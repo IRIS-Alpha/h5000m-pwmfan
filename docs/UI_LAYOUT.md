@@ -41,17 +41,19 @@ packages; this package needs only to integrate with the theme.
    - hysteresis and downshift delay;
    - validation that points are ordered and within 0–255 PWM.
 
-## Advanced section
+## Advanced settings page
 
 - fan hwmon path and PWM node;
 - optional cooling-device association;
 - minimum stable PWM and maximum PWM;
 - sensor polling interval;
-- failsafe PWM;
+- failure-to-full-output policy;
 - diagnostic paths and read-only kernel protection state.
 
-Advanced controls should be collapsed by default and should explain that
-effective PWM may exceed the request when kernel thermal protection is active.
+Advanced controls live on a separate LuCI page and are grouped by protection,
+downshift hysteresis, startup boost, fault response, and sampling/source.
+Explain that effective output may exceed the request when kernel thermal
+protection is active.
 
 ## Safety and interaction rules
 

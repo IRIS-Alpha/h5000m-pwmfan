@@ -15,4 +15,5 @@ config settings 'main'
 	option curve_balanced '30:64,42:96,54:144,66:200,76:240,84:255'
 	option curve_performance '25:128,40:192,55:224,70:255'
 	option curve_custom '35:64,45:96,55:144,65:208,78:255'
+	option curve_manual '35:64,45:96,55:144,65:208,78:255'
 

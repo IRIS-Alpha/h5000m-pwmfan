@@ -210,8 +210,6 @@ load_settings() {
 	config_get raw "$SECTION" max_pwm 255
 	MAX_PWM=$(cfg_number "$raw" 1 255) || return 1
 	[ "$MIN_PWM" -le "$MAX_PWM" ] || return 1
-	config_get raw "$SECTION" manual_pwm 128
-	MANUAL_PWM=$(cfg_number "$raw" 0 255) || return 1
 	config_get raw "$SECTION" kick_pwm 255
 	KICK_PWM=$(cfg_number "$raw" 0 255) || return 1
 	config_get raw "$SECTION" kick_ms 750
@@ -229,19 +227,18 @@ load_settings() {
 	balanced) config_get CURVE "$SECTION" curve_balanced '30:64,42:96,54:144,66:200,76:240,84:255' ;;
 	performance) config_get CURVE "$SECTION" curve_performance '25:128,40:192,55:224,70:255' ;;
 	custom) config_get CURVE "$SECTION" curve_custom '35:64,45:96,55:144,65:208,78:255' ;;
+	manual)
+		config_get CURVE "$SECTION" curve_manual ''
+		[ -n "$CURVE" ] || config_get CURVE "$SECTION" curve_custom '35:64,45:96,55:144,65:208,78:255'
+		;;
 	*) CURVE= ;;
 	esac
-	[ "$MODE" = manual ] || [ "$MODE" = kernel ] || curve_validate "$CURVE" || return 1
+	[ "$MODE" = kernel ] || curve_validate "$CURVE" || return 1
 }
 
 requested_pwm() {
-	case "$MODE" in
-	manual) clamp_pwm "$MANUAL_PWM" "$MIN_PWM" "$MAX_PWM" ;;
-	*)
-		value=$(curve_value "$CURVE" "$CONTROL_TEMP_C") || return 1
-		clamp_pwm "$value" "$MIN_PWM" "$MAX_PWM"
-		;;
-	esac
+	value=$(curve_value "$CURVE" "$CONTROL_TEMP_C") || return 1
+	clamp_pwm "$value" "$MIN_PWM" "$MAX_PWM"
 }
 
 apply_cycle() {

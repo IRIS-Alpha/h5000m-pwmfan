@@ -217,3 +217,237 @@ msgstr "当前模式：%s"
 msgid "Unknown"
 msgstr "未知"
 
+msgid "Manual"
+msgstr "手动"
+
+msgid "Kernel"
+msgstr "内核"
+
+msgid "Fan output array"
+msgstr "风扇输出阵列"
+
+msgid "CPU"
+msgstr "CPU"
+
+msgid "Radio"
+msgstr "射频"
+
+msgid "5G module"
+msgstr "5G 模组"
+
+msgid "PHY"
+msgstr "PHY"
+
+msgid "Processor"
+msgstr "处理器"
+
+msgid "Wireless"
+msgstr "无线"
+
+msgid "Modem"
+msgstr "模组"
+
+msgid "Ethernet"
+msgstr "以太网"
+
+msgid "Requested output"
+msgstr "请求输出"
+
+msgid "Actual output"
+msgstr "实际输出"
+
+msgid "Protected output"
+msgstr "保护输出"
+
+msgid "Duty cycle"
+msgstr "占空比"
+
+msgid "Fan output indicator"
+msgstr "风扇输出状态指示"
+
+msgid "No RPM feedback"
+msgstr "无 RPM 反馈"
+
+msgid "Kernel floor unavailable"
+msgstr "内核保护下限不可用"
+
+msgid "Fan curve"
+msgstr "风扇曲线"
+
+msgid "Apply curve"
+msgstr "应用曲线"
+
+msgid "Advanced settings"
+msgstr "高级设置"
+
+msgid "Temperature history"
+msgstr "温度历史"
+
+msgid "Live readings held in browser memory"
+msgstr "实时读数保存在浏览器内存中"
+
+msgid "Sensor"
+msgstr "传感器"
+
+msgid "Automatic sensor"
+msgstr "自动选择"
+
+msgid "No available sensor"
+msgstr "无可用传感器"
+
+msgid "Window"
+msgstr "滚动范围"
+
+msgid "Read every"
+msgstr "读取间隔"
+
+msgid "Chart"
+msgstr "图表"
+
+msgid "Enabled"
+msgstr "启用"
+
+msgid "Chart disabled"
+msgstr "图表已关闭"
+
+msgid "Now"
+msgstr "现在"
+
+msgid "%s min"
+msgstr "%s 分钟"
+
+msgid "%s hr"
+msgstr "%s 小时"
+
+msgid "%s s"
+msgstr "%s 秒"
+
+msgid "Fan curve applied."
+msgstr "风扇曲线已应用。"
+
+msgid "Could not apply fan curve: %s"
+msgstr "无法应用风扇曲线：%s"
+
+msgid "Back to dashboard"
+msgstr "返回控制主页"
+
+msgid "Fan policy grouped by behavior"
+msgstr "按控制行为分类的风扇策略"
+
+msgid "Advanced fan settings"
+msgstr "风扇高级设置"
+
+msgid "Protection"
+msgstr "保护策略"
+
+msgid "Kernel thermal protection stays enabled. This package does not change CPU passive, hot, or critical trips."
+msgstr "内核温控保护保持启用。本包不会修改 CPU passive、hot 或 critical 温度阈值。"
+
+msgid "Enable fan control"
+msgstr "启用风扇控制"
+
+msgid "When disabled, the controller releases PWM ownership and keeps status visible."
+msgstr "关闭后控制器释放 PWM 控制权，状态仍保持可见。"
+
+msgid "Minimum fan output"
+msgstr "风扇最低输出"
+
+msgid "Maximum curve output"
+msgstr "曲线最高输出"
+
+msgid "Full-speed temperature threshold (°C)"
+msgstr "全速保护温度阈值（°C）"
+
+msgid "Downshift hysteresis"
+msgstr "降速迟滞"
+
+msgid "Avoid rapid fan-speed drops when temperature fluctuates near a curve point."
+msgstr "温度在曲线点附近波动时，避免风扇输出快速下降。"
+
+msgid "Temperature hysteresis (°C)"
+msgstr "温度回差（°C）"
+
+msgid "Downshift delay (seconds)"
+msgstr "降速等待时间（秒）"
+
+msgid "Startup boost"
+msgstr "启动助推"
+
+msgid "Briefly raise output when the fan starts, then return to the selected curve."
+msgstr "风扇启动时短暂提高输出，随后恢复所选曲线。"
+
+msgid "Startup boost output"
+msgstr "启动助推输出"
+
+msgid "Startup boost duration (milliseconds)"
+msgstr "启动助推时长（毫秒）"
+
+msgid "Fault response"
+msgstr "故障响应"
+
+msgid "Invalid temperature data or a failed PWM write requests full output."
+msgstr "温度数据无效或 PWM 写入失败时请求全速输出。"
+
+msgid "Sensor or controller fault"
+msgstr "传感器或控制器故障"
+
+msgid "Request 100% output; kernel thermal safeguards remain active."
+msgstr "请求 100% 输出；内核温控保护保持生效。"
+
+msgid "Sampling and source"
+msgstr "采样与温度来源"
+
+msgid "The controller reads one sensor snapshot per control cycle. Sensors not selected for curve control still participate in the safety maximum."
+msgstr "控制器每个控制周期读取一次传感器快照。未选作曲线来源的传感器仍参与安全最高温判断。"
+
+msgid "Control interval (seconds)"
+msgstr "控制周期（秒）"
+
+msgid "Curve sensor source"
+msgstr "曲线温度来源"
+
+msgid "Advanced fan settings applied."
+msgstr "风扇高级设置已应用。"
+
+msgid "Could not apply fan settings: %s"
+msgstr "无法应用风扇设置：%s"
+
+msgid "Advanced Settings"
+msgstr "高级设置"
+
+msgid "Other parameters"
+msgstr "其他参数"
+
+msgid "Fan output (%)"
+msgstr "风扇输出（%）"
+
+msgid "Remove"
+msgstr "移除"
+
+msgid "Add point"
+msgstr "添加曲线点"
+
+msgid "Manual · not applied"
+msgstr "手动 · 尚未应用"
+
+msgid "Waiting for history…"
+msgstr "等待历史数据…"
+
+msgid "Running"
+msgstr "运行中"
+
+msgid "Fault"
+msgstr "故障"
+
+msgid "Stopped"
+msgstr "已停止"
+
+msgid "Controller owner unavailable"
+msgstr "控制权状态不可用"
+
+msgid "Kernel protection"
+msgstr "内核保护"
+
+msgid "Selected curve"
+msgstr "当前曲线"
+

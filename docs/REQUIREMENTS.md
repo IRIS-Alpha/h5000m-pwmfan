@@ -15,8 +15,9 @@ package. It is intentionally separate from the main OpenWrt firmware project.
 - Fail safe when temperature input, PWM discovery, or writes are invalid.
 - Keep the package independently buildable; integration into the main firmware
   repository happens only after package-level validation.
-- Keep the primary LuCI workflow on one page: quick dispatch selection,
-  temperature array, curve control, safety protections, and language choice.
+- Keep the primary LuCI workflow on a dashboard page with quick dispatch,
+  temperature/output arrays, editable curves, and temperature history; put
+  fan policy and safety tuning on a second Advanced Settings page.
 - Match the installed Vantage theme by consuming LuCI/theme styles and tokens;
   support Vantage light, dark, and automatic appearance modes without forcing
   a package-specific color scheme.

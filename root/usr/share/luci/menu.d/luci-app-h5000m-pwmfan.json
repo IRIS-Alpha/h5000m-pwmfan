@@ -3,8 +3,31 @@
 		"title": "H5000M PWM Fan",
 		"order": 85,
 		"action": {
+			"type": "firstchild"
+		},
+		"depends": {
+			"acl": [ "luci-app-h5000m-pwmfan" ],
+			"uci": { "h5000m_pwmfan": true }
+		}
+	},
+	"admin/system/h5000m_pwmfan/dashboard": {
+		"title": "Dashboard",
+		"order": 10,
+		"action": {
 			"type": "view",
 			"path": "h5000m-pwmfan"
+		},
+		"depends": {
+			"acl": [ "luci-app-h5000m-pwmfan" ],
+			"uci": { "h5000m_pwmfan": true }
+		}
+	},
+	"admin/system/h5000m_pwmfan/advanced": {
+		"title": "Advanced Settings",
+		"order": 20,
+		"action": {
+			"type": "view",
+			"path": "h5000m-pwmfan-advanced"
 		},
 		"depends": {
 			"acl": [ "luci-app-h5000m-pwmfan" ],
