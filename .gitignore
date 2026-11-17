@@ -1,0 +1,18 @@
+# OpenWrt and local build outputs
+bin/
+build_dir/
+staging_dir/
+tmp/
+*.ipk
+*.apk
+
+# Local test fixtures and runtime state
+.test-tmp/
+*.status.thermal
+
+# Editor and OS files
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+

@@ -1,0 +1,14 @@
+{
+	"admin/system/h5000m_pwmfan": {
+		"title": "H5000M PWM Fan",
+		"order": 85,
+		"action": {
+			"type": "view",
+			"path": "h5000m-pwmfan"
+		},
+		"depends": {
+			"acl": [ "luci-app-h5000m-pwmfan" ],
+			"uci": { "h5000m_pwmfan": true }
+		}
+	}
+}

@@ -1,0 +1,219 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: luci-app-h5000m-pwmfan\n"
+"PO-Revision-Date: 2026-11-17 00:00+0000\n"
+"Last-Translator: H5000M PWM Fan contributors\n"
+"Language-Team: Chinese (Simplified)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: zh_CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "H5000M PWM Fan"
+msgstr "H5000M PWM 风扇"
+
+msgid "OWT2510 · Hiveton H5000M"
+msgstr "OWT2510 · Hiveton H5000M"
+
+msgid "Quick dispatch"
+msgstr "快速调度"
+
+msgid "Select a ready-to-use policy"
+msgstr "选择控制模式"
+
+msgid "Quiet"
+msgstr "静音"
+
+msgid "Balanced"
+msgstr "均衡"
+
+msgid "Performance"
+msgstr "性能"
+
+msgid "Custom curve"
+msgstr "自定义曲线"
+
+msgid "Manual PWM"
+msgstr "手动 PWM"
+
+msgid "Kernel only"
+msgstr "仅内核保护"
+
+msgid "Off"
+msgstr "关闭"
+
+msgid "Temperature array"
+msgstr "温控阵列"
+
+msgid "Safety monitors all available sources"
+msgstr "安全保护持续监控全部可用温度源"
+
+msgid "Curve preview"
+msgstr "温控曲线"
+
+msgid "Control temperature"
+msgstr "控制温度"
+
+msgid "Safety maximum"
+msgstr "安全监控最高温"
+
+msgid "Requested PWM"
+msgstr "请求 PWM"
+
+msgid "Effective PWM"
+msgstr "实际 PWM"
+
+msgid "Controller target"
+msgstr "控制器目标值"
+
+msgid "Hardware read-back"
+msgstr "硬件回读值"
+
+msgid "No source"
+msgstr "无来源"
+
+msgid "Monitoring every source"
+msgstr "监控全部来源"
+
+msgid "Unavailable"
+msgstr "不可用"
+
+msgid "Waiting for sensor readings…"
+msgstr "等待温度读数…"
+
+msgid "Curve and safety"
+msgstr "曲线控制与安全监控"
+
+msgid "Safety monitoring"
+msgstr "安全监控"
+
+msgid "Enable fan controller"
+msgstr "启用风扇控制"
+
+msgid "Disabled is read-only: status remains visible and PWM is not written."
+msgstr "关闭时仅读取状态，不写入 PWM。"
+
+msgid "Dispatch mode"
+msgstr "调度模式"
+
+msgid "Curve sensor"
+msgstr "曲线温度来源"
+
+msgid "Hottest valid sensor"
+msgstr "最高有效温度"
+
+msgid "Unselected valid sensors still participate in the high-temperature safety override."
+msgstr "未选作曲线来源的有效传感器仍参与高温保护。"
+
+msgid "Manual PWM (0–255)"
+msgstr "手动 PWM（0–255）"
+
+msgid "%s curve (°C:PWM)"
+msgstr "%s 曲线（°C:PWM）"
+
+msgid "The chart previews this curve. Temperature points must ascend."
+msgstr "图表预览当前曲线，温度点必须递增。"
+
+msgid "Minimum PWM"
+msgstr "最低 PWM"
+
+msgid "Maximum curve PWM"
+msgstr "曲线最高 PWM"
+
+msgid "Full-speed safety temperature (°C)"
+msgstr "全速保护温度（°C）"
+
+msgid "Startup boost PWM"
+msgstr "启动助推 PWM"
+
+msgid "Startup boost duration (ms)"
+msgstr "启动助推时长（毫秒）"
+
+msgid "Downshift hysteresis (°C)"
+msgstr "降速回差（°C）"
+
+msgid "Downshift delay (s)"
+msgstr "降速延迟（秒）"
+
+msgid "Sampling interval (s)"
+msgstr "采样间隔（秒）"
+
+msgid "Failure response"
+msgstr "故障保护"
+
+msgid "Request full PWM (255). CPU passive, hot and critical protection remains enabled."
+msgstr "请求全速 PWM（255）。CPU 被动、hot 和 critical 热保护保持启用。"
+
+msgid "Fan policy"
+msgstr "风扇策略"
+
+msgid "Fan policy applied."
+msgstr "风扇策略已应用。"
+
+msgid "Could not apply policy: %s"
+msgstr "无法应用策略：%s"
+
+msgid "Could not apply fan policy: %s"
+msgstr "无法应用风扇策略：%s"
+
+msgid "Language"
+msgstr "语言"
+
+msgid "English"
+msgstr "English"
+
+msgid "简体中文"
+msgstr "简体中文"
+
+msgid "Could not change language: %s"
+msgstr "无法切换语言：%s"
+
+msgid "Request full PWM"
+msgstr "请求全速 PWM"
+
+msgid "Controller reason: %s"
+msgstr "控制原因：%s"
+
+msgid "Waiting for status"
+msgstr "等待状态"
+
+msgid "Starting controller"
+msgstr "控制器启动中"
+
+msgid "Status unavailable"
+msgstr "状态不可用"
+
+msgid "%.1f °C"
+msgstr "%.1f °C"
+
+msgid "Temperature (°C)"
+msgstr "温度（°C）"
+
+msgid "Temperatures must ascend from 0–150 °C and PWM must stay between 0–255."
+msgstr "温度点须在 0–150 °C 内递增，PWM 须在 0–255 之间。"
+
+msgid "Enter at least two comma-separated temperature:PWM points."
+msgstr "至少输入两个以逗号分隔的温度:PWM 点。"
+
+msgid "Missing"
+msgstr "缺失"
+
+msgid "Invalid reading"
+msgstr "读数无效"
+
+msgid "Stale reading"
+msgstr "读数已过期"
+
+msgid "Unsupported"
+msgstr "不支持"
+
+msgid "Current mode: Off"
+msgstr "当前模式：关闭"
+
+msgid "Current mode: %s"
+msgstr "当前模式：%s"
+
+msgid "Unknown"
+msgstr "未知"
+

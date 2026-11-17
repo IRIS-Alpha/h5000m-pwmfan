@@ -1,0 +1,41 @@
+name: Quality checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  shell-and-fixture-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install native checkers
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y bats device-tree-compiler gettext shellcheck
+
+      - name: Install shfmt
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Build shfmt tool
+        run: |
+          go install mvdan.cc/sh/v3/cmd/shfmt@v3.8.0
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+
+      - name: Run repository checks
+        run: |
+          dtc --version
+          node --check htdocs/luci-static/resources/view/h5000m-pwmfan.js
+          msgfmt --check --check-format -o /dev/null po/zh_Hans/h5000m-pwmfan.po
+          STRICT=1 sh tools/check.sh
+          git diff --check
+
+  # Add the OpenWrt SDK package-build job after the package Makefile exists.
+

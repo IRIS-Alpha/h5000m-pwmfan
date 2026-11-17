@@ -1,0 +1,361 @@
+#!/bin/sh
+
+umask 077
+
+# shellcheck disable=SC1091
+. /lib/functions.sh
+# shellcheck source=root/usr/lib/h5000m-pwmfan/controller-lib.sh
+. /usr/lib/h5000m-pwmfan/controller-lib.sh
+
+CONFIG=h5000m_pwmfan
+SECTION=main
+RUNDIR=/var/run/h5000m-pwmfan
+STATUS_FILE=$RUNDIR/status
+PID_FILE=$RUNDIR/pid
+HW_MON_DIR=${H5000M_SYS_CLASS_HWMON:-/sys/class/hwmon}
+THERMAL_DIR=${H5000M_SYS_CLASS_THERMAL:-/sys/class/thermal}
+MODEM_CACHE_FILE=${H5000M_MODEM_CACHE_FILE:-/tmp/5gmodem/tele.json}
+ACTIVE_OWNER=0
+FAILSAFE_PWM=255
+MAX_PWM=255
+MODE=balanced
+OWNER=none
+SENSOR_STATUS=
+CONTROL_TEMP_MC=
+CONTROL_SOURCE=
+SAFETY_TEMP_MC=
+SAFETY_SOURCE=
+LAST_PWM=
+LAST_TEMP=
+LAST_CHANGE=0
+
+cfg_number() {
+	value=$1
+	minimum=$2
+	maximum=$3
+	in_range "$value" "$minimum" "$maximum" || return 1
+	printf '%s\n' "$value"
+}
+
+find_fan() {
+	for hwmon in "$HW_MON_DIR"/hwmon*; do
+		[ -r "$hwmon/name" ] || continue
+		[ "$(cat "$hwmon/name" 2>/dev/null)" = pwmfan ] || continue
+		[ -w "$hwmon/pwm1" ] || continue
+		printf '%s\n' "$hwmon/pwm1"
+		return 0
+	done
+	return 1
+}
+
+add_sensor() {
+	id=$1
+	label=$2
+	file=$3
+	value=
+	state=missing
+	if [ -r "$file" ]; then
+		value=$(cat "$file" 2>/dev/null) || value=
+		if valid_temp_mc "$value"; then state=ok; else state=invalid; fi
+	fi
+	record_sensor "$id" "$label" "$value" "$state"
+}
+
+add_modem_sensor() {
+	value=
+	state=missing
+	MODEM_MIN_PWM=0
+	if [ -r "$MODEM_CACHE_FILE" ] && command -v jsonfilter >/dev/null 2>&1; then
+		mtime=$(stat -c %Y "$MODEM_CACHE_FILE" 2>/dev/null) || mtime=
+		now=$(date +%s)
+		case "$mtime" in '' | *[!0-9]*) state=invalid ;; *)
+			age=$((now - mtime))
+			if [ "$age" -lt 0 ] || [ "$age" -gt 90 ]; then
+				state=stale
+			else
+				degrees=$(jsonfilter -i "$MODEM_CACHE_FILE" -e '@.temp' 2>/dev/null) || degrees=
+				throttle=$(jsonfilter -i "$MODEM_CACHE_FILE" -e '@.therm' 2>/dev/null) || throttle=
+				if valid_temp_c "$degrees"; then
+					value=$((degrees * 1000))
+					state=ok
+					MODEM_MIN_PWM=$(modem_throttle_pwm "$throttle") || MODEM_MIN_PWM=0
+				else
+					state=invalid
+				fi
+			fi
+			;;
+		esac
+	elif [ -e "$MODEM_CACHE_FILE" ]; then
+		state=unsupported
+	fi
+	record_sensor modem modem "$value" "$state"
+}
+
+collect_sensors() {
+	CONTROL_TEMP_MC=
+	CONTROL_SOURCE=
+	SAFETY_TEMP_MC=
+	SAFETY_SOURCE=
+	SENSOR_STATUS=
+	for zone in "$THERMAL_DIR"/thermal_zone*; do
+		[ -r "$zone/temp" ] || continue
+		zone_id=${zone##*/}
+		zone_type=$(cat "$zone/type" 2>/dev/null) || zone_type=$zone_id
+		zone_label=$(printf '%s' "$zone_type" | tr ' |;=' '____')
+		add_sensor "tz_${zone_id}" "$zone_label" "$zone/temp"
+	done
+	for hwmon in "$HW_MON_DIR"/hwmon*; do
+		[ -r "$hwmon/name" ] || continue
+		hwmon_id=${hwmon##*/}
+		hwmon_name=$(cat "$hwmon/name" 2>/dev/null) || hwmon_name=$hwmon_id
+		hwmon_label=$(printf '%s' "$hwmon_name" | tr ' |;=' '____')
+		for input in "$hwmon"/temp*_input; do
+			[ -r "$input" ] || continue
+			input_id=${input##*/}
+			input_id=${input_id%_input}
+			add_sensor "${hwmon_id}_${input_id}" "${hwmon_label}_${input_id}" "$input"
+		done
+	done
+	add_modem_sensor
+	[ -n "$CONTROL_TEMP_MC" ]
+}
+
+write_status() {
+	state=$1
+	reason=$2
+	requested=$3
+	effective=$4
+	temperature=${CONTROL_TEMP_MC:---}
+	source=${CONTROL_SOURCE:---}
+	safety_temperature=${SAFETY_TEMP_MC:---}
+	safety_source=${SAFETY_SOURCE:---}
+	tmp="$STATUS_FILE.$$"
+	{
+		printf 'state=%s\n' "$state"
+		printf 'reason=%s\n' "$reason"
+		printf 'mode=%s\n' "$MODE"
+		printf 'owner=%s\n' "$OWNER"
+		printf 'temperature_mc=%s\n' "$temperature"
+		printf 'control_source=%s\n' "$source"
+		printf 'safety_temperature_mc=%s\n' "$safety_temperature"
+		printf 'safety_source=%s\n' "$safety_source"
+		printf 'requested_pwm=%s\n' "$requested"
+		printf 'effective_pwm=%s\n' "$effective"
+		printf 'sensors=%s\n' "$SENSOR_STATUS"
+		printf 'updated_at=%s\n' "$(date +%s)"
+	} >"$tmp" && mv "$tmp" "$STATUS_FILE"
+}
+
+set_pwm() {
+	requested=$1
+	[ -n "$PWM_FILE" ] && [ -w "$PWM_FILE" ] || return 1
+	printf '%s\n' "$requested" >"$PWM_FILE" 2>/dev/null || return 1
+	effective=$(cat "$PWM_FILE" 2>/dev/null) || return 1
+	in_range "$effective" 0 255 || return 1
+	ACTIVE_OWNER=1
+	OWNER=userspace
+	return 0
+}
+
+failsafe() {
+	reason=$1
+	requested=$FAILSAFE_PWM
+	if set_pwm "$requested"; then
+		LAST_PWM=$requested
+		write_status failsafe "$reason" "$requested" "$effective"
+	else
+		write_status fault "${reason}_and_failsafe_write_failed" "$requested" "--"
+	fi
+}
+
+release_fan() {
+	[ "$ACTIVE_OWNER" = 1 ] || return 0
+	OWNER=none
+	if set_pwm "$FAILSAFE_PWM"; then
+		OWNER=none
+		write_status disabled released "$FAILSAFE_PWM" "$effective"
+	else
+		OWNER=none
+		write_status fault release_write_failed "$FAILSAFE_PWM" "--"
+	fi
+	ACTIVE_OWNER=0
+}
+
+read_effective_pwm() {
+	for hwmon in "$HW_MON_DIR"/hwmon*; do
+		[ -r "$hwmon/name" ] || continue
+		[ "$(cat "$hwmon/name" 2>/dev/null)" = pwmfan ] || continue
+		[ -r "$hwmon/pwm1" ] || continue
+		value=$(cat "$hwmon/pwm1" 2>/dev/null) || value=
+		in_range "$value" 0 255 || value=--
+		printf '%s\n' "$value"
+		return
+	done
+	value=
+	in_range "$value" 0 255 || value=--
+	printf '%s\n' "$value"
+}
+
+load_settings() {
+	config_load "$CONFIG" || return 1
+	config_get ENABLED "$SECTION" enabled 0
+	[ "$ENABLED" = 0 ] || [ "$ENABLED" = 1 ] || return 1
+	config_get MODE "$SECTION" mode balanced
+	case "$MODE" in quiet | balanced | performance | custom | manual | kernel) ;; *) return 1 ;; esac
+	config_get SENSOR_SELECTION "$SECTION" sensor_sources auto
+	[ -n "$SENSOR_SELECTION" ] || SENSOR_SELECTION=auto
+	raw=
+	config_get raw "$SECTION" min_pwm 51
+	MIN_PWM=$(cfg_number "$raw" 0 255) || return 1
+	config_get raw "$SECTION" max_pwm 255
+	MAX_PWM=$(cfg_number "$raw" 1 255) || return 1
+	[ "$MIN_PWM" -le "$MAX_PWM" ] || return 1
+	config_get raw "$SECTION" manual_pwm 128
+	MANUAL_PWM=$(cfg_number "$raw" 0 255) || return 1
+	config_get raw "$SECTION" kick_pwm 255
+	KICK_PWM=$(cfg_number "$raw" 0 255) || return 1
+	config_get raw "$SECTION" kick_ms 750
+	KICK_MS=$(cfg_number "$raw" 0 5000) || return 1
+	config_get raw "$SECTION" hysteresis 3
+	HYSTERESIS=$(cfg_number "$raw" 0 30) || return 1
+	config_get raw "$SECTION" down_delay 10
+	DOWN_DELAY=$(cfg_number "$raw" 0 600) || return 1
+	config_get raw "$SECTION" poll_interval 2
+	POLL_INTERVAL=$(cfg_number "$raw" 1 30) || return 1
+	config_get raw "$SECTION" safety_temp 85
+	SAFETY_TEMP=$(cfg_number "$raw" 40 125) || return 1
+	case "$MODE" in
+	quiet) config_get CURVE "$SECTION" curve_quiet '35:51,45:64,55:96,65:160,75:224,85:255' ;;
+	balanced) config_get CURVE "$SECTION" curve_balanced '30:64,42:96,54:144,66:200,76:240,84:255' ;;
+	performance) config_get CURVE "$SECTION" curve_performance '25:128,40:192,55:224,70:255' ;;
+	custom) config_get CURVE "$SECTION" curve_custom '35:64,45:96,55:144,65:208,78:255' ;;
+	*) CURVE= ;;
+	esac
+	[ "$MODE" = manual ] || [ "$MODE" = kernel ] || curve_validate "$CURVE" || return 1
+}
+
+requested_pwm() {
+	case "$MODE" in
+	manual) clamp_pwm "$MANUAL_PWM" "$MIN_PWM" "$MAX_PWM" ;;
+	*)
+		value=$(curve_value "$CURVE" "$CONTROL_TEMP_C") || return 1
+		clamp_pwm "$value" "$MIN_PWM" "$MAX_PWM"
+		;;
+	esac
+}
+
+apply_cycle() {
+	if ! load_settings; then
+		MODE=invalid
+		OWNER=none
+		if [ "$ACTIVE_OWNER" = 1 ]; then failsafe invalid_configuration; else write_status fault invalid_configuration -- --; fi
+		return
+	fi
+	OWNER=none
+	collect_sensors || true
+	if [ "$ENABLED" != 1 ] || [ "$MODE" = kernel ]; then
+		was_owner=$ACTIVE_OWNER
+		release_fan
+		[ "$was_owner" = 1 ] && return
+		effective=$(read_effective_pwm)
+		if [ "$MODE" = kernel ]; then
+			write_status kernel_only kernel_owns_fan -- "$effective"
+		else
+			write_status disabled not_enabled -- "$effective"
+		fi
+		return
+	fi
+	PWM_FILE=$(find_fan) || PWM_FILE=
+	if [ -z "$PWM_FILE" ]; then
+		write_status fault pwmfan_not_found "$FAILSAFE_PWM" --
+		return
+	fi
+	if [ -z "$CONTROL_TEMP_MC" ]; then
+		failsafe no_valid_temperature
+		return
+	fi
+	CONTROL_TEMP_C=$((CONTROL_TEMP_MC / 1000))
+	SAFETY_TEMP_C=$((SAFETY_TEMP_MC / 1000))
+	if [ "$SAFETY_TEMP_C" -ge "$SAFETY_TEMP" ]; then
+		desired=255
+		reason=safety_temperature
+	else
+		desired=$(requested_pwm) || {
+			failsafe invalid_curve
+			return
+		}
+		reason=curve
+	fi
+	if [ "$MODEM_MIN_PWM" -gt "$desired" ]; then
+		desired=$MODEM_MIN_PWM
+		reason=modem_throttle_floor
+	fi
+	if [ "$MODE" = manual ] && [ "$desired" -lt "$MIN_PWM" ]; then desired=$MIN_PWM; fi
+	now=$(date +%s)
+	if [ -n "$LAST_PWM" ] && [ "$desired" -lt "$LAST_PWM" ]; then
+		if [ "$MODE" != manual ] && [ -n "$LAST_TEMP" ] && [ "$CONTROL_TEMP_C" -gt $((LAST_TEMP - HYSTERESIS)) ]; then
+			desired=$LAST_PWM
+			reason=hysteresis_hold
+		elif [ $((now - LAST_CHANGE)) -lt "$DOWN_DELAY" ]; then
+			desired=$LAST_PWM
+			reason=down_delay_hold
+		fi
+	fi
+	if [ "$ACTIVE_OWNER" = 0 ] && [ "$desired" -gt 0 ] && [ "$KICK_PWM" -gt "$desired" ] && [ "$KICK_MS" -gt 0 ]; then
+		kick=$(clamp_pwm "$KICK_PWM" "$MIN_PWM" "$MAX_PWM") || kick=$MAX_PWM
+		if ! set_pwm "$kick"; then
+			failsafe startup_kick_write_failed
+			return
+		fi
+		if command -v usleep >/dev/null 2>&1; then usleep "$((KICK_MS * 1000))"; else sleep 1; fi
+	fi
+	if [ "$desired" != "$LAST_PWM" ]; then LAST_CHANGE=$now; fi
+	if set_pwm "$desired"; then
+		LAST_PWM=$desired
+		LAST_TEMP=$CONTROL_TEMP_C
+		[ "$effective" = "$desired" ] || reason=kernel_or_driver_override
+		write_status running "$reason" "$desired" "$effective"
+	else
+		failsafe pwm_write_failed
+	fi
+}
+
+cleanup() {
+	trap - EXIT INT TERM HUP
+	if [ "$ACTIVE_OWNER" = 1 ]; then
+		PWM_FILE=$(find_fan) || PWM_FILE=
+		if [ -n "$PWM_FILE" ] && set_pwm "$FAILSAFE_PWM"; then
+			OWNER=none
+			write_status stopped service_exit "$FAILSAFE_PWM" "$effective"
+		else
+			OWNER=none
+			write_status fault service_exit_write_failed "$FAILSAFE_PWM" --
+		fi
+		ACTIVE_OWNER=0
+	fi
+	[ ! -f "$PID_FILE" ] || [ "$(cat "$PID_FILE" 2>/dev/null)" != "$$" ] || rm -f "$PID_FILE"
+}
+
+daemon() {
+	mkdir -p "$RUNDIR"
+	printf '%s\n' "$$" >"$PID_FILE"
+	trap ':' HUP
+	trap 'exit 0' INT TERM
+	trap cleanup EXIT
+	while :; do
+		apply_cycle
+		sleep "${POLL_INTERVAL:-2}"
+	done
+}
+
+case "${1:-status}" in
+daemon) daemon ;;
+status) [ ! -r "$STATUS_FILE" ] || cat "$STATUS_FILE" ;;
+reload)
+	if [ -r "$PID_FILE" ]; then kill -HUP "$(cat "$PID_FILE")" 2>/dev/null || exit 1; fi
+	;;
+*)
+	printf 'Usage: %s {daemon|status|reload}\n' "$0" >&2
+	exit 2
+	;;
+esac

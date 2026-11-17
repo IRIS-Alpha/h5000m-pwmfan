@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+
+case "${1:-}" in
+en | zh_cn) ;;
+*) exit 2 ;;
+esac
+
+uci -q set "luci.main.lang=$1"
+uci -q commit luci

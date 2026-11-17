@@ -1,0 +1,17 @@
+{
+	"luci-app-h5000m-pwmfan": {
+		"description": "Control the H5000M PWM fan",
+		"read": {
+			"file": {
+				"/usr/sbin/h5000m-pwmfan-status": [ "exec" ]
+			},
+			"uci": [ "h5000m_pwmfan", "luci" ]
+		},
+		"write": {
+			"file": {
+				"/usr/sbin/h5000m-pwmfan-language": [ "exec" ]
+			},
+			"uci": [ "h5000m_pwmfan" ]
+		}
+	}
+}
