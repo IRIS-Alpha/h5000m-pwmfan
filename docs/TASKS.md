@@ -16,6 +16,13 @@
 - Acceptance: acceleration onset, threshold lock, exact release hysteresis, equal target/threshold, and invalid configuration all have deterministic assertions.
 - Status: complete; all declared global-protection transition and validation cases pass offline.
 
+## Completed task block: bounded fan-service pause
+
+- Goal: observe kernel PWM behavior during a bounded pause of the existing fan service.
+- Expected changes: record the recovery procedure and live samples.
+- Verification: confirm the service is absent during sampling and resumes with fresh status afterwards.
+- Acceptance: record what the observed temperature range establishes and keep unverified control boundaries open.
+
 ## Work queue
 
 - [x] Establish independent package repository and preserve handoff.
@@ -26,13 +33,15 @@
 - [x] Add initial isolated curve-helper tests; sensor/ownership/failsafe tests remain queued.
 - [x] Restore non-interactive WSL SSH access to H5000M.
 - [x] Observe CPU trips, governor, cooling-device state, PWM readback, and fan service status while the installed controller is running.
-- [ ] Confirm kernel-only PWM ownership with the installed fan controller quiesced after reviewing a device rollback procedure.
+- [x] Sample PWM and thermal state during a bounded pause of the installed fan controller, then verify service restoration.
+- [ ] Confirm the kernel request on a natural trip crossing while the installed controller is quiescent. High-temperature handover remains unverified.
 - [x] Add project working agreement and reconcile V3 historical discussion with confirmed control decisions.
 - [x] Add deterministic pure helpers for target-drive interpolation/blending, bounded PI anti-windup, and global-protection transitions with offline boundary tests.
 - [x] Confirm and test target temperature, response interval, and transition-width limits, including zero-degree onset and automatic width compression.
 - [x] Verify that the target-drive controller preserves 0% below the response and recomputes PI correction after discarding saturated integration.
 - [x] Verify offline protection dispatch with output from any mode, including off, startup boost, repeated lock cycles, a per-cycle count, and fault handling. Check with `STRICT=1 sh tools/check.sh`.
 - [x] Exercise target drive and protection together in a simulated temperature sequence. Verify equal thresholds, 100% override, integral freeze and resume, and the reported control source.
+- [ ] Verify automatic PI integral freeze and recovery in the offline target-drive cycle.
 - [ ] Wire automatic PI freeze and recovery, control timing, and source reporting into the controller after the runtime ownership audit.
 - [x] Compute protection history offline and verify the 24-hour window, cumulative count, latest trigger, cycle peak, and invalid history handling.
 - [ ] Choose the protection history storage path and integrate persistence and status reporting with the service.
@@ -79,3 +88,4 @@
 - 2026-11-20: Verified protection history calculations offline. The rolling 24-hour window excludes events exactly 24 hours old. The newest completed or active cycle remains available for the latest trigger and peak display after it expires from the window. Strict checks passed with 24 Bats tests.
 - 2026-11-20: Restored WSL SSH with a dedicated ED25519 key for `192.168.10.1`. Verified `ssh -o BatchMode=yes root@192.168.10.1 true` returns 0. The local SSH config selects this key for the router. Host-key verification and existing router login methods were retained.
 - 2026-11-20: With `h5000m-fancontrol` running on kernel 6.18.60, observed CPU `step_wise` enabled, trips 40/85/115/117°C active, 120°C hot, and 125°C critical, with 2°C hysteresis. Live fan bindings cover 40/85/115°C and the device tree declares PWM levels 0/128/192/255. Around 48°C, sysfs showed fan state 0/3 and PWM 51/255 across three samples. The installed status helper reported its own derived state 1/3 and floor 128/255, with both requested and applied PWM at 51/255. Its code derives the floor from temperature and cooling maps, so the report does not identify a live kernel request. Kernel-only behavior remains pending. No PWM, governor, cooling-map, or service changes were made.
+- 2026-11-20: Recorded the recovery procedure and paused the existing fan service for a 12-second sample window. With the old process absent, PWM was 51/255 and cooling state 0/3 in all seven samples at 48.573–49.985°C. The service resumed with a fresh status timestamp and identical config digest. The sample did not cross a trip. Kernel takeover at a new trip and live integration remain open.
