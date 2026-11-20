@@ -42,7 +42,7 @@
 - [x] Restore non-interactive WSL SSH access to H5000M.
 - [x] Observe CPU trips, governor, cooling-device state, PWM readback, and fan service status while the installed controller is running.
 - [x] Sample PWM and thermal state during a bounded pause of the installed fan controller, then verify service restoration.
-- [ ] Confirm the kernel request on a natural trip crossing while the installed controller is quiescent. High-temperature handover remains unverified.
+- [ ] Confirm the kernel request on a natural trip crossing after fan replacement and stock controller baseline verification. High-temperature handover remains unverified.
 - [x] Add project working agreement and reconcile V3 historical discussion with confirmed control decisions.
 - [x] Add deterministic pure helpers for target-drive interpolation/blending, bounded PI anti-windup, and global-protection transitions with offline boundary tests.
 - [x] Confirm and test target temperature, response interval, and transition-width limits, including zero-degree onset and automatic width compression.
@@ -99,3 +99,4 @@
 - 2026-11-20: Recorded the recovery procedure and paused the existing fan service for a 12-second sample window. With the old process absent, PWM was 51/255 and cooling state 0/3 in all seven samples at 48.573–49.985°C. The service resumed with a fresh status timestamp and identical config digest. The sample did not cross a trip. Kernel takeover at a new trip and live integration remain open.
 - 2026-11-20: The offline target-drive cycle now derives PI freeze from the current protection state, including the ramp following unlock. The first sample outside protection uses its own elapsed interval. Fault cases keep the retained integral and request full speed. The strict suite passed all 26 Bats tests.
 - 2026-11-20: Checked upstream Linux v6.18.60 `pwm-fan` source. Successful userspace writes also recalculate `cur_state` from the configured levels. Recorded why `cur_state=0` and `pwm1=51` alone cannot identify the request source.
+- 2026-11-20: The field handoff traced the 20% baseline to a temporary manual request of 51/255 and a local edit to the installed thermal-floor condition while the fan awaits replacement. Corrected the runtime evidence notes and kept device arbitration pending. Offline control verification can continue.

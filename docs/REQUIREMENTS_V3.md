@@ -218,7 +218,7 @@ PWM cooling levels 为 `[0,128,192,255]`：40°C `active-low` 通过名为 `cpu-
 
 - 首版不实现 RPM 闭环；按 PWM 请求开环控制。分别显示插件请求、PWM 回读和可确认的仲裁来源，不由 PWM 推算 RPM。
 - 插件目标为负责 CPU 0–100°C 风扇调度，100–125°C 保留内核 thermal zone。须先用运行时只读数据验证 cooling device、governor、trip 和 PWM 回读；静态 DTB 不能证明运行时所有权。
-- 2026-11-20 LuCI 只读快照：当前 `luci-app-h5000m-fancontrol` 已启用且为手动模式，CPU 49°C；其状态命令报告 `thermal_state=1/3`、`thermal_floor=128/255`、`thermal_owner=shared`，同时 `requested_pwm=51/255`、`applied_pwm=51/255`、原因 `manual`。该快照显示内核 cooling state/floor 与实际 PWM 回读不一致，不能证明谁最后写入 PWM，也不能据此认定内核 floor 已生效。
+- 2026-11-20 LuCI 只读快照：当前 `luci-app-h5000m-fancontrol` 已启用且为手动模式，CPU 49°C；其状态命令报告 `thermal_state=1/3`、`thermal_floor=128/255`、`thermal_owner=shared`，同时 `requested_pwm=51/255`、`applied_pwm=51/255`、原因 `manual`。现场交接确认手动 20% 来自临时配置和仲裁脚本改动。该快照只记录改动后工况，内核真实请求和原版插件行为以独立核验为准。
 - 来源分为插件、内核/驱动、保护覆盖、未接管、未知。证据不足时显示未知。
 - 运行时核验前不改 thermal zone/cooling 配置、不部署设备。
 
