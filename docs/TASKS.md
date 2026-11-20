@@ -24,7 +24,9 @@
 - [x] Freeze initial v1 control and failure-state contract; hardware thresholds remain provisional.
 - [x] Implement initial package metadata, UCI defaults, procd service, and controller.
 - [x] Add initial isolated curve-helper tests; sensor/ownership/failsafe tests remain queued.
-- [ ] Read-only runtime audit of thermal zones, cooling devices, pwm-fan requests/readback, and running/stopped service ownership before arbitration changes.
+- [x] Restore non-interactive WSL SSH access to H5000M.
+- [x] Observe CPU trips, governor, cooling-device state, PWM readback, and fan service status while the installed controller is running.
+- [ ] Confirm kernel-only PWM ownership with the installed fan controller quiesced after reviewing a device rollback procedure.
 - [x] Add project working agreement and reconcile V3 historical discussion with confirmed control decisions.
 - [x] Add deterministic pure helpers for target-drive interpolation/blending, bounded PI anti-windup, and global-protection transitions with offline boundary tests.
 - [x] Confirm and test target temperature, response interval, and transition-width limits, including zero-degree onset and automatic width compression.
@@ -75,3 +77,5 @@
 - 2026-11-20: Verified offline dispatch from 0% through protection boost, ramp, lock, exact release, and relock. Invalid sensor readings or control inputs request full speed without recording a temperature event. The step returns one cumulative count, with history and persistence tracked separately.
 - 2026-11-20: Simulated equal target and protection thresholds across lock, release, return to mode control, and the first active PI sample. The test supplies the freeze signal explicitly. The checks passed with 22 Bats tests.
 - 2026-11-20: Verified protection history calculations offline. The rolling 24-hour window excludes events exactly 24 hours old. The newest completed or active cycle remains available for the latest trigger and peak display after it expires from the window. Strict checks passed with 24 Bats tests.
+- 2026-11-20: Restored WSL SSH with a dedicated ED25519 key for `192.168.10.1`. Verified `ssh -o BatchMode=yes root@192.168.10.1 true` returns 0. The local SSH config selects this key for the router. Host-key verification and existing router login methods were retained.
+- 2026-11-20: With `h5000m-fancontrol` running on kernel 6.18.60, observed CPU `step_wise` enabled, trips 40/85/115/117°C active, 120°C hot, and 125°C critical, with 2°C hysteresis. Live fan bindings cover 40/85/115°C and the device tree declares PWM levels 0/128/192/255. Around 48°C, sysfs showed fan state 0/3 and PWM 51/255 across three samples. The installed status helper reported its own derived state 1/3 and floor 128/255, with both requested and applied PWM at 51/255. Its code derives the floor from temperature and cooling maps, so the report does not identify a live kernel request. Kernel-only behavior remains pending. No PWM, governor, cooling-map, or service changes were made.
