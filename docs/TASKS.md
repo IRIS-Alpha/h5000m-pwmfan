@@ -10,6 +10,8 @@
 - [x] Add initial isolated curve-helper tests; sensor/ownership/failsafe tests remain queued.
 - [ ] Read-only runtime audit of thermal zones, cooling devices, pwm-fan requests/readback, and running/stopped service ownership before arbitration changes.
 - [x] Add project working agreement and reconcile V3 historical discussion with confirmed control decisions.
+- [x] Add deterministic pure helpers for target-drive interpolation/blending, bounded PI anti-windup, and global-protection transitions with offline boundary tests.
+- [x] Confirm and test target temperature, response interval, and transition-width limits, including zero-degree onset and automatic width compression.
 - [ ] Implement/test pure target-drive (linear feed-forward + bounded PI) and global-protection state logic, blending, boost, lock/release, counts, and faults.
 - [ ] Gate live PWM/thermal integration on reviewed runtime evidence and a device rollback procedure.
 - [ ] Build and validate IPK with the OWT2510 matching ImmortalWrt buildroot/SDK.
@@ -42,3 +44,5 @@
 - 2026-11-20: Recorded the agreed target-drive/global-protection contract in V3. Next: read-only runtime arbitration evidence; offline controller logic and tests can proceed without changing device thermal ownership.
 - 2026-11-20: Read the live fan-control status through LuCI. It reports thermal state 1/3 and floor 128/255 while requested/applied PWM is 51/255 in manual mode; direct sysfs reads are denied and no service-stop test was performed, so ownership remains unresolved.
 - 2026-11-20: Added project-level delivery, blocked-work, tracker, decision, device-access, and delegation rules in `AGENTS.md`; marked V3 section 9 as historical discussion superseded by confirmed section 12. Target-drive implementation remains the active task block.
+- 2026-11-20: Implemented and tested pure feed-forward/blend interpolation, bounded PI anti-windup, and global protection transition helpers. These are not connected to PWM writes; target-mode output anchors, global ownership arbitration, persisted trigger counters, and device/runtime integration remain in the open task block.
+- 2026-11-20: Confirmed target-drive limits: target 80-100°C; response interval minimum 15°C and maximum `T_target` so its onset stays at or above 0°C; transition width 2-10°C (default 5°C), clamped to the available interval. Added tests for the 0°C onset, interval bounds, and automatic width compression.

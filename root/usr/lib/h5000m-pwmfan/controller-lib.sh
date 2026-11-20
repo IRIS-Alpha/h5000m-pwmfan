@@ -137,3 +137,134 @@ clamp_pwm() {
 	[ "$value" -gt "$maximum" ] && value=$maximum
 	printf '%s\n' "$value"
 }
+
+is_signed_int() {
+	case "$1" in
+	'' | -) return 1 ;;
+	-*)
+		digits=${1#-}
+		case "$digits" in '' | *[!0-9]*) return 1 ;; esac
+		;;
+	*[!0-9]*) return 1 ;;
+	esac
+	return 0
+}
+
+linear_ramp_pwm() {
+	temperature=$1
+	start_temp=$2
+	end_temp=$3
+	start_pwm=$4
+	end_pwm=$5
+	valid_temp_c "$temperature" && valid_temp_c "$start_temp" && valid_temp_c "$end_temp" || return 1
+	in_range "$start_pwm" 0 255 && in_range "$end_pwm" "$start_pwm" 255 || return 1
+	[ "$start_temp" -lt "$end_temp" ] || return 1
+	if [ "$temperature" -le "$start_temp" ]; then
+		printf '%s\n' "$start_pwm"
+	elif [ "$temperature" -ge "$end_temp" ]; then
+		printf '%s\n' "$end_pwm"
+	else
+		printf '%s\n' "$((start_pwm + (temperature - start_temp) * (end_pwm - start_pwm) / (end_temp - start_temp)))"
+	fi
+}
+
+target_drive_pwm() {
+	temperature=$1
+	target_temp=$2
+	response_radius=$3
+	blend_width=$4
+	idle_pwm=$5
+	response_pwm=$6
+	maximum_pwm=$7
+	valid_temp_c "$temperature" || return 1
+	in_range "$target_temp" 80 100 || return 1
+	in_range "$response_radius" 15 "$target_temp" || return 1
+	in_range "$blend_width" 2 10 || return 1
+	in_range "$idle_pwm" 0 255 && in_range "$response_pwm" "$idle_pwm" 255 && in_range "$maximum_pwm" "$response_pwm" 255 || return 1
+	response_start=$((target_temp - response_radius))
+	effective_blend=$blend_width
+	[ "$effective_blend" -le "$response_start" ] || effective_blend=$response_start
+	if [ "$effective_blend" -eq 0 ]; then
+		if [ "$temperature" -lt "$response_start" ]; then
+			printf '%s\n' "$idle_pwm"
+		elif [ "$temperature" -eq "$response_start" ]; then
+			printf '%s\n' "$response_pwm"
+		else
+			linear_ramp_pwm "$temperature" "$response_start" "$target_temp" "$response_pwm" "$maximum_pwm"
+		fi
+	elif [ "$temperature" -le "$response_start" ]; then
+		blend_start=$((response_start - effective_blend))
+		linear_ramp_pwm "$temperature" "$blend_start" "$response_start" "$idle_pwm" "$response_pwm"
+	else
+		linear_ramp_pwm "$temperature" "$response_start" "$target_temp" "$response_pwm" "$maximum_pwm"
+	fi
+}
+
+bounded_pi_step() {
+	error_mc=$1
+	integral_mc_s=$2
+	delta_seconds=$3
+	kp_milli=$4
+	ki_milli=$5
+	integral_limit=$6
+	correction_limit=$7
+	is_signed_int "$error_mc" && is_signed_int "$integral_mc_s" || return 1
+	in_range "$delta_seconds" 1 30 || return 1
+	[ "$error_mc" -ge -190000 ] && [ "$error_mc" -le 190000 ] || return 1
+	in_range "$kp_milli" 0 1000000 && in_range "$ki_milli" 0 1000000 || return 1
+	in_range "$integral_limit" 1 100000000 && in_range "$correction_limit" 0 255 || return 1
+	[ "$integral_mc_s" -ge "$((0 - integral_limit))" ] && [ "$integral_mc_s" -le "$integral_limit" ] || return 1
+	new_integral=$((integral_mc_s + error_mc * delta_seconds))
+	[ "$new_integral" -lt "$((0 - integral_limit))" ] && new_integral=$((0 - integral_limit))
+	[ "$new_integral" -gt "$integral_limit" ] && new_integral=$integral_limit
+	proportional=$((error_mc * kp_milli / 1000000))
+	integral=$((new_integral * ki_milli / 1000000000))
+	correction=$((proportional + integral))
+	if [ "$correction" -gt "$correction_limit" ]; then
+		correction=$correction_limit
+		[ "$error_mc" -gt 0 ] && new_integral=$integral_mc_s
+	elif [ "$correction" -lt "$((0 - correction_limit))" ]; then
+		correction=$((0 - correction_limit))
+		[ "$error_mc" -lt 0 ] && new_integral=$integral_mc_s
+	fi
+	printf '%s|%s\n' "$correction" "$new_integral"
+}
+
+global_protection_step() {
+	temperature=$1
+	threshold=$2
+	acceleration_radius=$3
+	release_hysteresis=$4
+	base_pwm=$5
+	was_locked=$6
+	was_active=$7
+	valid_temp_c "$temperature" || return 1
+	in_range "$threshold" 80 100 || return 1
+	in_range "$acceleration_radius" 15 140 || return 1
+	in_range "$release_hysteresis" 2 100 || return 1
+	in_range "$base_pwm" 0 255 || return 1
+	case "$was_locked:$was_active" in 0:0 | 0:1 | 1:0 | 1:1) ;; *) return 1 ;; esac
+	start_temp=$((threshold - acceleration_radius))
+	[ "$start_temp" -ge -40 ] || return 1
+	locked=$was_locked
+	lock_event=0
+	if [ "$locked" = 1 ] && [ "$temperature" -le "$((threshold - release_hysteresis))" ]; then locked=0; fi
+	if [ "$locked" = 0 ] && [ "$temperature" -ge "$threshold" ]; then
+		locked=1
+		lock_event=1
+	fi
+	active=0
+	boost=0
+	if [ "$temperature" -ge "$start_temp" ] || [ "$locked" = 1 ]; then
+		active=1
+		[ "$was_active" = 1 ] || boost=1
+	fi
+	if [ "$locked" = 1 ]; then
+		pwm=255
+	elif [ "$active" = 1 ]; then
+		pwm=$(linear_ramp_pwm "$temperature" "$start_temp" "$threshold" "$base_pwm" 255) || return 1
+	else
+		pwm=$base_pwm
+	fi
+	printf '%s|%s|%s|%s|%s\n' "$pwm" "$locked" "$active" "$boost" "$lock_event"
+}
