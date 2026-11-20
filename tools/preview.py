@@ -2,7 +2,7 @@
 """Serve the package with firmware LuCI assets and isolated demo RPC state."""
 import argparse
 import gettext
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import mimetypes
 from pathlib import Path
@@ -41,6 +41,8 @@ def make_handler(rootfs, messages):
     config = settings()
 
     class Preview(BaseHTTPRequestHandler):
+        timeout = 10
+
         def send_data(self, data, content_type):
             self.send_response(200)
             self.send_header('Content-Type', content_type)
@@ -143,7 +145,8 @@ def main():
     mo = subprocess.check_output(['msgfmt', '-o', '-', str(REPO / 'po/zh_Hans/h5000m-pwmfan.po')])
     from io import BytesIO
     messages = {key: value for key, value in gettext.GNUTranslations(BytesIO(mo))._catalog.items() if key}
-    HTTPServer(('127.0.0.1', args.port), make_handler(args.rootfs.resolve(), messages)).serve_forever()
+    with ThreadingHTTPServer(('127.0.0.1', args.port), make_handler(args.rootfs.resolve(), messages)) as server:
+        server.serve_forever()
 
 
 if __name__ == '__main__':
