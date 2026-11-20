@@ -28,7 +28,8 @@
 - [x] Add project working agreement and reconcile V3 historical discussion with confirmed control decisions.
 - [x] Add deterministic pure helpers for target-drive interpolation/blending, bounded PI anti-windup, and global-protection transitions with offline boundary tests.
 - [x] Confirm and test target temperature, response interval, and transition-width limits, including zero-degree onset and automatic width compression.
-- [ ] Implement/test pure target-drive (linear feed-forward + bounded PI) and global-protection state logic, blending, boost, lock/release, counts, and faults.
+- [x] Verify that the target-drive controller preserves 0% below the response and recomputes PI correction after discarding saturated integration.
+- [ ] Complete offline arbitration tests for combined target drive and global protection, including startup boost, repeated lock cycles, counters, and fault handling.
 - [ ] Gate live PWM/thermal integration on reviewed runtime evidence and a device rollback procedure.
 - [ ] Build and validate IPK with the OWT2510 matching ImmortalWrt buildroot/SDK.
 - [x] Implement one-page LuCI status/control view, ACL/menu, quick dispatch, UCI settings, and zh-Hans translation package.
@@ -66,3 +67,4 @@
 - 2026-11-20: Read-only router SSH audit was attempted with the configured user and host-key acceptance; the router returned `Permission denied (publickey,password)`. Runtime ownership remains blocked. Continued with independent offline global-protection boundary tests; no device writes or service stops were attempted.
 - 2026-11-20: Added deterministic coverage for global protection at acceleration onset, threshold lock, exact release hysteresis, lock release while still in the ramp, equal threshold/target, and invalid states/configuration.
 - 2026-11-20: Recorded the commit rule for confirmed requirements. The response interval and transition width update is in `5409bd0`.
+- 2026-11-20: Verified the target-drive stop zone and PI recovery offline. A 0% feed-forward request stays at 0% before protection is applied. When PI discards an integral update at saturation, the correction is recalculated from the retained state. The strict suite passed all 18 tests.

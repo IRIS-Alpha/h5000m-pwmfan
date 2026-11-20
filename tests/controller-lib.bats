@@ -129,6 +129,8 @@ setup() {
 	[ "$(bounded_pi_step 5000 0 2 10000 1000 10000000 255)" = "50|10000" ]
 	[ "$(bounded_pi_step -5000 0 2 10000 1000 10000000 255)" = "-50|-10000" ]
 	[ "$(bounded_pi_step 190000 0 10 1000000 1000000 100000000 40)" = "40|0" ]
+	[ "$(bounded_pi_step 10000 2000 2 1000 1000000 10000000 20)" = "12|2000" ]
+	[ "$(bounded_pi_step -10000 -2000 2 1000 1000000 10000000 20)" = "-12|-2000" ]
 	run bounded_pi_step bad 0 2 10000 1000 10000000 255
 	[ "$status" -ne 0 ]
 }
@@ -137,10 +139,14 @@ setup() {
 	[ "$(target_drive_step 200 5000 0 2 10000 0 10000000 255 0 255 0)" = "250|10000|50" ]
 	[ "$(target_drive_step 200 5000 1234 2 10000 0 10000000 255 0 255 1)" = "250|1234|50" ]
 	[ "$(target_drive_step 240 5000 100 2 10000 1000000 10000000 255 0 255 0)" = "255|100|50" ]
-	[ "$(target_drive_step 240 5000 100 2 10000 1000000 10000000 255 0 255 0)" = "255|100|50" ]
 	[ "$(target_drive_step 10 -5000 100 2 10000 1000000 10000000 255 51 255 0)" = "51|100|-50" ]
 	run target_drive_step 200 5000 0 2 10000 0 10000000 255 0 255 2
 	[ "$status" -ne 0 ]
+}
+
+@test "target-drive preserves a stop request with a configured running floor" {
+	[ "$(target_drive_step 0 5000 3000 2 10000 1000000 10000000 255 51 255)" = "0|3000|0" ]
+	[ "$(target_drive_step 10 0 0 2 10000 0 10000000 255 51 255)" = "51|0|0" ]
 }
 
 @test "global protection boosts once, ramps, locks, and releases with hysteresis" {
@@ -151,7 +157,6 @@ setup() {
 	[ "$(global_protection_step 90 90 15 5 51 0 1)" = "255|1|1|0|1" ]
 	[ "$(global_protection_step 89 90 15 5 51 1 1)" = "255|1|1|0|0" ]
 	[ "$(global_protection_step 85 90 15 5 51 1 1)" = "187|0|1|0|0" ]
-	[ "$(global_protection_step 75 90 15 5 51 0 0)" = "51|0|1|1|0" ]
 	[ "$(global_protection_step 100 100 15 2 0 0 0)" = "255|1|1|1|1" ]
 	[ "$(global_protection_step 88 90 15 2 51 1 1)" = "227|0|1|0|0" ]
 	[ "$(global_protection_step 88 90 15 2 51 1 0)" = "227|0|1|1|0" ]

@@ -226,13 +226,14 @@ bounded_pi_step() {
 	proportional=$((error_mc * kp_milli / 1000000))
 	integral=$((new_integral * ki_milli / 1000000000))
 	correction=$((proportional + integral))
-	if [ "$correction" -gt "$correction_limit" ]; then
-		correction=$correction_limit
-		[ "$error_mc" -gt 0 ] && new_integral=$integral_mc_s
-	elif [ "$correction" -lt "$((0 - correction_limit))" ]; then
-		correction=$((0 - correction_limit))
-		[ "$error_mc" -lt 0 ] && new_integral=$integral_mc_s
+	negative_limit=$((0 - correction_limit))
+	if { [ "$correction" -gt "$correction_limit" ] && [ "$error_mc" -gt 0 ]; } ||
+		{ [ "$correction" -lt "$negative_limit" ] && [ "$error_mc" -lt 0 ]; }; then
+		new_integral=$integral_mc_s
+		correction=$((proportional + new_integral * ki_milli / 1000000000))
 	fi
+	[ "$correction" -gt "$correction_limit" ] && correction=$correction_limit
+	[ "$correction" -lt "$negative_limit" ] && correction=$negative_limit
 	printf '%s|%s\n' "$correction" "$new_integral"
 }
 
@@ -251,9 +252,15 @@ target_drive_step() {
 	in_range "$feedforward_pwm" 0 255 && in_range "$minimum_pwm" 0 255 && in_range "$maximum_pwm" 1 255 || return 1
 	[ "$minimum_pwm" -le "$maximum_pwm" ] || return 1
 	case "$freeze_integral" in 0 | 1) ;; *) return 1 ;; esac
+	# The feed-forward stop zone takes precedence over PI and the running floor.
+	[ "$feedforward_pwm" -eq 0 ] && freeze_integral=1
 	result=$(bounded_pi_step "$error_mc" "$integral_mc_s" "$delta_seconds" "$kp_milli" "$ki_milli" "$integral_limit" "$correction_limit" "$freeze_integral") || return 1
 	correction=${result%%|*}
 	next_integral=${result#*|}
+	if [ "$feedforward_pwm" -eq 0 ]; then
+		printf '0|%s|0\n' "$next_integral"
+		return 0
+	fi
 	requested=$((feedforward_pwm + correction))
 	if [ "$freeze_integral" = 0 ] && { { [ "$requested" -gt "$maximum_pwm" ] && [ "$error_mc" -gt 0 ]; } || { [ "$requested" -lt "$minimum_pwm" ] && [ "$error_mc" -lt 0 ]; }; }; then
 		result=$(bounded_pi_step "$error_mc" "$integral_mc_s" "$delta_seconds" "$kp_milli" "$ki_milli" "$integral_limit" "$correction_limit" 1) || return 1
