@@ -204,3 +204,31 @@ EOF
 	run protection_dispatch_step 0 90 90 15 5 51 0 1 0 8
 	[ "$status" -ne 0 ]
 }
+
+@test "target drive and protection compose when their thresholds are equal" {
+	# Use a target-mode cap below full speed to distinguish the two requests.
+	feedforward=$(target_drive_pwm 90 90 15 5 0 51 200)
+	mode=$(target_drive_step "$feedforward" 0 2000 2 1000 1000000 10000000 30 51 200)
+	[ "${mode%%|*}" = 200 ]
+	protection=$(protection_dispatch_step "${mode%%|*}" 90 90 15 5 51 170 0 1 0)
+	[ "$protection" = "255|protection_lock|1|1|0|1" ]
+
+	# A cooler control sensor must not lower the protected safety request.
+	feedforward=$(target_drive_pwm 85 90 15 5 0 51 200)
+	mode=$(target_drive_step "$feedforward" -5000 2000 2 1000 1000000 10000000 30 51 200 1)
+	[ "$mode" = "147|2000|-3" ]
+	[ "$(protection_dispatch_step "${mode%%|*}" 86 90 15 5 51 255 1 1 1)" = "255|protection_lock|1|1|0|1" ]
+	[ "$(protection_dispatch_step "${mode%%|*}" 85 90 15 5 51 255 1 1 1)" = "219|protection_ramp|0|1|0|1" ]
+
+	# Once the safety sensor leaves the acceleration range, mode control resumes.
+	feedforward=$(target_drive_pwm 74 90 15 5 0 51 200)
+	mode=$(target_drive_step "$feedforward" -16000 2000 2 1000 1000000 10000000 30 51 200 1)
+	[ "$mode" = "51|2000|-14" ]
+	[ "$(protection_dispatch_step "${mode%%|*}" 74 90 15 5 51 219 0 1 1)" = "51|mode|0|0|0|1" ]
+
+	# After release, resume from the retained integral with one normal sample.
+	feedforward=$(target_drive_pwm 74 90 15 5 51 90 200)
+	mode=$(target_drive_step "$feedforward" -16000 2000 2 1000 100000 10000000 30 51 200)
+	[ "$mode" = "63|-30000|-19" ]
+	[ "$(protection_dispatch_step "${mode%%|*}" 74 90 15 5 51 51 0 0 1)" = "63|mode|0|0|0|1" ]
+}

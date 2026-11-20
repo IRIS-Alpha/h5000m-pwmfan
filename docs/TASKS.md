@@ -30,7 +30,8 @@
 - [x] Confirm and test target temperature, response interval, and transition-width limits, including zero-degree onset and automatic width compression.
 - [x] Verify that the target-drive controller preserves 0% below the response and recomputes PI correction after discarding saturated integration.
 - [x] Verify offline protection dispatch with output from any mode, including off, startup boost, repeated lock cycles, a per-cycle count, and fault handling. Check with `STRICT=1 sh tools/check.sh`.
-- [ ] Connect target-drive state and protection dispatch in a simulated controller cycle, including PI freeze and recovery, timing, and control source.
+- [x] Exercise target drive and protection together in a simulated temperature sequence. Verify equal thresholds, 100% override, integral freeze and resume, and the reported control source.
+- [ ] Wire automatic PI freeze and recovery, control timing, and source reporting into the controller after the runtime ownership audit.
 - [ ] Maintain protection history for the 24-hour count, cumulative count, most recent trigger, and cycle peak.
 - [ ] Gate live PWM/thermal integration on reviewed runtime evidence and a device rollback procedure.
 - [ ] Build and validate IPK with the OWT2510 matching ImmortalWrt buildroot/SDK.
@@ -71,3 +72,4 @@
 - 2026-11-20: Recorded the commit rule for confirmed requirements. The response interval and transition width update is in `5409bd0`.
 - 2026-11-20: Verified the target-drive stop zone and PI recovery offline. A 0% feed-forward request stays at 0% before protection is applied. When PI discards an integral update at saturation, the correction is recalculated from the retained state. The strict suite passed all 18 tests.
 - 2026-11-20: Verified offline dispatch from 0% through protection boost, ramp, lock, exact release, and relock. Invalid sensor readings or control inputs request full speed without recording a temperature event. The step returns one cumulative count, with history and persistence tracked separately.
+- 2026-11-20: Simulated equal target and protection thresholds across lock, release, return to mode control, and the first active PI sample. The test supplies the freeze signal explicitly. The checks passed with 22 Bats tests.
