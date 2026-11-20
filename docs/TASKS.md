@@ -1,12 +1,20 @@
 # Project task tracker
 
-## Active task block
+## Completed task block: PI composition
 
 - Goal: compose target-drive feed-forward PWM with bounded PI correction in a deterministic offline helper.
 - Expected changes: optional integral freeze in the PI helper; output clamping with anti-windup when saturation is driven further by the current error; focused Bats coverage.
 - Verification: `shfmt`, `STRICT=1 sh tools/check.sh`, and `git diff --check`.
 - Acceptance: the helper returns bounded PWM, correction, and integral state; protected/frozen calls preserve the integral; saturation does not accumulate integral in the saturating direction.
 - Status: complete; PI composition, integral freeze, saturation, and anti-windup cases pass offline tests.
+
+## Completed task block: global protection boundaries
+
+- Goal: verify global temperature protection boundary transitions and invalid-input handling offline.
+- Expected changes: focused Bats cases and task log; no PWM service or device changes.
+- Verification: `shfmt`, `STRICT=1 sh tools/check.sh`, and `git diff --check`.
+- Acceptance: acceleration onset, threshold lock, exact release hysteresis, equal target/threshold, and invalid configuration all have deterministic assertions.
+- Status: complete; all declared global-protection transition and validation cases pass offline.
 
 ## Work queue
 
@@ -55,3 +63,5 @@
 - 2026-11-20: Implemented and tested pure feed-forward/blend interpolation, bounded PI anti-windup, and global protection transition helpers. These are not connected to PWM writes; target-mode output anchors, global ownership arbitration, persisted trigger counters, and device/runtime integration remain in the open task block.
 - 2026-11-20: Confirmed target-drive limits: target 80-100°C; response interval minimum 15°C and maximum `T_target` so its onset stays at or above 0°C; transition width 2-10°C (default 5°C), clamped to the available interval. Added tests for the 0°C onset, interval bounds, and automatic width compression.
 - 2026-11-20: Added target-drive composition over feed-forward and bounded PI, including explicit integral freeze and anti-windup at final PWM bounds. Strict checks pass with 17 Bats tests; runtime integration remains gated on read-only ownership evidence.
+- 2026-11-20: Read-only router SSH audit was attempted with the configured user and host-key acceptance; the router returned `Permission denied (publickey,password)`. Runtime ownership remains blocked. Continued with independent offline global-protection boundary tests; no device writes or service stops were attempted.
+- 2026-11-20: Added deterministic coverage for global protection at acceleration onset, threshold lock, exact release hysteresis, lock release while still in the ramp, equal threshold/target, and invalid states/configuration.

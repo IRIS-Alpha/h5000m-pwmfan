@@ -151,6 +151,14 @@ setup() {
 	[ "$(global_protection_step 90 90 15 5 51 0 1)" = "255|1|1|0|1" ]
 	[ "$(global_protection_step 89 90 15 5 51 1 1)" = "255|1|1|0|0" ]
 	[ "$(global_protection_step 85 90 15 5 51 1 1)" = "187|0|1|0|0" ]
+	[ "$(global_protection_step 75 90 15 5 51 0 0)" = "51|0|1|1|0" ]
+	[ "$(global_protection_step 100 100 15 2 0 0 0)" = "255|1|1|1|1" ]
+	[ "$(global_protection_step 88 90 15 2 51 1 1)" = "227|0|1|0|0" ]
+	[ "$(global_protection_step 88 90 15 2 51 1 0)" = "227|0|1|1|0" ]
 	run global_protection_step 80 90 14 5 51 0 0
+	[ "$status" -ne 0 ]
+	run global_protection_step 80 90 15 1 51 0 0
+	[ "$status" -ne 0 ]
+	run global_protection_step 80 90 15 5 51 2 0
 	[ "$status" -ne 0 ]
 }
