@@ -11,6 +11,7 @@
 ## Decisions and Coordination
 
 - Add decisions to formal requirements only after they are confirmed. Keep unresolved proposals in a clearly labeled discussion section.
+- Commit each confirmed requirements update after verification. Use judgment about when to commit other changes.
 - Confirm material disagreements about behavior, safety policy, or user-configurable parameter ranges promptly; do not silently turn an unresolved proposal into a requirement.
 - Before assigning work to another agent, state the concrete value of delegation and the independent result it is expected to produce. Do not delegate when parallel work has no meaningful benefit.
 
