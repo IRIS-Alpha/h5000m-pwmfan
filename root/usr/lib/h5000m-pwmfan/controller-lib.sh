@@ -312,3 +312,57 @@ global_protection_step() {
 	fi
 	printf '%s|%s|%s|%s|%s\n' "$pwm" "$locked" "$active" "$boost" "$lock_event"
 }
+
+# Decide the PWM request for one offline cycle, given the current mode request
+# and the prior protection state. Return pwm|reason|locked|active|boost|count.
+# The caller applies any boost and stores the returned state after the cycle.
+# A rejected prior state must be handled as a control fault by the caller.
+protection_dispatch_step() (
+	mode_pwm=$1
+	safety_temp=$2
+	threshold=$3
+	radius=$4
+	release=$5
+	running_min=$6
+	previous_pwm=$7
+	was_locked=$8
+	was_active=$9
+	count=${10}
+	case "$was_locked:$was_active" in 0:0 | 0:1 | 1:1) ;; *) return 1 ;; esac
+	in_range "$count" 0 2147483647 || return 1
+
+	if ! valid_temp_c "$safety_temp"; then
+		printf '255|invalid_sensor|%s|%s|0|%s\n' "$was_locked" "$was_active" "$count"
+		return 0
+	fi
+	if ! in_range "$mode_pwm" 0 255 || ! in_range "$running_min" 0 255 || ! in_range "$previous_pwm" 0 255 ||
+		! protection=$(global_protection_step "$safety_temp" "$threshold" "$radius" "$release" "$mode_pwm" "$was_locked" "$was_active"); then
+		printf '255|invalid_control|%s|%s|0|%s\n' "$was_locked" "$was_active" "$count"
+		return 0
+	fi
+	IFS='|' read -r pwm locked active boost lock_event <<EOF
+$protection
+EOF
+
+	reason=mode
+	if [ "$locked" = 1 ]; then
+		reason=protection_lock
+		# The locked output is already full speed. Request it immediately.
+		boost=0
+	elif [ "$boost" = 1 ] || [ "$pwm" -gt "$mode_pwm" ]; then
+		reason=protection_ramp
+	fi
+	if [ "$pwm" -gt 0 ] || [ "$active" = 1 ]; then
+		[ "$pwm" -ge "$running_min" ] || pwm=$running_min
+	fi
+	# Protection already signals its own boost on entry, even at a 0% floor.
+	if [ "$active" = 0 ] && [ "$pwm" -gt 0 ] && [ "$previous_pwm" -eq 0 ]; then
+		boost=1
+	fi
+	if [ "$lock_event" = 1 ] && [ "$count" -lt 2147483647 ]; then
+		# Strip leading zeros so shell arithmetic treats the counter as decimal.
+		count=${count#"${count%%[!0]*}"}
+		count=$((${count:-0} + 1))
+	fi
+	printf '%s|%s|%s|%s|%s|%s\n' "$pwm" "$reason" "$locked" "$active" "$boost" "$count"
+)

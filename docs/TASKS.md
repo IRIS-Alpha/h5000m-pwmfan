@@ -29,7 +29,9 @@
 - [x] Add deterministic pure helpers for target-drive interpolation/blending, bounded PI anti-windup, and global-protection transitions with offline boundary tests.
 - [x] Confirm and test target temperature, response interval, and transition-width limits, including zero-degree onset and automatic width compression.
 - [x] Verify that the target-drive controller preserves 0% below the response and recomputes PI correction after discarding saturated integration.
-- [ ] Complete offline arbitration tests for combined target drive and global protection, including startup boost, repeated lock cycles, counters, and fault handling.
+- [x] Verify offline protection dispatch with output from any mode, including off, startup boost, repeated lock cycles, a per-cycle count, and fault handling. Check with `STRICT=1 sh tools/check.sh`.
+- [ ] Connect target-drive state and protection dispatch in a simulated controller cycle, including PI freeze and recovery, timing, and control source.
+- [ ] Maintain protection history for the 24-hour count, cumulative count, most recent trigger, and cycle peak.
 - [ ] Gate live PWM/thermal integration on reviewed runtime evidence and a device rollback procedure.
 - [ ] Build and validate IPK with the OWT2510 matching ImmortalWrt buildroot/SDK.
 - [x] Implement one-page LuCI status/control view, ACL/menu, quick dispatch, UCI settings, and zh-Hans translation package.
@@ -68,3 +70,4 @@
 - 2026-11-20: Added deterministic coverage for global protection at acceleration onset, threshold lock, exact release hysteresis, lock release while still in the ramp, equal threshold/target, and invalid states/configuration.
 - 2026-11-20: Recorded the commit rule for confirmed requirements. The response interval and transition width update is in `5409bd0`.
 - 2026-11-20: Verified the target-drive stop zone and PI recovery offline. A 0% feed-forward request stays at 0% before protection is applied. When PI discards an integral update at saturation, the correction is recalculated from the retained state. The strict suite passed all 18 tests.
+- 2026-11-20: Verified offline dispatch from 0% through protection boost, ramp, lock, exact release, and relock. Invalid sensor readings or control inputs request full speed without recording a temperature event. The step returns one cumulative count, with history and persistence tracked separately.

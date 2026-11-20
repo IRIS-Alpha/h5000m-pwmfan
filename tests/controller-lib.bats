@@ -167,3 +167,40 @@ setup() {
 	run global_protection_step 80 90 15 5 51 2 0
 	[ "$status" -ne 0 ]
 }
+
+@test "offline dispatch keeps stop and running floor distinct and signals startup" {
+	[ "$(protection_dispatch_step 0 74 90 15 5 51 0 0 0 0)" = "0|mode|0|0|0|0" ]
+	[ "$(protection_dispatch_step 10 74 90 15 5 51 0 0 0 0)" = "51|mode|0|0|1|0" ]
+	[ "$(protection_dispatch_step 51 75 90 15 5 51 51 0 0 0)" = "51|protection_ramp|0|1|1|0" ]
+	[ "$(protection_dispatch_step 0 75 90 15 5 51 0 0 0 0)" = "51|protection_ramp|0|1|1|0" ]
+	[ "$(protection_dispatch_step 0 76 90 15 5 51 51 0 1 0)" = "51|protection_ramp|0|1|0|0" ]
+	[ "$(protection_dispatch_step 0 75 90 15 5 0 0 0 0 0)" = "0|protection_ramp|0|1|1|0" ]
+	[ "$(protection_dispatch_step 0 76 90 15 5 0 0 0 1 0)" = "17|protection_ramp|0|1|0|0" ]
+}
+
+@test "offline dispatch overrides off, counts once per lock, and releases at the boundary" {
+	lock=$(protection_dispatch_step 0 90 90 15 5 51 0 0 0 0)
+	[ "$lock" = "255|protection_lock|1|1|0|1" ]
+	IFS='|' read -r pwm _ locked active _ count <<EOF
+$lock
+EOF
+	held=$(protection_dispatch_step 0 86 90 15 5 51 "$pwm" "$locked" "$active" "$count")
+	[ "$held" = "255|protection_lock|1|1|0|1" ]
+	IFS='|' read -r pwm _ locked active _ count <<EOF
+$held
+EOF
+	released=$(protection_dispatch_step 0 85 90 15 5 51 "$pwm" "$locked" "$active" "$count")
+	[ "$released" = "170|protection_ramp|0|1|0|1" ]
+	IFS='|' read -r pwm _ locked active _ count <<EOF
+$released
+EOF
+	[ "$(protection_dispatch_step 0 90 90 15 5 51 "$pwm" "$locked" "$active" "$count")" = "255|protection_lock|1|1|0|2" ]
+}
+
+@test "offline dispatch requests full speed on faults without inventing a heat event" {
+	[ "$(protection_dispatch_step 0 bad 90 15 5 51 255 1 1 8)" = "255|invalid_sensor|1|1|0|8" ]
+	[ "$(protection_dispatch_step bad 90 90 15 5 51 0 0 0 8)" = "255|invalid_control|0|0|0|8" ]
+	[ "$(protection_dispatch_step 0 90 90 15 1 51 0 0 0 8)" = "255|invalid_control|0|0|0|8" ]
+	run protection_dispatch_step 0 90 90 15 5 51 0 1 0 8
+	[ "$status" -ne 0 ]
+}
