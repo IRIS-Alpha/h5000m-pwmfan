@@ -232,3 +232,41 @@ EOF
 	[ "$mode" = "63|-30000|-19" ]
 	[ "$(protection_dispatch_step "${mode%%|*}" 74 90 15 5 51 51 0 0 1)" = "63|mode|0|0|0|1" ]
 }
+
+@test "protection history updates a cycle peak and expires old events from the 24-hour count" {
+	newline='
+'
+	first=$(protection_dispatch_step 0 90 90 15 5 51 0 0 0 0)
+	result=$(protection_history_step 100000 90 0 "$first" '')
+	[ "$result" = "1|1|100000|90
+100000|90" ]
+	held=$(protection_dispatch_step 0 94 90 15 5 51 255 1 1 1)
+	result=$(protection_history_step 100010 94 1 "$held" "${result#*"$newline"}")
+	[ "$result" = "1|1|100000|94
+100000|94" ]
+
+	# After a release and new lock exactly 24 hours later, the first event
+	# remains in the cumulative count only.
+	relock=$(protection_dispatch_step 0 91 90 15 5 51 0 0 0 1)
+	result=$(protection_history_step 186400 91 0 "$relock" "${result#*"$newline"}")
+	[ "$result" = "1|2|186400|91
+186400|91" ]
+	fault=$(protection_dispatch_step 0 bad 90 15 5 51 255 1 1 2)
+	result=$(protection_history_step 272800 bad 1 "$fault" "${result#*"$newline"}")
+	[ "$result" = "0|2|186400|91
+186400|91" ]
+}
+
+@test "protection history keeps multiple recent cycles and rejects invalid stored rows" {
+	previous='100000|94
+110000|91'
+	dispatch=$(protection_dispatch_step 0 93 90 15 5 51 0 0 0 7)
+	[ "$(protection_history_step 120000 93 0 "$dispatch" "$previous")" = "3|8|120000|93
+100000|94
+110000|91
+120000|93" ]
+	run protection_history_step 120000 93 0 "$dispatch" '120001|92'
+	[ "$status" -ne 0 ]
+	run protection_history_step 120000 93 0 "$dispatch" '110000|bad'
+	[ "$status" -ne 0 ]
+}

@@ -366,3 +366,67 @@ EOF
 	fi
 	printf '%s|%s|%s|%s|%s|%s\n' "$pwm" "$reason" "$locked" "$active" "$boost" "$count"
 )
+
+# Record a protection dispatch result in a timestamp|peak_c history. The caller
+# passes the previous lock state and the rows from the prior result. The first
+# output line is count_24h|cumulative_count|last_trigger|last_cycle_peak.
+protection_history_step() (
+	now=$1
+	safety_temp=$2
+	was_locked=$3
+	dispatch=$4
+	history=$5
+	in_range "$now" 0 9999999999 || return 1
+	case "$was_locked" in 0 | 1) ;; *) return 1 ;; esac
+	IFS='|' read -r _ reason locked _ _ count <<EOF
+$dispatch
+EOF
+	in_range "$count" 0 2147483647 || return 1
+	case "$reason:$locked" in
+	protection_lock:1) valid_temp_c "$safety_temp" || return 1 ;;
+	mode:0 | protection_ramp:0 | invalid_sensor:0 | invalid_sensor:1 | invalid_control:0 | invalid_control:1) safety_temp=0 ;;
+	*) return 1 ;;
+	esac
+
+	printf '%s\n' "$history" | awk -F '|' -v now="$now" -v temp="$safety_temp" \
+		-v update="$reason" -v prior="$was_locked" -v total="$count" '
+		BEGIN { now += 0 }
+		NF == 0 && NR == 1 { next }
+		NF != 2 || $1 !~ /^[0-9]+$/ || $2 !~ /^-?[0-9]+$/ ||
+			$1 + 0 > now || (seen && $1 + 0 < last) || $2 + 0 < -40 || $2 + 0 > 150 {
+			invalid = 1
+			exit 1
+		}
+		{
+			# Hold the newest row separately so its peak can be updated.
+			if (seen) retain_recent(last, peak)
+			last = $1 + 0
+			peak = $2 + 0
+			seen = 1
+		}
+		function retain_recent(timestamp, temperature) {
+			if (timestamp > now - 86400) {
+				rows = rows sprintf("%.0f|%d\n", timestamp, temperature)
+				recent++
+			}
+		}
+		END {
+			if (invalid || (prior && !seen)) exit 1
+			if (update == "protection_lock") {
+				if (!prior) {
+					if (seen) retain_recent(last, peak)
+					last = now + 0
+					peak = temp + 0
+					seen = 1
+				} else if (temp + 0 > peak) {
+					peak = temp + 0
+				}
+			}
+			if (!seen) {
+				printf "0|%d|--|--\n", total
+				exit
+			}
+			if (last > now - 86400) recent++
+			printf "%d|%d|%.0f|%d\n%s%.0f|%d\n", recent, total, last, peak, rows, last, peak
+		}'
+)
