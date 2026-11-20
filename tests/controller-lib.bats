@@ -376,3 +376,77 @@ EOF
 	printf '%s\n' "$output" | grep -Fxq 'state=running'
 	printf '%s\n' "$output" | grep -Fxq 'protection_history_state=unavailable'
 }
+
+@test "V3 manual curves require six rising temperatures and nondecreasing bounded output" {
+	curve_validate '30:0,40:51,50:51,60:140,70:200,80:255' 51 255 6 100
+	run curve_validate '30:0,40:30,50:51,60:140,70:200,80:255' 51 255 6 100
+	[ "$status" -ne 0 ]
+	run curve_validate '30:0,40:51,50:51,60:140,70:130,80:255' 51 255 6 100
+	[ "$status" -ne 0 ]
+	run curve_validate '30:0,40:51,50:51,60:140,70:200' 51 255 6 100
+	[ "$status" -ne 0 ]
+	[ "$(curve_value '30:51,40:81' -8)" = 51 ]
+}
+
+@test "shared temperature history retains four stable sources and skips stale samples" {
+	file="$BATS_TEST_TMPDIR/temperatures"
+	temperature_history_record "$file" 30000 'cpu|cpu-thermal|45100|ok;radio1|mt7996_phy0.1_temp1|80000|ok;radio0|mt7996_phy0.0_temp1|36900|unselected;modem|modem||missing;phy|mdio_bus:01_temp1|40000|ok'
+	temperature_history_record "$file" 51601 'cpu|cpu-thermal|84100|ok;radio1|mt7996_phy0.1_temp1|80000|ok;radio0|mt7996_phy0.0_temp1|36900|unselected;modem|modem||missing;phy|mdio_bus:01_temp1|40000|ok'
+	[ "$(temperature_history_read "$file" 51601)" = '51601|84100|36900||40000' ]
+}
+
+@test "daemon control path preserves the takeover gate and applies protection in an isolated fixture" {
+	fixture=$BATS_TEST_TMPDIR
+	controller="$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan"
+	lib="$BATS_TEST_DIRNAME/../root/usr/lib/h5000m-pwmfan/controller-lib.sh"
+	sed -e '/^\. \/lib\/functions.sh$/d' -e "s|^\. /usr/lib/h5000m-pwmfan/controller-lib.sh$|. '$lib'|" \
+		-e "s|^RUNDIR=/var/run/h5000m-pwmfan$|RUNDIR='$fixture'|" -e '/^case "${1:-status}" in/,$d' \
+		"$controller" >"$fixture/controller"
+	cat >"$fixture/check-cycle" <<'EOF_CYCLE'
+set -eu
+fixture=$1
+. "$fixture/controller"
+config_load() { return 0; }
+config_get() {
+	case "$3" in
+	enabled | kernel_takeover) setting=1 ;;
+	mode) setting=$TEST_MODE ;;
+	kick_ms | down_delay | hysteresis) setting=0 ;;
+	*) setting=$4 ;;
+	esac
+	eval "$1=\$setting"
+}
+collect_sensors() { CONTROL_TEMP_MC=$TEST_TEMP; SAFETY_TEMP_MC=$TEST_TEMP; MODEM_MIN_PWM=0; }
+find_fan() { printf '%s\n' "$fixture/pwm"; }
+read_effective_pwm() { cat "$fixture/pwm"; }
+TEST_MODE=off TEST_TEMP=50000
+printf '51\n' >"$fixture/pwm"
+apply_cycle
+[ "$(cat "$fixture/pwm")" = 51 ]
+grep -Fxq 'reason=takeover_pending' "$STATUS_FILE"
+kernel_takeover_ready() { return 0; }
+apply_cycle
+[ "$(cat "$fixture/pwm")" = 0 ]
+grep -Fxq 'requested_pwm=0' "$STATUS_FILE"
+TEST_TEMP=90000
+apply_cycle
+[ "$(cat "$fixture/pwm")" = 255 ]
+grep -Fxq 'reason=protection_lock' "$STATUS_FILE"
+grep -Fxq 'mode_pwm=0' "$STATUS_FILE"
+grep -Fxq 'v1|1|1' "$HISTORY_FILE"
+TEST_TEMP=84000
+apply_cycle
+grep -Fxq 'v1|0|1' "$HISTORY_FILE"
+TEST_TEMP=missing
+apply_cycle
+[ "$(cat "$fixture/pwm")" = 255 ]
+grep -Fxq 'reason=no_valid_temperature' "$STATUS_FILE"
+TEST_MODE=target TEST_TEMP=65000
+set_pwm() { effective=128; ACTIVE_OWNER=1; OWNER=userspace; }
+apply_cycle
+grep -Fxq 'reason=pwm_mismatch' "$STATUS_FILE"
+grep -Fxq 'owner=unknown' "$STATUS_FILE"
+EOF_CYCLE
+	run sh "$fixture/check-cycle" "$fixture"
+	[ "$status" -eq 0 ]
+}

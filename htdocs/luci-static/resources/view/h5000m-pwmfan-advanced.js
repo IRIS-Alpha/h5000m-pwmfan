@@ -2,6 +2,7 @@
 'require view';
 'require form';
 'require uci';
+'require ui';
 
 var CONFIG = 'h5000m_pwmfan';
 var SECTION = 'main';
@@ -26,9 +27,11 @@ return view.extend({
 		return option;
 	},
 
-	group: function(section, title, description) {
-		var option = section.option(form.DummyValue, '_group_' + title.replace(/\W/g, '_'), title);
+	group: function(section, key, title, description) {
+		var option = section.option(form.DummyValue, '_group_' + key, title);
 		option.default = description;
+		option.title = '';
+		option.optional = true;
 		option.renderWidget = function() {
 			return E('div', { 'class': 'pwmfan-group-heading' }, [ E('h3', {}, title), E('p', {}, description) ]);
 		};
@@ -42,27 +45,42 @@ return view.extend({
 		var map = new form.Map(CONFIG, _('Advanced fan settings'));
 		var section = map.section(form.NamedSection, SECTION, 'settings');
 		section.anonymous = true;
-		this.group(section, _('Protection'), _('Kernel thermal protection stays enabled. This package does not change CPU passive, hot, or critical trips.'));
+		this.group(section, 'kernel', _('Kernel protection'), _('Takeover applies to fan control between −20 °C and 100 °C. Kernel thermal control above 100 °C remains active.'));
+		var takeover = section.option(form.Flag, 'kernel_takeover', _('Take over kernel protection'));
+		takeover.default = '0'; takeover.rmempty = false;
+		takeover.readonly = true;
+		takeover.description = _('Hardware verification is pending.');
 		var enabled = section.option(form.Flag, 'enabled', _('Enable fan control'));
 		enabled.default = '0'; enabled.rmempty = false;
 		enabled.description = _('When disabled, the controller releases PWM ownership and keeps status visible.');
 		this.percentOption(section, 'min_pwm', _('Minimum fan output'), 20);
 		this.percentOption(section, 'max_pwm', _('Maximum curve output'), 100);
-		var safety = section.option(form.Value, 'safety_temp', _('Full-speed temperature threshold (°C)'));
-		safety.datatype = 'range(40,125)'; safety.default = '85'; safety.rmempty = false;
-		this.group(section, _('Downshift hysteresis'), _('Avoid rapid fan-speed drops when temperature fluctuates near a curve point.'));
+		this.group(section, 'temperature', _('Temperature protection'), _('Protection ramps up before the threshold, locks at 100%, and releases below the threshold by the configured hysteresis.'));
+		var safety = section.option(form.Value, 'protection_temp', _('Full-speed temperature threshold (°C)'));
+		safety.datatype = 'range(80,100)'; safety.default = '90'; safety.rmempty = false;
+		safety.validate = function(sectionId, value) {
+			return uci.get(CONFIG, sectionId, 'mode') !== 'target' || Number(value) >= Number(uci.get(CONFIG, sectionId, 'target_temp') || 85) || _('The protection threshold must be at or above the target.');
+		};
+		var radius = section.option(form.Value, 'protection_radius', _('Acceleration radius (°C)'));
+		radius.datatype = 'range(15,140)'; radius.default = '15'; radius.rmempty = false;
+		radius.validate = function(sectionId, value) {
+			return Number(value) <= Number(safety.formvalue(sectionId) || 90) + 40 || _('The acceleration start must be at least −40 °C.');
+		};
+		var release = section.option(form.Value, 'protection_release', _('Release hysteresis (°C)'));
+		release.datatype = 'range(2,100)'; release.default = '5'; release.rmempty = false;
+		this.group(section, 'downshift', _('Downshift hysteresis'), _('Avoid rapid fan-speed drops when temperature fluctuates near a curve point.'));
 		var hysteresis = section.option(form.Value, 'hysteresis', _('Temperature hysteresis (°C)'));
 		hysteresis.datatype = 'range(0,30)'; hysteresis.default = '3'; hysteresis.rmempty = false;
 		var delay = section.option(form.Value, 'down_delay', _('Downshift delay (seconds)'));
 		delay.datatype = 'range(0,600)'; delay.default = '10'; delay.rmempty = false;
-		this.group(section, _('Startup boost'), _('Briefly raise output when the fan starts, then return to the selected curve.'));
+		this.group(section, 'boost', _('Startup boost'), _('Briefly raise output when the fan starts, then return to the selected curve.'));
 		this.percentOption(section, 'kick_pwm', _('Startup boost output'), 100);
 		var kick = section.option(form.Value, 'kick_ms', _('Startup boost duration (milliseconds)'));
 		kick.datatype = 'range(0,5000)'; kick.default = '750'; kick.rmempty = false;
-		this.group(section, _('Fault response'), _('Invalid temperature data or a failed PWM write requests full output.'));
+		this.group(section, 'fault', _('Fault response'), _('Invalid temperature data or a failed PWM write requests full output.'));
 		var failure = section.option(form.DummyValue, '_failsafe', _('Sensor or controller fault'));
 		failure.default = _('Request 100% output; kernel thermal safeguards remain active.');
-		this.group(section, _('Sampling and source'), _('The controller reads one sensor snapshot per control cycle. Sensors not selected for curve control still participate in the safety maximum.'));
+		this.group(section, 'sampling', _('Sampling and source'), _('The controller reads one sensor snapshot per control cycle. Sensors not selected for curve control still participate in the safety maximum.'));
 		var interval = section.option(form.Value, 'poll_interval', _('Control interval (seconds)'));
 		interval.datatype = 'range(1,30)'; interval.default = '2'; interval.rmempty = false;
 		var source = section.option(form.Value, 'sensor_sources', _('Curve sensor source'));
@@ -71,8 +89,23 @@ return view.extend({
 		return map;
 	},
 
+	handleSave: function() {
+		return this.map.save();
+	},
+
+	handleSaveApply: function() {
+		return this.handleSave().then(function() { return uci.apply(); }).then(function() {
+			ui.addNotification(null, E('p', {}, _('Settings applied.')), 'info');
+		});
+	},
+
+	handleReset: function() {
+		return this.map.reset();
+	},
+
 	render: function() {
-		return this.form().render().then(L.bind(function(formNode) {
+		this.map = this.form();
+		return this.map.render().then(L.bind(function(formNode) {
 			return E('div', { 'class': 'pwmfan-advanced' }, [
 				this.style(),
 				E('header', { 'class': 'pwmfan-header' }, [

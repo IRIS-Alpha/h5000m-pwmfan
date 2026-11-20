@@ -39,6 +39,22 @@
 - Acceptance: a fresh reader can restore a valid snapshot. Invalid state and failed updates leave the prior snapshot intact.
 - Status: complete for storage and status reads. The daemon writer remains queued with runtime control integration. The runtime directory retains history across daemon restarts during the same router boot.
 
+## Completed task block: V3 interactive preview
+
+- Goal: render the V3 dashboard and advanced settings using the package views and local Vantage theme assets.
+- Expected changes: six-mode dispatch, fixed-node curve editing, four-channel history, control-source presentation, advanced protection settings, and an offline browser launcher.
+- Verification: test view interaction, English and Chinese strings, and light, dark, and automatic themes across desktop and narrow mobile viewports.
+- Acceptance: a reproducible browser preview, with generated sensor samples and explicit runtime ownership states.
+- Status: complete for the preview. The confirmed V3 rules drive the dashboard and advanced settings; Playwright verified 320/390/1360px layouts and settings interactions.
+
+## Completed task block: V3 controller and history fixture
+
+- Goal: connect the V3 control cycle and bounded temperature history for offline verification.
+- Expected changes: six-mode settings, protection and PI state, status fields, and shared temperature history across page reloads.
+- Verification: strict checks and a fake PWM fixture for off, lock/release, sensor failure, and output mismatch.
+- Acceptance: history can be loaded on a fresh page, unknown control sources stay unknown, and the active path stays gated until hardware ownership is verified.
+- Status: complete for the fixture and preview. Physical takeover, the matching SDK package build, and installation checks remain separate tasks.
+
 ## Work queue
 
 - [x] Establish independent package repository and preserve handoff.
@@ -58,14 +74,15 @@
 - [x] Verify offline protection dispatch with output from any mode, including off, startup boost, repeated lock cycles, a per-cycle count, and fault handling. Check with `STRICT=1 sh tools/check.sh`.
 - [x] Exercise target drive and protection together in a simulated temperature sequence. Verify equal thresholds, 100% override, integral freeze and resume, and the reported control source.
 - [x] Verify automatic PI integral freeze and recovery in the offline target-drive cycle.
-- [ ] Wire automatic PI freeze and recovery, control timing, and source reporting into the controller after the runtime ownership audit.
+- [x] Wire PI freeze and recovery, control timing, and source reporting into the offline controller fixture.
 - [x] Compute protection history offline and verify the 24-hour window, cumulative count, latest trigger, cycle peak, and invalid history handling.
 - [x] Verify the protection history snapshot and status reader in isolation.
-- [ ] Connect the protection history writer to the daemon once the runtime protection cycle is ready.
+- [x] Verify the daemon protection-history writer against an isolated PWM fixture.
 - [ ] Gate live PWM/thermal integration on reviewed runtime evidence and a device rollback procedure.
 - [ ] Build and validate IPK with the OWT2510 matching ImmortalWrt buildroot/SDK.
 - [x] Implement one-page LuCI status/control view, ACL/menu, quick dispatch, UCI settings, and zh-Hans translation package.
-- [ ] Test page under Vantage dark/light/auto and small viewport with Playwright after obtaining the required LuCI 25.12 rootfs and replay mirror.
+- [x] Verify the V3 views under Vantage light/dark/auto and at 320/390/1360px with Playwright and the local firmware assets.
+- [ ] Verify the installed Simplified Chinese translation package with the matching SDK/IPK on the device.
 - [ ] Prepare optional H5000M thermal-map integration patch for later main-project feature.
 - [ ] Hardware validation and rollback procedure.
 - [ ] Select source redistribution license and replace temporary `UNKNOWN` metadata before publishing.
@@ -110,3 +127,4 @@
 - 2026-11-20: Checked upstream Linux v6.18.60 `pwm-fan` source. Successful userspace writes also recalculate `cur_state` from the configured levels. Recorded why `cur_state=0` and `pwm1=51` alone cannot identify the request source.
 - 2026-11-20: The field handoff traced the 20% baseline to a temporary manual request of 51/255 and a local edit to the installed thermal-floor condition while the fan awaits replacement. Corrected the runtime evidence notes and kept device arbitration pending. Offline control verification can continue.
 - 2026-11-20: Implemented protection history snapshots in the runtime directory and connected the read-only LuCI status command. Verified restoration after daemon restart within one boot, 24-hour expiry, unavailable history reporting, and preservation of the previous snapshot when updates fail. Strict checks passed all 30 Bats tests.
+- 2026-11-20: Rendered the V3 LuCI dashboard and advanced settings with Vantage firmware assets and isolated RPC data. Verified six modes, target validation, manual curve editing, history refill and folding, language selection, and advanced-setting persistence in Playwright. Strict checks passed with 33 Bats tests. The production takeover gate remains closed pending runtime verification.

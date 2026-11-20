@@ -10,6 +10,9 @@ umask 077
 CONFIG=h5000m_pwmfan
 SECTION=main
 RUNDIR=/var/run/h5000m-pwmfan
+HISTORY_FILE=$RUNDIR/protection-history
+TEMP_HISTORY_FILE=$RUNDIR/temperature-history
+NEXT_HISTORY_PRUNE=0
 STATUS_FILE=$RUNDIR/status
 PID_FILE=$RUNDIR/pid
 HW_MON_DIR=${H5000M_SYS_CLASS_HWMON:-/sys/class/hwmon}
@@ -19,6 +22,7 @@ ACTIVE_OWNER=0
 FAILSAFE_PWM=255
 MAX_PWM=255
 MODE=balanced
+CURVE=
 OWNER=none
 SENSOR_STATUS=
 CONTROL_TEMP_MC=
@@ -28,12 +32,23 @@ SAFETY_SOURCE=
 LAST_PWM=
 LAST_TEMP=
 LAST_CHANGE=0
+LAST_SAMPLE=
+LAST_MODE=
+PI_INTEGRAL=0
+PROTECTION_LOCKED=0
+PROTECTION_ACTIVE=0
+PROTECTION_COUNT=0
+HISTORY_READY=0
+PROTECTION_PWM=--
+MODE_PWM=--
 
 cfg_number() {
 	value=$1
 	minimum=$2
 	maximum=$3
 	in_range "$value" "$minimum" "$maximum" || return 1
+	value=${value#"${value%%[!0]*}"}
+	value=${value:-0}
 	printf '%s\n' "$value"
 }
 
@@ -129,6 +144,13 @@ write_status() {
 	source=${CONTROL_SOURCE:---}
 	safety_temperature=${SAFETY_TEMP_MC:---}
 	safety_source=${SAFETY_SOURCE:---}
+	stamp=$(date +%s)
+	if [ "$stamp" -ge "$NEXT_HISTORY_PRUNE" ] && [ -f "$TEMP_HISTORY_FILE" ]; then
+		history_tmp="$TEMP_HISTORY_FILE.$$"
+		temperature_history_read "$TEMP_HISTORY_FILE" "$stamp" >"$history_tmp" && mv "$history_tmp" "$TEMP_HISTORY_FILE"
+	fi
+	if [ "$stamp" -ge "$NEXT_HISTORY_PRUNE" ]; then NEXT_HISTORY_PRUNE=$((stamp + 300)); fi
+	temperature_history_record "$TEMP_HISTORY_FILE" "$stamp" "$SENSOR_STATUS" || true
 	tmp="$STATUS_FILE.$$"
 	{
 		printf 'state=%s\n' "$state"
@@ -141,8 +163,10 @@ write_status() {
 		printf 'safety_source=%s\n' "$safety_source"
 		printf 'requested_pwm=%s\n' "$requested"
 		printf 'effective_pwm=%s\n' "$effective"
+		printf 'protection_pwm=%s\n' "$PROTECTION_PWM"
+		printf 'mode_pwm=%s\n' "$MODE_PWM"
 		printf 'sensors=%s\n' "$SENSOR_STATUS"
-		printf 'updated_at=%s\n' "$(date +%s)"
+		printf 'updated_at=%s\n' "$stamp"
 	} >"$tmp" && mv "$tmp" "$STATUS_FILE"
 }
 
@@ -200,8 +224,10 @@ load_settings() {
 	config_load "$CONFIG" || return 1
 	config_get ENABLED "$SECTION" enabled 0
 	[ "$ENABLED" = 0 ] || [ "$ENABLED" = 1 ] || return 1
+	config_get TAKEOVER "$SECTION" kernel_takeover 0
+	[ "$TAKEOVER" = 0 ] || [ "$TAKEOVER" = 1 ] || return 1
 	config_get MODE "$SECTION" mode balanced
-	case "$MODE" in quiet | balanced | performance | custom | manual | kernel) ;; *) return 1 ;; esac
+	case "$MODE" in quiet | balanced | performance | custom | manual | kernel | target | off) ;; *) return 1 ;; esac
 	config_get SENSOR_SELECTION "$SECTION" sensor_sources auto
 	[ -n "$SENSOR_SELECTION" ] || SENSOR_SELECTION=auto
 	raw=
@@ -220,28 +246,116 @@ load_settings() {
 	DOWN_DELAY=$(cfg_number "$raw" 0 600) || return 1
 	config_get raw "$SECTION" poll_interval 2
 	POLL_INTERVAL=$(cfg_number "$raw" 1 30) || return 1
-	config_get raw "$SECTION" safety_temp 85
-	SAFETY_TEMP=$(cfg_number "$raw" 40 125) || return 1
+	config_get DRIVE "$SECTION" drive curve
+	case "$DRIVE" in curve | duty) ;; *) return 1 ;; esac
+	config_get raw "$SECTION" protection_temp 90
+	SAFETY_TEMP=$(cfg_number "$raw" 80 100) || return 1
+	config_get raw "$SECTION" protection_radius 15
+	PROTECTION_RADIUS=$(cfg_number "$raw" 15 "$((SAFETY_TEMP + 40))") || return 1
+	config_get raw "$SECTION" protection_release 5
+	PROTECTION_RELEASE=$(cfg_number "$raw" 2 100) || return 1
 	case "$MODE" in
-	quiet) config_get CURVE "$SECTION" curve_quiet '35:51,45:64,55:96,65:160,75:224,85:255' ;;
-	balanced) config_get CURVE "$SECTION" curve_balanced '30:64,42:96,54:144,66:200,76:240,84:255' ;;
-	performance) config_get CURVE "$SECTION" curve_performance '25:128,40:192,55:224,70:255' ;;
-	custom) config_get CURVE "$SECTION" curve_custom '35:64,45:96,55:144,65:208,78:255' ;;
-	manual)
-		config_get CURVE "$SECTION" curve_manual ''
-		[ -n "$CURVE" ] || config_get CURVE "$SECTION" curve_custom '35:64,45:96,55:144,65:208,78:255'
+	target)
+		config_get raw "$SECTION" target_temp 85
+		TARGET_TEMP=$(cfg_number "$raw" 80 "$SAFETY_TEMP") || return 1
+		config_get raw "$SECTION" response_range 15
+		RESPONSE_RANGE=$(cfg_number "$raw" 15 "$TARGET_TEMP") || return 1
+		config_get raw "$SECTION" transition_width 5
+		TRANSITION_WIDTH=$(cfg_number "$raw" 2 10) || return 1
+		config_get raw "$SECTION" target_idle_pwm 0
+		TARGET_IDLE=$(cfg_number "$raw" 0 "$MAX_PWM") || return 1
 		;;
-	*) CURVE= ;;
+	quiet | balanced | performance)
+		case "$MODE" in
+		quiet)
+			preset='35:51,45:64,55:96,65:160,75:224,85:255'
+			duty=30
+			;;
+		balanced)
+			preset='30:64,42:96,54:144,66:200,76:240,84:255'
+			duty=50
+			;;
+		performance)
+			preset='25:128,34:160,43:192,52:224,61:240,70:255'
+			duty=80
+			;;
+		esac
+		if [ "$DRIVE" = duty ]; then
+			config_get raw "$SECTION" "duty_$MODE" "$duty"
+			DUTY=$(cfg_number "$raw" 0 100) || return 1
+			[ "$((DUTY % 10))" -eq 0 ] || return 1
+		else
+			config_get CURVE "$SECTION" "curve_$MODE" "$preset"
+			curve_validate "$CURVE" || return 1
+		fi
+		;;
+	manual | custom)
+		config_get CURVE "$SECTION" "curve_$MODE" '30:51,40:64,50:96,60:144,70:208,80:255'
+		curve_validate "$CURVE" "$MIN_PWM" "$MAX_PWM" 6 100 || return 1
+		;;
 	esac
-	[ "$MODE" = kernel ] || curve_validate "$CURVE" || return 1
 }
 
 requested_pwm() {
-	value=$(curve_value "$CURVE" "$CONTROL_TEMP_C") || return 1
-	clamp_pwm "$value" "$MIN_PWM" "$MAX_PWM"
+	case "$MODE:$DRIVE" in
+	off:*)
+		printf '0\n'
+		return
+		;;
+	quiet:duty | balanced:duty | performance:duty) value=$(((DUTY * 255 + 50) / 100)) ;;
+	*) value=$(curve_value "$CURVE" "$CONTROL_TEMP_C") || return 1 ;;
+	esac
+	if [ "$value" -eq 0 ]; then printf '0\n'; else clamp_pwm "$value" "$MIN_PWM" "$MAX_PWM"; fi
+}
+
+restore_history() {
+	[ "$HISTORY_READY" = 0 ] || return 0
+	history=$(protection_history_load "$HISTORY_FILE" "$now") || return 1
+	IFS='|' read -r PROTECTION_LOCKED _ PROTECTION_COUNT _ _ <<EOF_HISTORY
+$(printf '%s\n' "$history" | head -n 1)
+EOF_HISTORY
+	PROTECTION_ACTIVE=$PROTECTION_LOCKED
+	HISTORY_READY=1
+}
+
+calculate_request() {
+	previous=${LAST_PWM:-0}
+	if [ "$MODE" = target ]; then
+		idle=$TARGET_IDLE
+		if [ "$idle" -gt 0 ] && [ "$idle" -lt "$MIN_PWM" ]; then idle=$MIN_PWM; fi
+		anchor=$MIN_PWM
+		[ "$idle" -le "$anchor" ] || anchor=$idle
+		feedforward=$(target_drive_pwm "$CONTROL_TEMP_C" "$TARGET_TEMP" "$RESPONSE_RANGE" "$TRANSITION_WIDTH" "$idle" "$anchor" "$MAX_PWM") || return 1
+		MODE_PWM=$feedforward
+		result=$(protected_target_step "$feedforward" "$((CONTROL_TEMP_MC - TARGET_TEMP * 1000))" "$PI_INTEGRAL" "$CYCLE_ELAPSED" 1000 100000 10000000 30 "$MIN_PWM" "$MAX_PWM" \
+			"$SAFETY_TEMP_C" "$SAFETY_TEMP" "$PROTECTION_RADIUS" "$PROTECTION_RELEASE" "$previous" "$PROTECTION_LOCKED" "$PROTECTION_ACTIVE" "$PROTECTION_COUNT") || return 1
+		IFS='|' read -r desired reason locked active boost count PI_INTEGRAL _ <<EOF_TARGET
+$result
+EOF_TARGET
+		dispatch="$desired|$reason|$locked|$active|$boost|$count"
+	else
+		PI_INTEGRAL=0
+		MODE_PWM=$(requested_pwm) || return 1
+		dispatch=$(protection_dispatch_step "$MODE_PWM" "$SAFETY_TEMP_C" "$SAFETY_TEMP" "$PROTECTION_RADIUS" "$PROTECTION_RELEASE" "$MIN_PWM" "$previous" "$PROTECTION_LOCKED" "$PROTECTION_ACTIVE" "$PROTECTION_COUNT") || return 1
+		IFS='|' read -r desired reason locked active boost count <<EOF_DISPATCH
+$dispatch
+EOF_DISPATCH
+	fi
+	if [ "$HISTORY_READY" = 1 ] && ! protection_history_save_step "$HISTORY_FILE" "$now" "$SAFETY_TEMP_C" "$dispatch" >/dev/null; then
+		HISTORY_READY=2
+		logger -t h5000m-pwmfan 'Could not update protection history'
+	fi
+	PROTECTION_LOCKED=$locked PROTECTION_ACTIVE=$active PROTECTION_COUNT=$count
+}
+
+kernel_takeover_ready() {
+	# The V3 preview does not verify an installed kernel handover mechanism.
+	# The controller test supplies an isolated handover against fake sysfs.
+	return 1
 }
 
 apply_cycle() {
+	PROTECTION_PWM=-- MODE_PWM=--
 	if ! load_settings; then
 		MODE=invalid
 		OWNER=none
@@ -250,13 +364,13 @@ apply_cycle() {
 	fi
 	OWNER=none
 	collect_sensors || true
-	if [ "$ENABLED" != 1 ] || [ "$MODE" = kernel ]; then
+	if [ "$ENABLED" != 1 ] || [ "$MODE" = kernel ] || ! kernel_takeover_ready; then
 		was_owner=$ACTIVE_OWNER
 		release_fan
 		[ "$was_owner" = 1 ] && return
 		effective=$(read_effective_pwm)
-		if [ "$MODE" = kernel ]; then
-			write_status kernel_only kernel_owns_fan -- "$effective"
+		if [ "$ENABLED" = 1 ] && [ "$MODE" != kernel ]; then
+			write_status disabled takeover_pending -- "$effective"
 		else
 			write_status disabled not_enabled -- "$effective"
 		fi
@@ -267,29 +381,45 @@ apply_cycle() {
 		write_status fault pwmfan_not_found "$FAILSAFE_PWM" --
 		return
 	fi
-	if [ -z "$CONTROL_TEMP_MC" ]; then
+	if ! valid_temp_mc "$CONTROL_TEMP_MC" || ! valid_temp_mc "$SAFETY_TEMP_MC"; then
 		failsafe no_valid_temperature
 		return
 	fi
 	CONTROL_TEMP_C=$((CONTROL_TEMP_MC / 1000))
 	SAFETY_TEMP_C=$((SAFETY_TEMP_MC / 1000))
-	if [ "$SAFETY_TEMP_C" -ge "$SAFETY_TEMP" ]; then
-		desired=255
-		reason=safety_temperature
-	else
-		desired=$(requested_pwm) || {
-			failsafe invalid_curve
-			return
-		}
-		reason=curve
+	now=$(date +%s)
+	read -r uptime _ </proc/uptime || uptime=0
+	CYCLE_ELAPSED=${POLL_INTERVAL:-2}
+	sample=${uptime%%.*}
+	if [ -n "$LAST_SAMPLE" ]; then
+		CYCLE_ELAPSED=$((sample - LAST_SAMPLE))
+		[ "$CYCLE_ELAPSED" -ge 1 ] || CYCLE_ELAPSED=1
+		[ "$CYCLE_ELAPSED" -le 30 ] || CYCLE_ELAPSED=30
 	fi
+	LAST_SAMPLE=$sample
+	if ! restore_history; then
+		HISTORY_READY=2
+		logger -t h5000m-pwmfan 'Protection history is unavailable'
+	fi
+	if [ "$LAST_MODE" != "$MODE" ]; then PI_INTEGRAL=0; fi
+	LAST_MODE=$MODE
+	if ! calculate_request; then
+		failsafe invalid_control
+		return
+	fi
+	case "$reason" in
+	invalid_sensor | invalid_control)
+		failsafe "$reason"
+		return
+		;;
+	protection_ramp | protection_lock) PROTECTION_PWM=$desired ;;
+	*) PROTECTION_PWM=0 ;;
+	esac
 	if [ "$MODEM_MIN_PWM" -gt "$desired" ]; then
 		desired=$MODEM_MIN_PWM
 		reason=modem_throttle_floor
 	fi
-	if [ "$MODE" = manual ] && [ "$desired" -lt "$MIN_PWM" ]; then desired=$MIN_PWM; fi
-	now=$(date +%s)
-	if [ -n "$LAST_PWM" ] && [ "$desired" -lt "$LAST_PWM" ]; then
+	if [ "$MODE" != off ] && [ "$desired" -gt 0 ] && [ "$active" = 0 ] && [ -n "$LAST_PWM" ] && [ "$desired" -lt "$LAST_PWM" ]; then
 		if [ "$MODE" != manual ] && [ -n "$LAST_TEMP" ] && [ "$CONTROL_TEMP_C" -gt $((LAST_TEMP - HYSTERESIS)) ]; then
 			desired=$LAST_PWM
 			reason=hysteresis_hold
@@ -298,19 +428,23 @@ apply_cycle() {
 			reason=down_delay_hold
 		fi
 	fi
-	if [ "$ACTIVE_OWNER" = 0 ] && [ "$desired" -gt 0 ] && [ "$KICK_PWM" -gt "$desired" ] && [ "$KICK_MS" -gt 0 ]; then
+	if [ "$boost" = 1 ] && { [ "$active" = 1 ] || { [ "$desired" -gt 0 ] && [ "$KICK_PWM" -gt "$desired" ] && [ "$KICK_MS" -gt 0 ]; }; }; then
 		kick=$(clamp_pwm "$KICK_PWM" "$MIN_PWM" "$MAX_PWM") || kick=$MAX_PWM
+		if [ "$active" = 1 ]; then kick=255; fi
 		if ! set_pwm "$kick"; then
 			failsafe startup_kick_write_failed
 			return
 		fi
-		if command -v usleep >/dev/null 2>&1; then usleep "$((KICK_MS * 1000))"; else sleep 1; fi
+		if [ "$active" = 1 ]; then sleep 1; elif command -v usleep >/dev/null 2>&1; then usleep "$((KICK_MS * 1000))"; else sleep 1; fi
 	fi
 	if [ "$desired" != "$LAST_PWM" ]; then LAST_CHANGE=$now; fi
 	if set_pwm "$desired"; then
 		LAST_PWM=$desired
 		LAST_TEMP=$CONTROL_TEMP_C
-		[ "$effective" = "$desired" ] || reason=kernel_or_driver_override
+		if [ "$effective" -ne "$desired" ]; then
+			reason=pwm_mismatch
+			OWNER=unknown
+		elif [ "$active" = 1 ]; then OWNER=protection; fi
 		write_status running "$reason" "$desired" "$effective"
 	else
 		failsafe pwm_write_failed

@@ -2,7 +2,7 @@
 set -eu
 
 case "${1:-}" in
-en | zh_cn) ;;
+auto | en | zh_cn) ;;
 *) exit 2 ;;
 esac
 

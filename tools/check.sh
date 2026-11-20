@@ -46,7 +46,10 @@ if command -v shellcheck >/dev/null 2>&1; then run_shellcheck; fi
 if command -v shfmt >/dev/null 2>&1; then run_shfmt; fi
 if command -v bats >/dev/null 2>&1 && [ -d tests ]; then bats tests; fi
 if command -v msgfmt >/dev/null 2>&1; then msgfmt --check --check-format -o /dev/null po/zh_Hans/h5000m-pwmfan.po; fi
-if command -v node >/dev/null 2>&1; then node --check htdocs/luci-static/resources/view/h5000m-pwmfan.js; fi
+if command -v node >/dev/null 2>&1; then
+	node --check htdocs/luci-static/resources/view/h5000m-pwmfan.js
+	node --check htdocs/luci-static/resources/view/h5000m-pwmfan-advanced.js
+fi
 
 if [ "$strict" = 1 ] && [ "$missing" -ne 0 ]; then
 	printf '%s\n' 'required development tools are missing' >&2

@@ -3,6 +3,11 @@
 . /usr/lib/h5000m-pwmfan/controller-lib.sh
 
 runtime_dir=/var/run/h5000m-pwmfan
+if [ "${1:-}" = temperatures ]; then
+	temperature_history_read "$runtime_dir/temperature-history" "$(date +%s)"
+	exit $?
+fi
+[ "$#" -eq 0 ] || exit 2
 status_file=$runtime_dir/status
 [ -r "$status_file" ] || exit 1
 cat "$status_file" || exit 1

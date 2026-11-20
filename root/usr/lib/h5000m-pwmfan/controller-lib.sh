@@ -66,8 +66,14 @@ record_sensor() {
 	SENSOR_STATUS="${SENSOR_STATUS}${SENSOR_STATUS:+;}${id}|${label}|${value}|${state}"
 }
 
-curve_validate() {
+curve_validate() (
 	curve=$1
+	minimum=${2:-0}
+	maximum=${3:-255}
+	point_count=${4:-0}
+	maximum_temp=${5:-150}
+	set -f
+	case "$curve" in ,* | *, | *,,*) return 1 ;; esac
 	old_ifs=$IFS
 	IFS=,
 	# Intentional splitting: each comma-delimited point becomes one argument.
@@ -75,23 +81,28 @@ curve_validate() {
 	set -- $curve
 	IFS=$old_ifs
 	[ "$#" -ge 2 ] || return 1
+	[ "$point_count" -eq 0 ] || [ "$#" -eq "$point_count" ] || return 1
 	previous_temp=-1
+	previous_pwm=0
 	for point; do
 		case "$point" in *:*) ;; *) return 1 ;; esac
 		temp=${point%%:*}
 		pwm=${point#*:}
 		case "$pwm" in *:*) return 1 ;; esac
-		in_range "$temp" 0 150 || return 1
-		in_range "$pwm" 0 255 || return 1
+		case "$temp:$pwm" in 0[0-9]*:* | *:0[0-9]*) return 1 ;; esac
+		in_range "$temp" 0 "$maximum_temp" || return 1
+		in_range "$pwm" "$previous_pwm" "$maximum" || return 1
+		[ "$pwm" -eq 0 ] || [ "$pwm" -ge "$minimum" ] || return 1
 		[ "$temp" -gt "$previous_temp" ] || return 1
 		previous_temp=$temp
+		previous_pwm=$pwm
 	done
-}
+)
 
 curve_value() {
 	curve=$1
 	target_temp=$2
-	is_uint "$target_temp" || return 1
+	valid_temp_c "$target_temp" || return 1
 	curve_validate "$curve" || return 1
 	old_ifs=$IFS
 	IFS=,
@@ -552,3 +563,33 @@ EOF_DISPATCH
 	printf '%s\n' "$content" >"$tmp" && mv -f -- "$tmp" "$file" || return 1
 	printf '%s\n' "$summary"
 )
+
+# Shared history keeps one compact snapshot per sample. The controller is the
+# only writer. Readers ignore an incomplete final line during an append.
+temperature_history_record() (
+	file=$1 stamp=$2 sensors=$3
+	in_range "$stamp" 1 9999999999 || return 1
+	printf '%s\n' "$sensors" | awk -F ';' -v stamp="$stamp" '
+		{
+			for (i = 1; i <= NF; i++) {
+				split($i, fields, "|")
+				label = tolower(fields[2]); value = fields[3]
+				if (fields[4] !~ /^(ok|unselected)$/ || value !~ /^-?[0-9]+$/ || value + 0 < -40000 || value + 0 > 150000) continue
+				if (label ~ /^(cpu-thermal|cpu_thermal(_temp1)?|cpu)$/ && cpu == "") cpu = value
+				else if (label ~ /^mt7996[-_]phy0[._]0(_temp1)?$/ && radio == "") radio = value
+				else if (label ~ /^(modem|mt5700m)$/ && modem == "") modem = value
+				else if (label ~ /^(mdio_bus|phy)/ && phy == "") phy = value
+			}
+		}
+		END { printf "%s|%s|%s|%s|%s\n", stamp, cpu, radio, modem, phy }
+	' >>"$file"
+)
+
+temperature_history_read() {
+	[ ! -L "$1" ] && [ -f "$1" ] || return 1
+	awk -F '|' -v now="$2" '
+		NF == 5 && $1 ~ /^[0-9]+$/ && $1 + 0 > now - 21600 && $1 + 0 <= now && $1 + 0 > last {
+			print
+			last = $1 + 0
+		}' "$1"
+}

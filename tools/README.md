@@ -24,3 +24,21 @@ Device-tree inspection remains a separate compatibility check because it needs
 the target firmware's DTB and must preserve CPU passive, hot, and critical
 protection.
 
+
+## Vantage preview
+
+Serve the actual package views alongside the LuCI and Vantage assets from an
+extracted firmware root. The launcher uses an isolated in-memory RPC fixture,
+so changes in the preview apply only to that server session.
+
+```sh
+python3 tools/preview.py /path/to/extracted-rootfs --port 8028
+```
+
+Open `http://127.0.0.1:8028/`. The dashboard links to Advanced Settings and
+supports automatic, light, and dark themes. `msgfmt` provides the preview
+translation catalog. The real package uses the standard LuCI translation build.
+
+With Playwright installed, run `node tests/preview.mjs` against a fresh preview
+server. Use `PWMFAN_PREVIEW_URL` to select the server and
+`PWMFAN_PREVIEW_OUTPUT` to save screenshots.

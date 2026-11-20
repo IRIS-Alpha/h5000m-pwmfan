@@ -23,10 +23,10 @@ msgid "Select a ready-to-use policy"
 msgstr "选择控制模式"
 
 msgid "Quiet"
-msgstr "静音"
+msgstr "安静"
 
 msgid "Balanced"
-msgstr "均衡"
+msgstr "平衡"
 
 msgid "Performance"
 msgstr "性能"
@@ -44,7 +44,7 @@ msgid "Off"
 msgstr "关闭"
 
 msgid "Temperature array"
-msgstr "温控阵列"
+msgstr "温度阵列"
 
 msgid "Safety monitors all available sources"
 msgstr "安全保护持续监控全部可用温度源"
@@ -451,3 +451,159 @@ msgstr "内核保护"
 msgid "Selected curve"
 msgstr "当前曲线"
 
+
+msgid "Target drive"
+msgstr "目标驱动"
+
+msgid "5G modem"
+msgstr "5G 模组"
+
+msgid "Automatic"
+msgstr "自动"
+
+msgid "Manual duty request"
+msgstr "手动占空比请求"
+
+msgid "Curve preset"
+msgstr "曲线预设"
+
+msgid "Control method"
+msgstr "生效方式"
+
+msgid "Requested duty"
+msgstr "请求占空比"
+
+msgid "Off requests 0% output. Temperature protection can raise the output."
+msgstr "关闭模式请求 0% 输出，温度保护仍可提高输出。"
+
+msgid "Use a target at or below the protection threshold and a response interval of 15 °C up to the target."
+msgstr "目标温度不得高于保护阈值，响应区间须在 15 °C 至目标温度之间。"
+
+msgid "Target temperature (°C)"
+msgstr "目标温度（°C）"
+
+msgid "Response interval (°C)"
+msgstr "响应区间（°C）"
+
+msgid "Transition width (°C)"
+msgstr "过渡宽度（°C）"
+
+msgid "Apply target"
+msgstr "应用目标"
+
+msgid "Response starts at %s °C · Effective transition %s °C"
+msgstr "从 %s °C 开始响应 · 有效过渡 %s °C"
+
+msgid "Curve has unapplied changes."
+msgstr "曲线有未应用的修改。"
+
+msgid "Saved curve is invalid. Restore six default points to edit."
+msgstr "已保存的曲线无效，请恢复六个默认点后编辑。"
+
+msgid "Select Manual to edit the six curve points."
+msgstr "选择手动后可编辑六个曲线点。"
+
+msgid "%s · Point %s"
+msgstr "%s · 第 %s 点"
+
+msgid "Temperatures must increase and output must stay level or increase. Nonzero output must stay within the running limits."
+msgstr "温度须递增，输出可持平或递增，非零输出须在运行范围内。"
+
+msgid "Output (%)"
+msgstr "输出（%）"
+
+msgid "Restore curve defaults"
+msgstr "恢复默认曲线"
+
+msgid "Kernel control"
+msgstr "内核控制"
+
+msgid "Protection active"
+msgstr "保护响应"
+
+msgid "Not in control"
+msgstr "未接管"
+
+msgid "Plugin"
+msgstr "插件"
+
+msgid "Temperature protection"
+msgstr "温度保护"
+
+msgid "Kernel or driver"
+msgstr "内核或驱动"
+
+msgid "Kernel or driver override"
+msgstr "内核或驱动覆盖"
+
+msgid "Control source"
+msgstr "控制来源"
+
+msgid "Protection output"
+msgstr "保护输出"
+
+msgid "Fan speed"
+msgstr "风扇转速"
+
+msgid "Curve request"
+msgstr "曲线请求"
+
+msgid "Current temperature"
+msgstr "当前温度"
+
+msgid "Curve parameters"
+msgstr "曲线参数"
+
+msgid "Takeover applies to fan control between −20 °C and 100 °C. Kernel thermal control above 100 °C remains active."
+msgstr "接管内核在 −20 °C 到 100 °C 的风扇控制。高于 100 °C 的内核热区控制始终开启。"
+
+msgid "Take over kernel protection"
+msgstr "接管内核保护"
+
+msgid "Hardware verification is pending."
+msgstr "等待实机接管验证。"
+
+msgid "Protection ramps up before the threshold, locks at 100%, and releases below the threshold by the configured hysteresis."
+msgstr "温度保护在阈值前逐步提高输出，到阈值锁定 100%，降至阈值减回差后解除。"
+
+msgid "The protection threshold must be at or above the target."
+msgstr "保护阈值不得低于目标温度。"
+
+msgid "The acceleration start must be at least −40 °C."
+msgstr "加速起点不得低于 −40 °C。"
+
+msgid "Acceleration radius (°C)"
+msgstr "加速半径（°C）"
+
+msgid "Release hysteresis (°C)"
+msgstr "解除回差（°C）"
+
+msgid "Protection history"
+msgstr "温度保护记录"
+
+msgid "Last 24 hours"
+msgstr "近 24 小时"
+
+msgid "Total this boot"
+msgstr "本次开机累计"
+
+msgid "Latest trigger"
+msgstr "最近触发"
+
+msgid "Cycle peak"
+msgstr "周期峰值"
+
+msgid "Fan output"
+msgstr "输出阵列"
+
+msgid "Simulated data"
+msgstr "模拟数据"
+
+msgid "Light"
+msgstr "浅色"
+
+msgid "Dark"
+msgstr "深色"
+
+msgid "Settings applied."
+msgstr "已应用设置。"
