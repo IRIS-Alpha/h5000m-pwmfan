@@ -290,3 +290,89 @@ EOF
 	[ "$(protected_target_step 120 bad 2000 2 1000 1000000 10000000 30 51 200 74 90 15 5 120 0 0 4)" = \
 		"255|invalid_control|0|0|0|4|2000|0" ]
 }
+
+@test "history snapshot restores an active cycle after restart and ages the 24-hour count" {
+	file="$BATS_TEST_TMPDIR/protection-history"
+	[ "$(protection_history_load "$file" 100000)" = '0|0|0|--|--' ]
+	first=$(protection_dispatch_step 0 90 90 15 5 51 0 0 0 0)
+	[ "$(protection_history_save_step "$file" 100000 90 "$first")" = '1|1|100000|90' ]
+	[ "$(stat -c %a "$file")" = 600 ]
+	# Load the state in a fresh shell with no in-memory lock or counter.
+	run sh -c '. "$1"; protection_history_load "$2" 100010' sh "$BATS_TEST_DIRNAME/../root/usr/lib/h5000m-pwmfan/controller-lib.sh" "$file"
+	[ "$status" -eq 0 ]
+	[ "$output" = '1|1|1|100000|90
+100000|90' ]
+	held=$(protection_dispatch_step 0 97 90 15 5 51 255 1 1 1)
+	[ "$(protection_history_save_step "$file" 100010 97 "$held")" = '1|1|100000|97' ]
+	[ "$(protection_history_load "$file" 186400)" = '1|0|1|100000|97
+100000|97' ]
+	released=$(protection_dispatch_step 0 85 90 15 5 51 255 1 1 1)
+	[ "$(protection_history_save_step "$file" 186400 85 "$released")" = '0|1|100000|97' ]
+	relock=$(protection_dispatch_step 0 91 90 15 5 51 200 0 1 1)
+	[ "$(protection_history_save_step "$file" 186401 91 "$relock")" = '1|2|186401|91' ]
+	[ "$(protection_history_load "$file" 186401)" = '1|1|2|186401|91
+186401|91' ]
+}
+
+@test "history snapshot preserves the previous file on stale dispatch and clock rollback" {
+	file="$BATS_TEST_TMPDIR/protection-history"
+	printf '%s\n' 'v1|1|1' '100000|93' >"$file"
+	before=$(cat "$file")
+	run protection_history_save_step "$file" 100010 95 '255|protection_lock|1|1|0|2'
+	[ "$status" -ne 0 ]
+	run protection_history_save_step "$file" 99999 95 '255|protection_lock|1|1|0|1'
+	[ "$status" -ne 0 ]
+	[ "$(cat "$file")" = "$before" ]
+
+	# Simulate a failed atomic replacement without relying on runner permissions.
+	mv() { return 1; }
+	run protection_history_save_step "$file" 100010 95 '255|protection_lock|1|1|0|1'
+	[ "$status" -ne 0 ]
+	[ "$(cat "$file")" = "$before" ]
+	set -- "$file".*
+	[ "$1" = "$file.*" ]
+}
+
+@test "history snapshot rejects malformed persisted state without resetting counters" {
+	file="$BATS_TEST_TMPDIR/protection-history"
+	for broken in 'v1|1|08' 'v1|1|0' 'v1|1|1|' 'v2|1|1'; do
+		printf '%s\n' "$broken" '100000|93' >"$file"
+		before=$(cat "$file")
+		run protection_history_save_step "$file" 100010 95 '255|protection_lock|1|1|0|1'
+		[ "$status" -ne 0 ]
+		[ "$(cat "$file")" = "$before" ]
+	done
+}
+
+@test "status command reads history when available and preserves fan status when it is damaged" {
+	runtime_dir=$BATS_TEST_TMPDIR
+	status_command="$runtime_dir/status-command"
+	history_file="$runtime_dir/protection-history"
+	lib="$BATS_TEST_DIRNAME/../root/usr/lib/h5000m-pwmfan/controller-lib.sh"
+	# Route the installed entry point to an isolated status directory and library.
+	sed -e "s|^\. /usr/lib/h5000m-pwmfan/controller-lib.sh$|. '$lib'|" \
+		-e "s|^runtime_dir=/var/run/h5000m-pwmfan$|runtime_dir='$runtime_dir'|" \
+		"$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-status" >"$status_command"
+	printf '%s\n' 'state=running' >"$runtime_dir/status"
+	run sh "$status_command"
+	[ "$status" -eq 0 ]
+	printf '%s\n' "$output" | grep -Fxq 'state=running'
+	printf '%s\n' "$output" | grep -Fxq 'protection_history_state=missing'
+
+	now=$(date +%s)
+	printf 'v1|0|2\n%s|95\n' "$((now - 30))" >"$history_file"
+	run sh "$status_command"
+	[ "$status" -eq 0 ]
+	printf '%s\n' "$output" | grep -Fxq 'protection_history_state=available'
+	printf '%s\n' "$output" | grep -Fxq 'protection_locked=0'
+	printf '%s\n' "$output" | grep -Fxq 'protection_count_24h=1'
+	printf '%s\n' "$output" | grep -Fxq 'protection_count_total=2'
+	printf '%s\n' "$output" | grep -Fxq "protection_last_trigger=$((now - 30))"
+	printf '%s\n' "$output" | grep -Fxq 'protection_last_cycle_peak_c=95'
+
+	printf 'bad\n' >"$history_file"
+	run sh "$status_command"
+	[ "$status" -eq 0 ]
+	printf '%s\n' "$output" | grep -Fxq 'state=running'
+	printf '%s\n' "$output" | grep -Fxq 'protection_history_state=unavailable'
+}

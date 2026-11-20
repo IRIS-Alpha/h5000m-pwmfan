@@ -1,7 +1,29 @@
 #!/bin/sh
-status_file=/var/run/h5000m-pwmfan/status
+# shellcheck source=root/usr/lib/h5000m-pwmfan/controller-lib.sh
+. /usr/lib/h5000m-pwmfan/controller-lib.sh
+
+runtime_dir=/var/run/h5000m-pwmfan
+status_file=$runtime_dir/status
 [ -r "$status_file" ] || exit 1
-cat "$status_file"
+cat "$status_file" || exit 1
+history_file=$runtime_dir/protection-history
+if [ -e "$history_file" ] || [ -L "$history_file" ]; then
+	if history=$(protection_history_load "$history_file" "$(date +%s)"); then
+		IFS='|' read -r locked count_24h total last_trigger peak <<EOF_HISTORY
+$(printf '%s\n' "$history" | head -n 1)
+EOF_HISTORY
+		printf 'protection_history_state=available\n'
+		printf 'protection_locked=%s\n' "$locked"
+		printf 'protection_count_24h=%s\n' "$count_24h"
+		printf 'protection_count_total=%s\n' "$total"
+		printf 'protection_last_trigger=%s\n' "$last_trigger"
+		printf 'protection_last_cycle_peak_c=%s\n' "$peak"
+	else
+		printf 'protection_history_state=unavailable\n'
+	fi
+else
+	printf 'protection_history_state=missing\n'
+fi
 if [ -r /usr/lib/lua/luci/i18n/h5000m-pwmfan.zh-cn.lmo ]; then
 	printf 'language_zh_available=1\n'
 else

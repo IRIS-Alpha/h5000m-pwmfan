@@ -472,3 +472,83 @@ EOF_PI
 		"$minimum" "$previous_pwm" "$was_locked" "$was_active" "$count") || return 1
 	printf '%s|%s|%s\n' "$dispatch" "$next_integral" "$correction"
 )
+
+# Print the stored lock flag and summary, followed by retained timestamp|peak
+# rows. Missing files represent a fresh history. Invalid snapshots fail closed
+# so a later update cannot replace the existing counters with an empty history.
+protection_history_load() (
+	file=$1 now=$2
+	locked=0 total=0 rows=
+	[ ! -L "$file" ] || return 1
+	if [ -e "$file" ]; then
+		[ -f "$file" ] || return 1
+		{
+			IFS= read -r header || return 1
+			IFS='|' read -r version locked total <<EOF_HEADER
+$header
+EOF_HEADER
+			[ "$header" = "v1|$locked|$total" ] && [ "$version" = v1 ] || return 1
+			case "$total" in 0[0-9]*) return 1 ;; esac
+			rows=$(cat) || return 1
+		} <"$file" || return 1
+		if [ -n "$rows" ]; then
+			row_count=$(printf '%s\n' "$rows" | wc -l) || return 1
+			in_range "$total" "$row_count" 2147483647 || return 1
+		else
+			[ "$total" = 0 ] || return 1
+		fi
+	fi
+	result=$(protection_history_step "$now" 0 "$locked" "255|invalid_sensor|$locked|$locked|0|$total" "$rows") || return 1
+	printf '%s|%s\n' "$locked" "$result"
+)
+
+# Save one six-field protection_dispatch_step result from a single writer.
+# Return the new history summary on success. A failed write leaves the
+# previous snapshot available to readers.
+protection_history_save_step() (
+	file=$1 now=$2 safety_temp=$3 dispatch=$4
+	snapshot=$(protection_history_load "$file" "$now") || return 1
+	newline='
+'
+	if [ "$snapshot" = "${snapshot%%"$newline"*}" ]; then
+		rows=
+	else
+		rows=${snapshot#*"$newline"}
+	fi
+	IFS='|' read -r was_locked _ prior_total _ _ <<EOF_STORED
+${snapshot%%"$newline"*}
+EOF_STORED
+	IFS='|' read -r _ reason locked _ _ total <<EOF_DISPATCH
+$dispatch
+EOF_DISPATCH
+	expected_total=$prior_total
+	if [ "$reason" = protection_lock ] && [ "$was_locked" = 0 ] && [ "$prior_total" -lt 2147483647 ]; then
+		expected_total=$((prior_total + 1))
+	fi
+	[ "$total" = "$expected_total" ] || return 1
+	case "$reason" in
+	invalid_sensor | invalid_control) [ "$locked" = "$was_locked" ] || return 1 ;;
+	esac
+	result=$(protection_history_step "$now" "$safety_temp" "$was_locked" "$dispatch" "$rows") || return 1
+	summary=${result%%"$newline"*}
+	content="v1|$locked|$total"
+	if [ "$result" != "$summary" ]; then
+		content="$content$newline${result#*"$newline"}"
+	fi
+	if [ -f "$file" ]; then
+		stored=$(cat "$file") || return 1
+		if [ "$stored" = "$content" ]; then
+			printf '%s\n' "$summary"
+			return 0
+		fi
+	elif [ "$total" = 0 ]; then
+		printf '%s\n' "$summary"
+		return 0
+	fi
+	umask 077
+	tmp=$(mktemp "${file}.XXXXXX") || return 1
+	trap 'rm -f -- "$tmp"' EXIT
+	trap 'exit 1' HUP INT TERM
+	printf '%s\n' "$content" >"$tmp" && mv -f -- "$tmp" "$file" || return 1
+	printf '%s\n' "$summary"
+)

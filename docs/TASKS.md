@@ -31,6 +31,14 @@
 - Acceptance: freeze the integral while protection is active and use only the current elapsed interval when normal control resumes.
 - Status: complete for offline calculation; integration with the live service remains queued.
 
+## Completed task block: protection history storage
+
+- Goal: retain protection counters, the latest event and its peak across daemon restarts within one boot.
+- Expected changes: an atomic history snapshot, read-only status projection, and tests using temporary files. The snapshot path is `/var/run/h5000m-pwmfan/protection-history`.
+- Verification: run the strict package checks and test relock, restart, time-window expiry, and unreadable or invalid snapshots.
+- Acceptance: a fresh reader can restore a valid snapshot. Invalid state and failed updates leave the prior snapshot intact.
+- Status: complete for storage and status reads. The daemon writer remains queued with runtime control integration. The runtime directory retains history across daemon restarts during the same router boot.
+
 ## Work queue
 
 - [x] Establish independent package repository and preserve handoff.
@@ -52,7 +60,8 @@
 - [x] Verify automatic PI integral freeze and recovery in the offline target-drive cycle.
 - [ ] Wire automatic PI freeze and recovery, control timing, and source reporting into the controller after the runtime ownership audit.
 - [x] Compute protection history offline and verify the 24-hour window, cumulative count, latest trigger, cycle peak, and invalid history handling.
-- [ ] Choose the protection history storage path and integrate persistence and status reporting with the service.
+- [x] Verify the protection history snapshot and status reader in isolation.
+- [ ] Connect the protection history writer to the daemon once the runtime protection cycle is ready.
 - [ ] Gate live PWM/thermal integration on reviewed runtime evidence and a device rollback procedure.
 - [ ] Build and validate IPK with the OWT2510 matching ImmortalWrt buildroot/SDK.
 - [x] Implement one-page LuCI status/control view, ACL/menu, quick dispatch, UCI settings, and zh-Hans translation package.
@@ -100,3 +109,4 @@
 - 2026-11-20: The offline target-drive cycle now derives PI freeze from the current protection state, including the ramp following unlock. The first sample outside protection uses its own elapsed interval. Fault cases keep the retained integral and request full speed. The strict suite passed all 26 Bats tests.
 - 2026-11-20: Checked upstream Linux v6.18.60 `pwm-fan` source. Successful userspace writes also recalculate `cur_state` from the configured levels. Recorded why `cur_state=0` and `pwm1=51` alone cannot identify the request source.
 - 2026-11-20: The field handoff traced the 20% baseline to a temporary manual request of 51/255 and a local edit to the installed thermal-floor condition while the fan awaits replacement. Corrected the runtime evidence notes and kept device arbitration pending. Offline control verification can continue.
+- 2026-11-20: Implemented protection history snapshots in the runtime directory and connected the read-only LuCI status command. Verified restoration after daemon restart within one boot, 24-hour expiry, unavailable history reporting, and preservation of the previous snapshot when updates fail. Strict checks passed all 30 Bats tests.
