@@ -430,3 +430,45 @@ EOF
 			printf "%d|%d|%.0f|%d\n%s%.0f|%d\n", recent, total, last, peak, rows, last, peak
 		}'
 )
+
+# Compose one offline target-drive cycle. Feed-forward PWM and elapsed time
+# come from the caller. Freeze PI across the full protection window (including
+# the ramp after unlock) and faults. Its first unprotected sample uses only
+# the caller's current elapsed interval.
+# Result: dispatch fields followed by the next integral and PI correction.
+protected_target_step() (
+	feedforward=$1 error_mc=$2 integral=$3 elapsed=$4 kp=$5 ki=$6
+	integral_limit=$7 correction_limit=$8 minimum=$9 maximum=${10}
+	shift 10
+	safety_temp=$1 threshold=$2 radius=$3 release=$4 previous_pwm=$5
+	was_locked=$6 was_active=$7 count=$8
+	freeze=0
+
+	# Protection activity is independent of the mode request. Preview its state
+	# with a zero request, keeping the original state for the real dispatch.
+	preview=$(protection_dispatch_step 0 "$safety_temp" "$threshold" "$radius" "$release" \
+		"$minimum" "$previous_pwm" "$was_locked" "$was_active" "$count") || return 1
+	IFS='|' read -r _ reason _ active _ <<EOF_PREVIEW
+$preview
+EOF_PREVIEW
+	case "$reason" in
+	invalid_sensor | invalid_control)
+		printf '%s|%s|0\n' "$preview" "$integral"
+		return 0
+		;;
+	esac
+	[ "$active" = 0 ] || freeze=1
+	if request=$(target_drive_step "$feedforward" "$error_mc" "$integral" "$elapsed" \
+		"$kp" "$ki" "$integral_limit" "$correction_limit" "$minimum" "$maximum" "$freeze"); then
+		IFS='|' read -r mode_pwm next_integral correction <<EOF_PI
+$request
+EOF_PI
+	else
+		mode_pwm=invalid
+		next_integral=$integral
+		correction=0
+	fi
+	dispatch=$(protection_dispatch_step "$mode_pwm" "$safety_temp" "$threshold" "$radius" "$release" \
+		"$minimum" "$previous_pwm" "$was_locked" "$was_active" "$count") || return 1
+	printf '%s|%s|%s\n' "$dispatch" "$next_integral" "$correction"
+)

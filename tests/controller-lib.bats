@@ -270,3 +270,23 @@ EOF
 	run protection_history_step 120000 93 0 "$dispatch" '110000|bad'
 	[ "$status" -ne 0 ]
 }
+
+@test "protected target cycle freezes integration through the ramp and resumes on exit" {
+	[ "$(protected_target_step 120 -5000 2000 2 1000 1000000 10000000 30 51 200 75 90 15 5 120 0 0 0)" = \
+		"117|protection_ramp|0|1|1|0|2000|-3" ]
+	# The safety sensor can cross the protection threshold while the control
+	# sensor still requests a lower output. No freeze flag is supplied.
+	[ "$(protected_target_step 120 -5000 2000 2 1000 1000000 10000000 30 51 200 90 90 15 5 120 0 1 0)" = \
+		"255|protection_lock|1|1|0|1|2000|-3" ]
+	[ "$(protected_target_step 150 -5000 2000 2 1000 1000000 10000000 30 51 200 85 90 15 5 255 1 1 1)" = \
+		"219|protection_ramp|0|1|0|1|2000|-3" ]
+	[ "$(protected_target_step 82 -16000 2000 2 1000 100000 10000000 30 51 200 74 90 15 5 219 0 1 1)" = \
+		"63|mode|0|0|0|1|-30000|-19" ]
+}
+
+@test "protected target cycle sends faults to full speed and preserves PI state" {
+	[ "$(protected_target_step 120 -5000 2000 2 1000 1000000 10000000 30 51 200 bad 90 15 5 255 1 1 4)" = \
+		"255|invalid_sensor|1|1|0|4|2000|0" ]
+	[ "$(protected_target_step 120 bad 2000 2 1000 1000000 10000000 30 51 200 74 90 15 5 120 0 0 4)" = \
+		"255|invalid_control|0|0|0|4|2000|0" ]
+}
