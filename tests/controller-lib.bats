@@ -133,6 +133,16 @@ setup() {
 	[ "$status" -ne 0 ]
 }
 
+@test "target-drive composition freezes and anti-winds up its integral" {
+	[ "$(target_drive_step 200 5000 0 2 10000 0 10000000 255 0 255 0)" = "250|10000|50" ]
+	[ "$(target_drive_step 200 5000 1234 2 10000 0 10000000 255 0 255 1)" = "250|1234|50" ]
+	[ "$(target_drive_step 240 5000 100 2 10000 1000000 10000000 255 0 255 0)" = "255|100|50" ]
+	[ "$(target_drive_step 240 5000 100 2 10000 1000000 10000000 255 0 255 0)" = "255|100|50" ]
+	[ "$(target_drive_step 10 -5000 100 2 10000 1000000 10000000 255 51 255 0)" = "51|100|-50" ]
+	run target_drive_step 200 5000 0 2 10000 0 10000000 255 0 255 2
+	[ "$status" -ne 0 ]
+}
+
 @test "global protection boosts once, ramps, locks, and releases with hysteresis" {
 	[ "$(global_protection_step 74 90 15 5 51 0 0)" = "51|0|0|0|0" ]
 	[ "$(global_protection_step 75 90 15 5 51 0 0)" = "51|0|1|1|0" ]

@@ -208,15 +208,21 @@ bounded_pi_step() {
 	ki_milli=$5
 	integral_limit=$6
 	correction_limit=$7
+	freeze_integral=${8:-0}
 	is_signed_int "$error_mc" && is_signed_int "$integral_mc_s" || return 1
 	in_range "$delta_seconds" 1 30 || return 1
 	[ "$error_mc" -ge -190000 ] && [ "$error_mc" -le 190000 ] || return 1
 	in_range "$kp_milli" 0 1000000 && in_range "$ki_milli" 0 1000000 || return 1
 	in_range "$integral_limit" 1 100000000 && in_range "$correction_limit" 0 255 || return 1
+	case "$freeze_integral" in 0 | 1) ;; *) return 1 ;; esac
 	[ "$integral_mc_s" -ge "$((0 - integral_limit))" ] && [ "$integral_mc_s" -le "$integral_limit" ] || return 1
-	new_integral=$((integral_mc_s + error_mc * delta_seconds))
-	[ "$new_integral" -lt "$((0 - integral_limit))" ] && new_integral=$((0 - integral_limit))
-	[ "$new_integral" -gt "$integral_limit" ] && new_integral=$integral_limit
+	if [ "$freeze_integral" = 1 ]; then
+		new_integral=$integral_mc_s
+	else
+		new_integral=$((integral_mc_s + error_mc * delta_seconds))
+		[ "$new_integral" -lt "$((0 - integral_limit))" ] && new_integral=$((0 - integral_limit))
+		[ "$new_integral" -gt "$integral_limit" ] && new_integral=$integral_limit
+	fi
 	proportional=$((error_mc * kp_milli / 1000000))
 	integral=$((new_integral * ki_milli / 1000000000))
 	correction=$((proportional + integral))
@@ -228,6 +234,37 @@ bounded_pi_step() {
 		[ "$error_mc" -lt 0 ] && new_integral=$integral_mc_s
 	fi
 	printf '%s|%s\n' "$correction" "$new_integral"
+}
+
+target_drive_step() {
+	feedforward_pwm=$1
+	error_mc=$2
+	integral_mc_s=$3
+	delta_seconds=$4
+	kp_milli=$5
+	ki_milli=$6
+	integral_limit=$7
+	correction_limit=$8
+	minimum_pwm=$9
+	maximum_pwm=${10}
+	freeze_integral=${11:-0}
+	in_range "$feedforward_pwm" 0 255 && in_range "$minimum_pwm" 0 255 && in_range "$maximum_pwm" 1 255 || return 1
+	[ "$minimum_pwm" -le "$maximum_pwm" ] || return 1
+	case "$freeze_integral" in 0 | 1) ;; *) return 1 ;; esac
+	result=$(bounded_pi_step "$error_mc" "$integral_mc_s" "$delta_seconds" "$kp_milli" "$ki_milli" "$integral_limit" "$correction_limit" "$freeze_integral") || return 1
+	correction=${result%%|*}
+	next_integral=${result#*|}
+	requested=$((feedforward_pwm + correction))
+	if [ "$freeze_integral" = 0 ] && { { [ "$requested" -gt "$maximum_pwm" ] && [ "$error_mc" -gt 0 ]; } || { [ "$requested" -lt "$minimum_pwm" ] && [ "$error_mc" -lt 0 ]; }; }; then
+		result=$(bounded_pi_step "$error_mc" "$integral_mc_s" "$delta_seconds" "$kp_milli" "$ki_milli" "$integral_limit" "$correction_limit" 1) || return 1
+		correction=${result%%|*}
+		next_integral=${result#*|}
+		requested=$((feedforward_pwm + correction))
+	fi
+	pwm=$requested
+	[ "$pwm" -lt "$minimum_pwm" ] && pwm=$minimum_pwm
+	[ "$pwm" -gt "$maximum_pwm" ] && pwm=$maximum_pwm
+	printf '%s|%s|%s\n' "$pwm" "$next_integral" "$correction"
 }
 
 global_protection_step() {
