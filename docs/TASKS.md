@@ -187,7 +187,7 @@
 - Status: started 2026-11-22; the apply model is settled, so the remaining work is implementation.
 
 - [ ] `mode=off` 退场：先按方案 A 把 `off` 降级为重载别名（映射 `fixed` + `fixed_duty=0`，删掉 `requested_pwm` 的 `off:*` 分支），再只读核对路由器 `uci show h5000m_pwmfan`；设备上没有 `mode=off` 且条件允许时升级到方案 B（白名单删除 + 一次性迁移）。
-- [ ] 固定请求滑块与模式切换共用 3 秒尾随合并器：拖动只更新读数、松手才提交、标题行显示“应用中-Ns”；不做后端步进限幅（已定案，见 `REQUIREMENTS_V3.md` §16）。
+- [ ] 固定请求滑块与模式切换共用 3 秒尾随合并器：拖动只更新读数、松手才提交、0% 绕过合并立即提交、标题行显示“应用中-Ns”；不做后端步进限幅（已定案，见 `REQUIREMENTS_V3.md` §16）。
 
 ## Brief log
 
