@@ -38,18 +38,18 @@ return view.extend({
 	},
 
 	style: function() {
-		return E('style', {}, '.pwmfan-advanced .cbi-section{border:1px solid var(--v-line,var(--border-color-medium,#d8dce0));border-radius:5px;background:var(--v-surface,var(--background-color-high,#fff));padding:14px}.pwmfan-group-heading{border-top:1px solid var(--v-line,var(--border-color-medium,#d8dce0));padding-top:15px;margin:4px 0 12px}.pwmfan-group-heading h3{font-size:16px;margin:0}.pwmfan-group-heading p{font-size:12px;color:var(--v-text-2,var(--text-color-medium,#737a80));margin:5px 0 0}.pwmfan-advanced .cbi-value-description{max-width:70ch}.pwmfan-advanced .cbi-page-actions{position:static}');
+		return E('style', {}, '.pwmfan-advanced .cbi-section{border:1px solid var(--v-line,var(--border-color-medium,#d8dce0));border-radius:5px;background:var(--v-surface,var(--background-color-high,#fff));padding:14px}.pwmfan-group-heading{border-top:1px solid var(--v-line,var(--border-color-medium,#d8dce0));padding-top:15px;margin:4px 0 12px}.pwmfan-group-heading h3{font-size:16px;margin:0}.pwmfan-group-heading p{font-size:12px;color:var(--v-text-2,var(--text-color-medium,#737a80));margin:5px 0 0}.pwmfan-advanced .cbi-value-field{min-width:0}.pwmfan-advanced .cbi-value-field select,.pwmfan-advanced .cbi-dropdown{width:100%;max-width:100%;box-sizing:border-box}.pwmfan-advanced .cbi-value-description{max-width:70ch}.pwmfan-advanced .cbi-page-actions{position:static}');
 	},
 
 	form: function() {
 		var map = new form.Map(CONFIG, _('Advanced fan settings'));
 		var section = map.section(form.NamedSection, SECTION, 'settings');
 		section.anonymous = true;
-		this.group(section, 'kernel', _('Kernel protection'), _('Takeover applies to fan control between −20 °C and 100 °C. Kernel thermal control above 100 °C remains active.'));
+		this.group(section, 'kernel', _('Kernel protection'), '');
 		var takeover = section.option(form.Flag, 'kernel_takeover', _('Take over kernel protection'));
 		takeover.default = '0'; takeover.rmempty = false;
 		takeover.readonly = true;
-		takeover.description = _('Hardware verification is pending.');
+		takeover.description = _('When enabled, the plugin owns CPU fan control from −20 °C through 100 °C. Kernel thermal-zone control above 100 °C remains active. Hardware verification is pending.');
 		var enabled = section.option(form.Flag, 'enabled', _('Enable fan control'));
 		enabled.default = '0'; enabled.rmempty = false;
 		enabled.description = _('When disabled, the controller releases PWM ownership and keeps status visible.');
@@ -80,10 +80,11 @@ return view.extend({
 		this.group(section, 'fault', _('Fault response'), _('Invalid temperature data or a failed PWM write requests full output.'));
 		var failure = section.option(form.DummyValue, '_failsafe', _('Sensor or controller fault'));
 		failure.default = _('Request 100% output; kernel thermal safeguards remain active.');
-		this.group(section, 'sampling', _('Sampling and source'), _('The controller reads one sensor snapshot per control cycle. Sensors not selected for curve control still participate in the safety maximum.'));
+		this.group(section, 'sampling', _('Controller sampling and curve source'), _('The controller reads one sensor snapshot per control cycle. This is separate from the dashboard history sampling interval. Sensors not selected for curve control still participate in the safety maximum.'));
 		var interval = section.option(form.Value, 'poll_interval', _('Control interval (seconds)'));
 		interval.datatype = 'range(1,30)'; interval.default = '2'; interval.rmempty = false;
 		var source = section.option(form.Value, 'sensor_sources', _('Curve sensor source'));
+		source.width = '100%';
 		source.value('auto', _('Hottest valid sensor'));
 		source.default = 'auto'; source.rmempty = false;
 		return map;

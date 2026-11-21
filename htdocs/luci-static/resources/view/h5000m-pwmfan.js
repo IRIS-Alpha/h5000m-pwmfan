@@ -7,7 +7,7 @@
 
 var CONFIG = 'h5000m_pwmfan', SECTION = 'main';
 var MODES = { quiet: _('Quiet'), balanced: _('Balanced'), performance: _('Performance'),
-	target: _('Target drive'), manual: _('Manual'), off: _('Off') };
+	target: _('Target drive'), manual: _('Custom curve') };
 var SENSORS = [
 	[ _('CPU'), /^(cpu-thermal|cpu_thermal(?:_temp1)?|CPU)$/i, '--pf-blue' ],
 	[ _('Radio'), /^(mt7996[-_]phy0[._]0)(?:_temp1)?$/i, '--pf-green' ],
@@ -105,13 +105,13 @@ return view.extend({
 
 	controlMode: function() {
 		var configured = setting('mode', 'balanced');
-		return Object.prototype.hasOwnProperty.call(MODES, configured) ? configured : 'balanced';
+		return Object.prototype.hasOwnProperty.call(MODES, configured) || configured === 'fixed' || configured === 'off' ? configured : 'balanced';
 	},
 
 	commit: function(changes) {
 		if (this.saving) return;
 		this.saving = true;
-		this.modeButtons.forEach(function(button) { button.disabled = true; });
+		this.modeButtons.concat(this.methodButtons || []).forEach(function(button) { button.disabled = true; });
 		var previous = {};
 		Object.keys(changes).forEach(function(key) {
 			previous[key] = uci.get(CONFIG, SECTION, key);
@@ -119,13 +119,13 @@ return view.extend({
 		});
 		return uci.save().then(function() { return uci.apply(); }).then(L.bind(function() {
 			this.saving = false;
-			this.modeButtons.forEach(function(button) { button.disabled = false; });
+			this.modeButtons.concat(this.methodButtons || []).forEach(function(button) { button.disabled = false; });
 			this.pendingCurve = null;
 			this.refreshPolicy();
 			return this.fetchStatus().then(L.bind(this.update, this));
 		}, this)).catch(L.bind(function(error) {
 			this.saving = false;
-			this.modeButtons.forEach(function(button) { button.disabled = false; });
+			this.modeButtons.concat(this.methodButtons || []).forEach(function(button) { button.disabled = false; });
 			Object.keys(previous).forEach(function(key) {
 				if (previous[key] == null) uci.unset(CONFIG, SECTION, key);
 				else uci.set(CONFIG, SECTION, key, previous[key]);
@@ -165,33 +165,30 @@ return view.extend({
 	},
 
 	refreshPolicy: function() {
-		var mode = this.controlMode(), drive = setting('drive', 'curve');
-		var preset = [ 'quiet', 'balanced', 'performance' ].indexOf(mode) >= 0;
+		var mode = this.controlMode(), fixed = mode === 'fixed' || mode === 'off';
 		var self = this;
-		this.modeButtons.forEach(function(button) {
-			button.setAttribute('aria-pressed', String(button.dataset.mode === mode));
-		});
-		var fields = [];
-		if (preset) {
-			var options = [ [ 'duty', _('Manual duty request') ], [ 'curve', _('Curve preset') ] ];
-			fields.push(E('div', { 'class': 'pf-segment', role: 'group', 'aria-label': _('Control method') }, options.map(function(option) {
-				return E('button', { type: 'button', 'aria-pressed': String(option[0] === drive),
-					click: function() { self.commit({ drive: option[0] }); } }, option[1]);
-			})));
-			if (drive === 'duty') {
-				var level = Number(setting('duty_' + mode, { quiet: 30, balanced: 50, performance: 80 }[mode]));
-				var readout = E('output', {}, level + '%');
-				var slider = E('input', { type: 'range', value: level, min: 0, max: 100, step: 10,
-					input: function(event) { readout.textContent = event.currentTarget.value + '%'; },
-					change: function(event) { var changes = {}; changes['duty_' + mode] = event.currentTarget.value; self.commit(changes); } });
-				fields.push(E('label', { 'class': 'pf-slider' }, [ E('span', {}, _('Requested duty')), slider, readout ]));
-			}
-		} else if (mode === 'target') {
-			fields.push(this.targetFields());
-		} else if (mode === 'off') {
-			fields.push(E('p', { 'class': 'pf-note' }, _('Off requests 0% output. Temperature protection can raise the output.')));
-		}
-		this.policy.replaceChildren.apply(this.policy, fields);
+		var curveMode = fixed ? setting('curve_mode', 'balanced') : mode;
+		if ([ 'quiet', 'balanced', 'performance', 'target', 'manual' ].indexOf(curveMode) < 0) curveMode = 'balanced';
+		this.modeButtons.forEach(function(button) { button.setAttribute('aria-pressed', String(button.dataset.mode === curveMode && !fixed)); });
+		var fixedTitle = E('button', { type: 'button', 'class': 'pf-method-title', 'aria-pressed': String(fixed),
+			click: function() { self.commit({ mode: 'fixed', drive: 'duty', enabled: '1' }); } }, [ _('Fixed request'), E('span', {}, fixed ? _('Selected') : _('Not selected')) ]);
+		var curveTitle = E('button', { type: 'button', 'class': 'pf-method-title', 'aria-pressed': String(!fixed),
+			click: function() { self.commit({ mode: curveMode, curve_mode: curveMode, drive: 'curve', enabled: '1' }); } }, [ _('Curve preset'), E('span', {}, fixed ? _('Not selected') : _('Selected')) ]);
+		this.methodButtons = [ fixedTitle, curveTitle ];
+		var duty = clamp(Number(setting('fixed_duty', 50)), 10, 100);
+		var readout = E('output', {}, duty + '%');
+		var slider = E('input', { type: 'range', value: duty, min: 10, max: 100, step: 10,
+			input: function(event) { readout.textContent = event.currentTarget.value + '%'; },
+			change: function(event) { self.commit({ mode: 'fixed', drive: 'duty', fixed_duty: event.currentTarget.value, enabled: '1' }); } });
+		var stop = E('button', { type: 'button', 'class': 'btn pf-danger', 'aria-pressed': String(mode === 'off'),
+			click: function() { self.commit({ mode: 'off', drive: 'duty', enabled: '1' }); } }, _('Stop fan'));
+		var fixedGroup = E('section', { 'class': 'pf-method', 'data-selected': String(fixed) }, [ fixedTitle,
+			E('div', { 'class': 'pf-fixed-controls' }, [ E('label', { 'class': 'pf-slider' }, [ E('span', {}, _('Requested duty')), slider, readout ]), stop ]) ]);
+		var curveChildren = [ curveTitle, E('div', { 'class': 'pf-modes', role: 'group', 'aria-label': _('Curve preset') }, this.modeButtons) ];
+		if (!fixed && curveMode === 'target') curveChildren.push(E('details', { 'class': 'pf-parameters' }, [ E('summary', {}, _('Target drive parameters')), this.targetFields() ]));
+		if (!fixed && curveMode === 'manual') curveChildren.push(E('details', { 'class': 'pf-parameters' }, [ E('summary', {}, _('Curve parameters')), this.editor ]));
+		var curveGroup = E('section', { 'class': 'pf-method', 'data-selected': String(!fixed) }, curveChildren);
+		this.policy.replaceChildren(fixedGroup, curveGroup);
 		this.renderEditor();
 		this.drawCharts();
 	},
@@ -235,6 +232,10 @@ return view.extend({
 		var low = Number(setting('min_pwm', 51)), max = Number(setting('max_pwm', 255));
 		var limit = function(pwm) { return pwm ? clamp(pwm, Math.min(low, max), max) : 0; };
 		if (mode === 'off') return [ { t: 0, pwm: 0 }, { t: 100, pwm: 0 } ];
+		if (mode === 'fixed') {
+			var fixedPwm = limit(Math.round(Number(setting('fixed_duty', 50)) * 255 / 100));
+			return [ { t: 0, pwm: fixedPwm }, { t: 100, pwm: fixedPwm } ];
+		}
 		if (mode === 'target') {
 			var target = Number(setting('target_temp', 85)), start = target - Number(setting('response_range', 15));
 			var blend = Math.min(start, Number(setting('transition_width', 5)));
@@ -260,7 +261,7 @@ return view.extend({
 		var rows = [];
 		var editorPoints = manual ? points : parseCurve(setting('curve_manual', CURVES.manual));
 		var message = E('p', { 'class': 'pf-note', 'aria-live': 'polite' }, manual ?
-			(points.length ? (this.pendingCurve ? _('Curve has unapplied changes.') : '') : _('Saved curve is invalid. Restore six default points to edit.')) : _('Select Manual to edit the six curve points.'));
+			(points.length ? (this.pendingCurve ? _('Curve has unapplied changes.') : '') : _('Saved curve is invalid. Restore six default points to edit.')) : _('Select Custom curve to edit the six curve points.'));
 		if (editorPoints.length === 6) editorPoints.forEach(function(point, i) {
 			var input = function(label, axis, value, min, max) {
 				return E('label', { 'class': 'pf-field' }, [ E('span', {}, label), E('input', {
@@ -291,7 +292,6 @@ return view.extend({
 				self.commit({ curve_manual: self.pendingCurve.map(function(point) { return point.t + ':' + point.pwm; }).join(',') });
 			} }, _('Apply curve'))
 		]));
-		if (this.saveCurve) this.saveCurve.disabled = !manual || !this.pendingCurve;
 	},
 
 	setCurve: function(points) {
@@ -349,6 +349,7 @@ return view.extend({
 		if (trigger !== null) counters.push(_('Latest trigger') + ': ' + new Date(trigger * 1000).toLocaleString());
 		if (peak !== null) counters.push(_('Cycle peak') + ': ' + peak + ' °C');
 		this.protectionSummary.textContent = counters.join(' · ');
+		if (this.historyState) this.historyState.textContent = values.fresh && values.temps.some(function(value) { return value !== null; }) ? _('Live temperature readings') : _('Waiting for temperature readings');
 		var now = Date.now(), time = values.fresh ? values.stamp * 1000 : now, last = this.history[this.history.length - 1];
 		if (!last || time - last.time >= this.interval * 1000) {
 			this.history.push({ time: time, temps: values.temps });
@@ -448,15 +449,15 @@ return view.extend({
 		ctx.font = '11px ' + (color('--pf-mono') || 'monospace');
 		ctx.fillStyle = color('--pf-muted');
 		ctx.textAlign = 'right';
-		for (var tick = 0; tick <= 100; tick += 25) {
+		for (var tick = 0; tick <= 100; tick += 20) {
 			coords(left, y(tick), right, y(tick), color('--pf-line'), tick ? [ 3, 3 ] : []);
 			ctx.fillText(tick + (chart.history ? '°' : '%'), left - 6, y(tick) + 4);
 		}
 		ctx.textAlign = 'center';
-		for (var i = 0; i <= 4; i++) {
-			var value = start + (end - start) * i / 4;
+		for (var i = 0; i <= 5; i++) {
+			var value = start + (end - start) * i / 5;
 			coords(x(value), top, x(value), bottom, color('--pf-line'), [ 3, 3 ]);
-			ctx.textAlign = i === 0 ? 'left' : i === 4 ? 'right' : 'center';
+			ctx.textAlign = i === 0 ? 'left' : i === 5 ? 'right' : 'center';
 			ctx.fillText(chart.history ? localeTime(value) : value + '°', x(value), bottom + 17);
 		}
 		var trace = function(points, stroke, fill) {
@@ -547,8 +548,8 @@ return view.extend({
 		this.interval = 2;
 		try {
 			var settings = JSON.parse(localStorage.getItem('h5000m-pwmfan-v3-history') || '{}');
-			if ([ 5, 15, 30, 60, 360 ].indexOf(settings.range) >= 0) this.range = settings.range;
-			if ([ 2, 5, 10 ].indexOf(settings.interval) >= 0) this.interval = settings.interval;
+			if (Number.isInteger(settings.range) && settings.range >= 5 && settings.range <= 360 && settings.range % 5 === 0) this.range = settings.range;
+			if (Number.isInteger(settings.interval) && settings.interval >= 1 && settings.interval <= 60) this.interval = settings.interval;
 		} catch (error) { /* History preferences are optional. */ }
 		this.badgeText = E('span', {}, _('Status unavailable'));
 		this.badge = E('span', { 'class': 'pf-live', role: 'status', 'data-state': 'idle' }, [ E('i', { 'aria-hidden': 'true' }), this.badgeText ]);
@@ -557,9 +558,9 @@ return view.extend({
 		this.tempMetrics = SENSORS.map(function(sensor) { return self.makeMetric(sensor[0], sensor[2]); });
 		this.outputMetrics = [ this.makeMetric(_('Requested output'), '--pf-blue'), this.makeMetric(_('Actual output'), '--pf-amber'),
 			this.makeMetric(_('Protection output'), '--pf-red'), this.makeMetric(_('Fan speed'), '--pf-muted') ];
-		this.modeButtons = Object.keys(MODES).map(function(mode) {
-			return E('button', { type: 'button', 'class': 'btn pf-mode' + (mode === 'off' ? ' pf-danger' : ''), 'data-mode': mode,
-				click: function() { self.commit({ mode: mode, enabled: '1' }); } }, MODES[mode]);
+		this.modeButtons = [ 'quiet', 'balanced', 'performance', 'target', 'manual' ].map(function(mode) {
+			return E('button', { type: 'button', 'class': 'btn pf-mode', 'data-mode': mode,
+				click: function() { self.commit({ mode: mode, curve_mode: mode, drive: 'curve', enabled: '1' }); } }, MODES[mode]);
 		});
 		this.policy = E('div', { 'class': 'pf-policy' });
 		this.editor = E('div', { 'class': 'pf-editor' });
@@ -576,20 +577,30 @@ return view.extend({
 			if (key === 'interval') self.loadTemperatureHistory();
 			self.drawCharts();
 		};
-		var temps = E('details', { 'class': 'pf-card pf-history', open: true }, [ E('summary', {}, _('Temperature history')),
+		this.historyState = E('span', { 'class': 'pf-chart-state' }, _('Waiting for temperature readings'));
+		var rangeInput = E('input', { type: 'number', min: 5, max: 360, step: 5, value: this.range, 'aria-label': _('Window') });
+		var intervalInput = E('input', { type: 'number', min: 1, max: 60, step: 1, value: this.interval, 'aria-label': _('Read every') });
+		var updatePreference = function(key, input, min, max, step) {
+			var value = Number(input.value);
+			if (!Number.isInteger(value) || value < min || value > max || value % step) { input.value = self[key]; return; }
+			setPreference(key, { currentTarget: { value: value } });
+		};
+		rangeInput.addEventListener('change', function() { updatePreference('range', rangeInput, 5, 360, 5); });
+		intervalInput.addEventListener('change', function() { updatePreference('interval', intervalInput, 1, 60, 1); });
+		var temps = E('details', { 'class': 'pf-card pf-history', open: true }, [ E('summary', {}, [ _('Temperature history'), this.historyState ]),
 			this.tempChart.element, E('div', { 'class': 'pf-history-settings' }, [
-				select(_('Window'), [ 5, 15, 30, 60, 360 ].map(function(min) { return [ min, min < 60 ? _('%s min').format(min) : _('%s hr').format(min / 60) ]; }), this.range, setPreference.bind(null, 'range')),
-				select(_('Read every'), [ 2, 5, 10 ].map(function(seconds) { return [ seconds, _('%s s').format(seconds) ]; }), this.interval, setPreference.bind(null, 'interval')) ]) ]);
+				E('label', { 'class': 'pf-number-setting' }, [ _('Window'), rangeInput, _('min') ]),
+				E('label', { 'class': 'pf-number-setting' }, [ _('Read every'), intervalInput, _('s') ]) ]) ]);
 		this.root = E('div', { 'class': 'pf-page' }, [
 			E('link', { rel: 'stylesheet', href: L.resource('view/h5000m-pwmfan.css') }),
-			E('div', { 'class': 'pf-heading' }, [ E('h2', {}, _('H5000M PWM Fan')), E('a', { href: L.url('admin/system/h5000m_pwmfan/advanced') }, _('Advanced settings')) ]),
+			E('div', { 'class': 'pf-heading' }, [ E('h2', {}, _('H5000M PWM Fan')) ]),
 			E('div', { 'class': 'pf-toolbar' }, [ this.badge, this.languageControl() ]),
 			E('div', { 'class': 'pf-boards' }, [ this.makeBoard(_('Temperature array'), this.tempMetrics), this.makeBoard(_('Fan output'), this.outputMetrics) ]),
 			E('section', { 'class': 'pf-card' }, [ E('div', { 'class': 'pf-dispatch-head' }, [ E('h3', {}, _('Quick dispatch')),
 				E('span', { 'class': 'pf-source' }, [ _('Control source'), ' · ', this.source ]) ]),
-				E('div', { 'class': 'pf-modes', role: 'group', 'aria-label': _('Quick dispatch') }, this.modeButtons), this.policy, this.protectionSummary ]),
-			E('section', { 'class': 'pf-card' }, [ E('div', { 'class': 'pf-dispatch-head' }, [ E('h3', {}, _('Fan curve')), this.saveCurve ]),
-				this.curveChart.element, E('details', { 'class': 'pf-parameters' }, [ E('summary', {}, _('Curve parameters')), this.editor ]) ]), temps
+				this.policy, this.protectionSummary ]),
+			E('details', { 'class': 'pf-card pf-curve-chart' }, [ E('summary', {}, _('Fan curve')),
+				this.curveChart.element ]), temps
 		]);
 		this.refreshPolicy();
 		this.update(data);

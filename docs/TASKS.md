@@ -4,9 +4,18 @@
 
 - Goal: implement the confirmed V3 dashboard and advanced-settings corrections against the local development build.
 - Expected changes: document the confirmed choices, separate fixed requests from curve presets, clarify selected state, unify chart folding and parameter placement, use five chart intervals, improve history controls/status, and fix the narrow advanced source field.
-- Verification: `STRICT=1 sh tools/check.sh`; browser preview at 500px mobile plus desktop in light and dark themes; verify 0% stop/protection semantics remain unchanged.
+- Progress:
+  - [x] Separate fixed 10–100% requests and stop action from the five curve presets, with mutually exclusive selected states.
+  - [x] Preserve the independent stop request and global protection arbitration; verify fixed PWM conversion and 10% validation offline.
+  - [x] Move target/custom parameters into the curve-preset block; fold the fan chart and keep its parameter editor folded by default.
+  - [x] Render six tick marks on chart axes; allow custom history windows in 5-minute steps and 1–60-second sampling.
+  - [x] Move history state into its heading, remove the duplicate advanced-settings link, and match top status/language sizing.
+  - [x] Clarify kernel takeover and controller-vs-chart sampling text; expand the curve-source selector to its field width.
+  - [x] Check the local preview at 320, 390, 500, and desktop widths in light/dark themes.
+- Verification: `STRICT=1 sh tools/check.sh`, `git diff --check`, `node --check tests/preview.mjs`, and the Windows `ego-browser` preview at 500px and desktop in both themes. The standalone `node tests/preview.mjs` runner could not start because WSL has no `playwright` module; equivalent primary interactions were inspected in the local preview.
 - Acceptance: local preview matches the confirmed V3 interaction; no width overflow or unequal top controls; all chart axes render six equally spaced ticks; history time ranges divide into five equal minute intervals.
-- Status: requirements recorded; implementation in progress.
+- Status: complete; local preview and offline control checks passed.
+- 2026-11-21: Implemented fixed-duty mode through the existing temperature-protection dispatch, updated the dashboard and advanced controls, and verified responsive layout, equal top controls, bilingual labels, fold behavior, and six chart ticks in the local preview. No router control files or live PWM state were changed.
 
 ## Completed task block: PI composition
 

@@ -227,7 +227,7 @@ load_settings() {
 	config_get TAKEOVER "$SECTION" kernel_takeover 0
 	[ "$TAKEOVER" = 0 ] || [ "$TAKEOVER" = 1 ] || return 1
 	config_get MODE "$SECTION" mode balanced
-	case "$MODE" in quiet | balanced | performance | custom | manual | kernel | target | off) ;; *) return 1 ;; esac
+	case "$MODE" in quiet | balanced | performance | custom | manual | kernel | target | fixed | off) ;; *) return 1 ;; esac
 	config_get SENSOR_SELECTION "$SECTION" sensor_sources auto
 	[ -n "$SENSOR_SELECTION" ] || SENSOR_SELECTION=auto
 	raw=
@@ -255,6 +255,11 @@ load_settings() {
 	config_get raw "$SECTION" protection_release 5
 	PROTECTION_RELEASE=$(cfg_number "$raw" 2 100) || return 1
 	case "$MODE" in
+	fixed)
+		config_get raw "$SECTION" fixed_duty 50
+		FIXED_DUTY=$(cfg_number "$raw" 10 100) || return 1
+		[ "$((FIXED_DUTY % 10))" -eq 0 ] || return 1
+		;;
 	target)
 		config_get raw "$SECTION" target_temp 85
 		TARGET_TEMP=$(cfg_number "$raw" 80 "$SAFETY_TEMP") || return 1
@@ -302,6 +307,7 @@ requested_pwm() {
 		printf '0\n'
 		return
 		;;
+	fixed:duty) value=$(((FIXED_DUTY * 255 + 50) / 100)) ;;
 	quiet:duty | balanced:duty | performance:duty) value=$(((DUTY * 255 + 50) / 100)) ;;
 	*) value=$(curve_value "$CURVE" "$CONTROL_TEMP_C") || return 1 ;;
 	esac

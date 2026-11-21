@@ -20,7 +20,8 @@
 .pf-heading, .pf-toolbar, .pf-dispatch-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .pf-heading h2 { font-size: 21px; }
 .pf-heading a { font-size: 12px; text-align: right; }
-.pf-toolbar > * { min-width: 0; width: clamp(110px, 40%, 160px); height: 32px; box-sizing: border-box; }
+.pf-toolbar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.pf-toolbar > * { min-width: 0; width: 100%; height: 32px; box-sizing: border-box; }
 .pf-page :is(select, input:not([type=range]), button) { min-width: 0; color: var(--pf-text); background: var(--pf-surface); border: 1px solid var(--pf-line); border-radius: 7px; }
 .pf-page :is(input:not([type=range]), select, button) { height: 34px; padding: 0 9px; }
 .pf-page :is(button, select, summary) { cursor: pointer; }
@@ -45,7 +46,14 @@
 .pf-bar { background: var(--pf-line); height: 3px; margin-inline: -7px; }
 .pf-bar i { display: block; background: var(--metric-color); width: 0; height: 100%; }
 .pf-source, .pf-note, .pf-field { color: var(--pf-muted); font-size: 12px; }
-.pf-modes { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; margin-top: 9px; }
+.pf-modes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; margin-top: 9px; }
+.pf-method { margin-top: 9px; padding: 9px; border: 1px solid var(--pf-line); border-radius: 7px; background: var(--pf-subtle); }
+.pf-method-title { display: flex; justify-content: space-between; align-items: center; width: 100%; text-align: left; font-weight: 650; }
+.pf-method-title span, .pf-chart-state { color: var(--pf-muted); font-size: 12px; font-weight: 400; }
+.pf-fixed-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.pf-history-settings { display: flex; gap: 12px; margin-top: 8px; }
+.pf-number-setting { display: flex; align-items: center; gap: 6px; color: var(--pf-muted); }
+.pf-number-setting input { width: 6em; }
 .pf-page .pf-mode { font-weight: 650; }
 .pf-page .pf-danger { color: var(--pf-red); border-color: var(--pf-red); }
 .pf-page button[aria-pressed=true] { border-color: var(--pf-blue); color: var(--pf-blue); background: color-mix(in srgb, var(--pf-blue) 10%, var(--pf-surface)); }
@@ -83,6 +91,7 @@
 	.pf-metric { padding-inline: 4px; min-height: 51px; }
 	.pf-bar { margin-inline: -4px; }
 	.pf-modes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+	.pf-fixed-controls { grid-template-columns: minmax(0, 1fr); }
 	.pf-target, .pf-points { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 	.pf-plot canvas { height: 150px; }
 }

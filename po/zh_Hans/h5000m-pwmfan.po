@@ -607,3 +607,33 @@ msgstr "深色"
 
 msgid "Settings applied."
 msgstr "已应用设置。"
+
+msgid "Fixed request"
+msgstr "固定请求"
+
+msgid "Selected"
+msgstr "已选"
+
+msgid "Not selected"
+msgstr "未选"
+
+msgid "Stop fan"
+msgstr "停转"
+
+msgid "Target drive parameters"
+msgstr "定温驱动参数"
+
+msgid "Waiting for temperature readings"
+msgstr "等待温度读数"
+
+msgid "Live temperature readings"
+msgstr "温度读数中"
+
+msgid "Controller sampling and curve source"
+msgstr "控制采样与曲线来源"
+
+msgid "The controller reads one sensor snapshot per control cycle. This is separate from the dashboard history sampling interval. Sensors not selected for curve control still participate in the safety maximum."
+msgstr "控制器每个控制周期读取一次传感器快照，与主页历史图表的采样间隔相互独立。未选作曲线控制来源的传感器仍参与安全最高温仲裁。"
+
+msgid "When enabled, the plugin owns CPU fan control from −20 °C through 100 °C. Kernel thermal-zone control above 100 °C remains active. Hardware verification is pending."
+msgstr "启用后，插件接管 −20 °C 至 100 °C 的 CPU 风扇控制；高于 100 °C 的内核热区控制仍保持开启。硬件验证尚未完成。"
