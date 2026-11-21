@@ -1,5 +1,13 @@
 # Project task tracker
 
+## Active task block: UI interaction and responsive corrections
+
+- Goal: implement the confirmed V3 dashboard and advanced-settings corrections against the local development build.
+- Expected changes: document the confirmed choices, separate fixed requests from curve presets, clarify selected state, unify chart folding and parameter placement, use five chart intervals, improve history controls/status, and fix the narrow advanced source field.
+- Verification: `STRICT=1 sh tools/check.sh`; browser preview at 500px mobile plus desktop in light and dark themes; verify 0% stop/protection semantics remain unchanged.
+- Acceptance: local preview matches the confirmed V3 interaction; no width overflow or unequal top controls; all chart axes render six equally spaced ticks; history time ranges divide into five equal minute intervals.
+- Status: requirements recorded; implementation in progress.
+
 ## Completed task block: PI composition
 
 - Goal: compose target-drive feed-forward PWM with bounded PI correction in a deterministic offline helper.
@@ -100,6 +108,7 @@
 
 - 2026-11-21: Re-ran `STRICT=1 sh tools/check.sh` (33/33 pass). Host `apk-tools 3.0.5` verified both October-SDK compatibility APK payloads and metadata: main package depends on `libc`/`luci-base`; zh-cn package depends on the main package and contains `h5000m-pwmfan.zh-cn.lmo`. Both signatures are reported untrusted, so neither is eligible for target installation/release verification. The supplied firmware rootfs confirms `r0-a4ba824`, but its source commit was not retrievable from the three candidate upstream repos; the public Releases Atom feed returned no entries and the unauthenticated Actions API was rate-limited. Matching build, trusted signing, device translation/UI verification, and live thermal handover remain open. No router or PWM state was changed.
 - 2026-11-21: At the user's request, installed the compatibility main/zh-cn APKs on the live `r0-a4ba824` router using `--allow-untrusted` for local validation. Verified package registration, `.lmo` presence, sensor reads, disabled control state (`enabled=0`, `kernel_takeover=0`, `requested_pwm=--`, `owner=none`), and current PWM readback `51/255`; the existing `h5000m-fancontrol` remained running and this package has no boot enable link or resident process. Browser-language rendering, matching-build validation, trusted release signature, and hardware takeover remain open. No control UCI values were changed.
+- 2026-11-21: Confirmed the next UI revision: local WSL workspace is the development/acceptance baseline and router-installed APKs are deployment checks; split fixed PWM requests from curve presets with mutually exclusive title/status indicators; use six ticks for five equal chart intervals, custom minute ranges in 5-minute multiples, custom history sampling fields, consistent fold controls, and a full-width advanced curve-source selector.
 
 - 2026-11-17: Created independent `luci-app-h5000m-pwmfan` workspace and moved the handoff into it; initial commit `757cc30`.
 - 2026-11-17: Added ShellCheck/shfmt/Bats/SDK preparation, CI scaffold, and initial requirements/UI drafts. Tool binaries are not installed in the Windows workspace.
