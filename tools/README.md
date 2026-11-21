@@ -9,7 +9,7 @@ itself targets OpenWrt and is built with an OpenWrt SDK on Linux or in CI.
 - `shfmt`: format shell scripts with LF line endings.
 - `bats`: run isolated controller tests with fake sysfs and temperature files.
 - `dtc`, `fdtdump`, and `fdtget`: inspect and validate H5000M device trees.
-- OpenWrt SDK: build the IPK and verify package metadata and dependencies.
+- OpenWrt SDK: build the APK and verify package metadata and dependencies.
 
 The WSL development environment installs these tools from Ubuntu packages. Do not add platform-specific binaries to this repository. Use the matching OWT2510 buildroot or SDK for package builds.
 

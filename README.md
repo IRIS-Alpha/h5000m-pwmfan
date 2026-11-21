@@ -38,7 +38,7 @@ make package/luci-app-h5000m-pwmfan/compile V=s
 ```
 
 The target firmware is OWT2510 based on ImmortalWrt SNAPSHOT, LuCI Master,
-mediatek/filogic, and Linux 6.18.60. The device reports IPK/opkg packaging.
+mediatek/filogic, and Linux 6.18.60. The device uses APK packages managed by apk-tools.
 Build and validate against the exact OWT2510 ImmortalWrt source revision and
 its feeds, or an SDK produced from that same buildroot; do not substitute an
 unrelated stable OpenWrt SDK. Integration into the main firmware project comes

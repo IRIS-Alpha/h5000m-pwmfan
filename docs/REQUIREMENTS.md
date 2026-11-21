@@ -6,7 +6,7 @@ package. It is intentionally separate from the main OpenWrt firmware project.
 ## Confirmed goals
 
 - Package name: `luci-app-h5000m-pwmfan`.
-- Target: Hiveton H5000M and its current OpenWrt IPK/opkg environment.
+- Target: Hiveton H5000M and its current OpenWrt apk-tools environment.
 - Allow a configurable low PWM output below the current effective 128/255
   floor when the user explicitly enables the package's fan ownership policy.
 - Keep CPU passive throttling, high-temperature, and critical protection.
@@ -29,7 +29,7 @@ package. It is intentionally separate from the main OpenWrt firmware project.
 - Reported firmware: ImmortalWrt SNAPSHOT r0-a4ba824, LuCI Master
   26.315.10273~ad75cde, custom image build IRIS-Alpha-26.11.15-14.22.58.
 - Reported kernel: Linux 6.18.60.
-- Package format: IPK/opkg.
+- Package format: APK, managed by apk-tools.
 - SDK/build validation must use the matching OWT2510 ImmortalWrt buildroot and
   feed revisions. The reported firmware is a moving snapshot, so its exact
   source commit and kernel build configuration must be captured when selecting
@@ -97,7 +97,7 @@ package. It is intentionally separate from the main OpenWrt firmware project.
 
 ## Acceptance evidence
 
-- IPK builds from an OpenWrt SDK.
+- APK builds from an OpenWrt SDK.
 - Installation, upgrade, stop, and rollback are repeatable.
 - Fake-sysfs tests cover normal control, invalid readings, write failures,
   startup kick, hysteresis, and failsafe.

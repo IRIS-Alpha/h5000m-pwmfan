@@ -8,7 +8,7 @@ Create a new LuCI package named `luci-app-h5000m-pwmfan` for H5000M. The package
 
 - Existing community build uses `luci-app-h5000m-fancontrol` from `FAN789/luci-app-h5000m-fancontrol`.
 - Factory firmware package is `luci-app-fanctrol`, version `3.2.14-r19`.
-- Factory package format is IPK/opkg, not APK.
+- Factory package format is APK, not IPK.
 - Factory package exact upstream source and license are unknown from the shipped firmware.
 - Factory package files were extracted under `E:\WorkSpace\A20_Project\Temp\H5000M-fancontrol-analysis\package\luci-app-fanctrol`.
 - Firmware and analysis manifest: `E:\WorkSpace\A20_Project\Temp\H5000M-fancontrol-analysis\MANIFEST.md`.

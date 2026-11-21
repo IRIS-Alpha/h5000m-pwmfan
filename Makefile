@@ -21,3 +21,4 @@ define Package/luci-app-h5000m-pwmfan/conffiles
 endef
 
 include $(TOPDIR)/feeds/luci/luci.mk
+# call BuildPackage - OpenWrt buildroot signature
