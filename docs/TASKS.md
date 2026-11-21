@@ -175,19 +175,19 @@
   - Fixed request uses a 1% step over 0–100%; the separate stop action is removed and 0% is the stop request, with a visible warning that is not colour-only.
   - The protection statistics line leaves the dashboard; the control source moves into the running badge.
   - The language control keeps its three options until the mobile header layout is settled.
-- Pending decision: the apply model and the 3-second minimum mode interval (proposal in `docs/REQUIREMENTS_V3.md`, 讨论中).
+- Confirmed apply model: per-control commits, drag-does-not-commit plus one shared 3-second trailing merge for modes and the fixed slider, no backend slew limit (`docs/REQUIREMENTS_V3.md` §16).
 - Expected changes:
   - [ ] `root/usr/sbin/h5000m-pwmfan`: accept `fixed_duty` 0–100 in 1% steps; keep `requested_pwm` so a 0% request yields 0 and any non-zero request still respects `min_pwm`.
   - [ ] `tests/controller-lib.bats`: replace the 10%-step rejection with 0% and 1% acceptance plus an out-of-range rejection; assert `requested_pwm=0` at 0% and the minimum floor at 1%.
-  - [ ] `htdocs/luci-static/resources/view/h5000m-pwmfan.js`: slider `min:0 step:1`, stop button removed, stop warning driven by the request value, control source merged into the badge, statistics line removed.
+  - [ ] `htdocs/luci-static/resources/view/h5000m-pwmfan.js`: slider `min:0 step:1`, stop button removed, stop warning driven by the live request and the actual output, control source merged into the badge, statistics line removed, shared 3-second trailing merge with the `应用中-Ns` countdown in the title-row state slot.
   - [ ] `htdocs/luci-static/resources/view/h5000m-pwmfan.css`: zero-request warning styling and the wider badge layout.
   - [ ] Translations and `docs/REQUIREMENTS_V3.md` §13/§14/§15 stay in sync; `docs/UIUX_RECHECK_2026-11-22.md` records the decisions.
 - Verification: `STRICT=1 sh tools/check.sh`, plus local preview at 320/390/500/651/1360px in light and dark for the 0% state and the merged badge.
 - Acceptance: 0% is reachable without the stop button and reports 0 requested PWM on the fixture; non-zero values still respect the minimum; one badge shows state and source; no statistics line; the language control is unchanged.
-- Status: started 2026-11-22; submission-timing changes wait for the apply-model decision.
+- Status: started 2026-11-22; the apply model is settled, so the remaining work is implementation.
 
 - [ ] `mode=off` 退场：先按方案 A 把 `off` 降级为重载别名（映射 `fixed` + `fixed_duty=0`，删掉 `requested_pwm` 的 `off:*` 分支），再只读核对路由器 `uci show h5000m_pwmfan`；设备上没有 `mode=off` 且条件允许时升级到方案 B（白名单删除 + 一次性迁移）。
-- [ ] 固定请求滑块的手速档：拖动只更新读数、松手才提交、提交做 2–3 秒合并；后端步进限幅作为独立提案另行确认。
+- [ ] 固定请求滑块与模式切换共用 3 秒尾随合并器：拖动只更新读数、松手才提交、标题行显示“应用中-Ns”；不做后端步进限幅（已定案，见 `REQUIREMENTS_V3.md` §16）。
 
 ## Brief log
 
