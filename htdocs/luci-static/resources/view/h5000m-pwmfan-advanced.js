@@ -38,11 +38,30 @@ return view.extend({
 	},
 
 	style: function() {
-		return E('style', {}, '.pwmfan-advanced .cbi-section{border:1px solid var(--v-line,var(--border-color-medium,#d8dce0));border-radius:5px;background:var(--v-surface,var(--background-color-high,#fff));padding:14px}.pwmfan-group-heading{border-top:1px solid var(--v-line,var(--border-color-medium,#d8dce0));padding-top:15px;margin:4px 0 12px}.pwmfan-group-heading h3{font-size:16px;margin:0}.pwmfan-group-heading p{font-size:12px;color:var(--v-text-2,var(--text-color-medium,#737a80));margin:5px 0 0}.pwmfan-advanced .cbi-value-field{min-width:0}.pwmfan-advanced .cbi-value-field select,.pwmfan-advanced .cbi-dropdown{width:100%;max-width:100%;box-sizing:border-box}.pwmfan-advanced .cbi-value-description{max-width:70ch}.pwmfan-advanced .cbi-page-actions{position:static}');
+		var line = 'var(--v-line,var(--line,var(--border-color-medium,#d8dce0)))';
+		var text = 'var(--v-text,var(--text,var(--text-color-high,#171d27)))';
+		var muted = 'var(--v-text-2,var(--text-2,var(--text-color-medium,#737a80)))';
+		return E('style', {}, [
+			'.pwmfan-advanced .cbi-value-field{min-width:0;max-width:460px}',
+			'.pwmfan-advanced .cbi-value-field select,.pwmfan-advanced .cbi-dropdown{width:100%;max-width:100%;box-sizing:border-box}',
+			'.pwmfan-advanced .cbi-value-description{max-width:70ch}',
+			'.pwmfan-advanced .cbi-map > h2{font-size:21px;margin:0 0 4px}',
+			'.pwmfan-advanced .cbi-map-descr{margin:0 0 14px;font-size:13px}',
+			'.pwmfan-advanced .cbi-value{scroll-margin-bottom:24px}',
+			/* Dock the LuCI command bar: while it floats it covers the field row beneath it. */
+			'.cbi-page-actions{position:static;bottom:auto;margin:18px 0 0 auto}',
+			'.pwmfan-header{display:flex;justify-content:flex-end;margin:0 0 10px}',
+			'.pwmfan-header .btn{display:inline-flex;align-items:center;height:30px;padding:0 11px;border:1px solid ' + line + ';border-radius:8px;background:transparent;color:' + muted + ';font-size:12.5px;font-weight:500;text-decoration:none}',
+			'.pwmfan-header .btn:hover{border-color:' + muted + ';color:' + text + '}',
+			'.pwmfan-group-heading{margin:18px 0 10px}',
+			'.pwmfan-group-heading h3{font-size:15px;font-weight:650;margin:0}',
+			'.pwmfan-group-heading p{font-size:12px;color:' + muted + ';margin:5px 0 0}',
+			'.pwmfan-advanced .cbi-value:first-child .pwmfan-group-heading{margin-top:0}'
+		].join(''));
 	},
 
 	form: function() {
-		var map = new form.Map(CONFIG, _('Advanced fan settings'));
+		var map = new form.Map(CONFIG, _('Advanced fan settings'), _('Fan policy grouped by behavior'));
 		var section = map.section(form.NamedSection, SECTION, 'settings');
 		section.anonymous = true;
 		this.group(section, 'kernel', _('Kernel protection'), '');
@@ -109,8 +128,7 @@ return view.extend({
 		return this.map.render().then(L.bind(function(formNode) {
 			return E('div', { 'class': 'pwmfan-advanced' }, [
 				this.style(),
-				E('header', { 'class': 'pwmfan-header' }, [
-					E('div', {}, [ E('h2', {}, _('Advanced settings')), E('p', {}, _('Fan policy grouped by behavior')) ]),
+				E('div', { 'class': 'pwmfan-header' }, [
 					E('a', { 'class': 'btn', 'href': L.url('admin/system/h5000m_pwmfan/dashboard') }, _('Back to dashboard'))
 				]),
 				formNode

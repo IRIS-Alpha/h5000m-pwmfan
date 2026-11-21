@@ -21,13 +21,13 @@
 .pf-heading h2 { font-size: 21px; }
 .pf-heading a { font-size: 12px; text-align: right; }
 .pf-toolbar { display: flex; justify-content: space-between; gap: clamp(18px, 8vw, 64px); }
-.pf-toolbar > * { min-width: 0; width: 46%; height: 32px; box-sizing: border-box; }
+.pf-toolbar > * { min-width: 0; width: 46%; max-width: 172px; height: 32px; box-sizing: border-box; }
 .pf-page :is(select, input:not([type=range]), button) { min-width: 0; color: var(--pf-text); background: var(--pf-surface); border: 1px solid var(--pf-line); border-radius: 7px; }
 .pf-page :is(input:not([type=range]), select, button) { height: 34px; padding: 0 9px; }
 .pf-page :is(button, select, summary) { cursor: pointer; }
 .pf-page button:disabled { opacity: .5; cursor: default; }
 .pf-page :is(input, select, button, summary, canvas):focus-visible { outline: 2px solid var(--pf-blue); outline-offset: 2px; }
-.pf-live { display: inline-flex; align-items: center; gap: 8px; padding: 0 10px; color: var(--pf-muted); background: var(--pf-surface); border: 1px solid var(--pf-line); border-radius: 999px; white-space: nowrap; }
+.pf-live { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 10px; color: var(--pf-muted); background: var(--pf-surface); border: 1px solid var(--pf-line); border-radius: 999px; white-space: nowrap; }
 .pf-live span { min-width: 0; text-overflow: ellipsis; overflow: hidden; }
 .pf-live i { width: 8px; height: 8px; flex: none; border-radius: 50%; background: currentColor; position: relative; }
 .pf-live[data-state=ok] i { color: var(--pf-green); }
@@ -46,7 +46,8 @@
 .pf-bar { background: var(--pf-line); height: 3px; margin-inline: -7px; }
 .pf-bar i { display: block; background: var(--metric-color); width: 0; height: 100%; }
 .pf-source, .pf-note, .pf-field { color: var(--pf-muted); font-size: 12px; }
-.pf-modes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; margin-top: 9px; }
+.pf-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 9px; }
+.pf-modes.pf-drives { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 7px; }
 .pf-method { margin-top: 9px; padding: 9px; border: 1px solid var(--pf-line); border-radius: 7px; background: var(--pf-subtle); }
 .pf-method-title { display: flex; justify-content: space-between; align-items: center; width: 100%; text-align: left; font-weight: 650; }
 .pf-method-title span, .pf-chart-state { color: var(--pf-muted); font-size: 12px; font-weight: 400; }
@@ -100,7 +101,6 @@
 	.pf-metrics { gap: 4px; }
 	.pf-metric { padding-inline: 4px; min-height: 51px; }
 	.pf-bar { margin-inline: -4px; }
-	.pf-modes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 	.pf-fixed-controls { grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
 	.pf-target, .pf-points { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 	.pf-plot canvas { height: 150px; }
@@ -124,7 +124,7 @@ html[data-darkmode=true] .pf-page {
 	--pf-red: var(--v-err, #ff8a9b);
 }
 .pf-page .pf-modes button.pf-danger { color: var(--pf-red); border-color: var(--pf-red); }
-.pf-page .pf-toolbar select { height: 32px; }
+.pf-page .pf-toolbar select { height: 32px; min-width: 8.5em; }
 .pf-touch-point { display: none; }
 @media (pointer: coarse) {
 	.pf-touch-point:not([hidden]) { display: block; position: absolute; width: 28px; height: 28px; transform: translate(-50%, -50%); touch-action: none; cursor: grab; }

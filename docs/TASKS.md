@@ -128,6 +128,7 @@
 - [ ] Recover an authoritative CI run/release record or pinned source and feed revisions for firmware `r0-a4ba824`; the current main-project workflow clones a moving branch and the reported short hash is not fetchable from the candidate upstream refs.
 - [x] Implement one-page LuCI status/control view, ACL/menu, quick dispatch, UCI settings, and zh-Hans translation package.
 - [x] Verify the V3 views under Vantage light/dark/auto and at 320/390/1360px with Playwright and the local firmware assets.
+- [x] Apply the four accepted visual corrections and the §13/§14 header sizing rule to the local views; verify at 320/390/500/651/1360px in light and dark.
 - [ ] Verify the installed Simplified Chinese translation package with the matching SDK/APK on the device; after hot installation, clear browser cache and hard-reload before judging menu or translation visibility.
 - [ ] Prepare optional H5000M thermal-map integration patch for later main-project feature.
 - [ ] Hardware validation and rollback procedure.
@@ -138,7 +139,7 @@
 
 - 2026-11-21: Recorded and implemented five local-preview UI corrections: top-control spacing, fixed-request label/slider/stop alignment, Wake-style slider feedback, and history unit spacing. Verified all 10 mobile/desktop theme combinations with no horizontal overflow and confirmed 10% keyboard increments.
 
-## Planned task block: UI/UX backlog verification
+## Completed task block: UI/UX backlog verification
 
 - Goal: verify the accepted visual backlog against the current local preview, then settle interaction questions before implementation.
 - Expected changes: first record findings and decisions; update formal requirements only after the user confirms unresolved behavior or parameter choices.
@@ -149,10 +150,24 @@
   - [x] Reported apply timing, minimum interval, zero-duty semantics, warning triggers, and the V3 conflicts in `docs/UIUX_RECHECK_2026-11-22.md`.
 - Verification: local preview screenshots/measurements, interaction-state inspection, and `git diff --check` for documentation changes.
 - Acceptance: each visual finding is confirmed, fixed, deferred, or marked not reproducible; unresolved behavior is not silently promoted to formal requirements.
-- Status: verification complete for the four findings and the new proposals; no interface or controller code changed. Awaiting decisions on zero-duty semantics, the apply model, and the 3-second interval before implementation. Report: `docs/UIUX_RECHECK_2026-11-22.md`.
+- Status: verification complete; the four findings were fixed in the follow-up pure-styling block below. Decisions on zero-duty semantics, the apply model, and the 3-second interval remain open for Block B. Report: `docs/UIUX_RECHECK_2026-11-22.md`.
+
+## Completed task block: pure styling corrections (Block A)
+
+- Goal: fix the four confirmed visual findings without changing control behaviour, submission semantics, or configured values.
+- Expected changes: history-axis label thinning, advanced-page heading and module tokens, docked command bar, preset/drive mode grouping, and the §13/§14 header sizing rule.
+- Progress:
+  - [x] `htdocs/luci-static/resources/view/h5000m-pwmfan.js`: thin history-axis labels from the measured label width and tick spacing while keeping six grid ticks (`[0, 2, 5]` at 320px, all six from 390px).
+  - [x] `htdocs/luci-static/resources/view/h5000m-pwmfan.css`: presets and parameterised modes render as 3 + 2 columns at every width; status and language controls keep equal width/height with a 172px cap.
+  - [x] `htdocs/luci-static/resources/view/h5000m-pwmfan-advanced.js`: one heading plus subtitle from `form.Map`, theme card and 460px field cap restored, secondary back link, command bar docked to the form end.
+- Verification: `node --check` on both views; `STRICT=1 sh tools/check.sh` 33/33; local preview at 320/390/500/651/1360px in light and dark with measured geometry and no horizontal overflow.
+- Acceptance: each finding is fixed in the local preview with no behaviour change.
+- Status: complete for styling. Block B behaviour items (zero-duty semantics, apply timing, 3-second interval) stay queued and unimplemented.
 
 ## Brief log
 
+- 2026-11-22: Fixed the four accepted visual findings in the local views: history-axis label thinning, docked advanced command bar, a single advanced heading with theme card tokens, and 3 + 2 preset/drive grouping. Header controls keep equal width and height with a 172px cap. `STRICT=1 sh tools/check.sh` 33/33; no behaviour change.
+- 2026-11-22: Recorded the fix evidence in `docs/UIUX_RECHECK_2026-11-22.md` section 7. Zero-duty semantics, apply timing, and the 3-second interval remain open for Block B.
 - 2026-11-22: Rechecked the four accepted UI findings and the nine new proposals in the local preview at 320/390/500/651/1360px in light and dark themes. Issues 1.1, 1.2, and 1.4 reproduce; 1.3 reproduces as duplicated page titles while the dark back-button colour did not reproduce. Recorded `docs/UIUX_RECHECK_2026-11-22.md`; no interface or controller code changed.
 - 2026-11-22: Removed a duplicated section 14 in `docs/REQUIREMENTS_V3.md`, clarified the finished UI-corrections block heading, and restored the blank line before the queued UI/UX verification block. Documentation only; no interface or controller change.
 - 2026-11-22: Logged the four accepted visual findings and the new UI proposals in `docs/UIUX_IMPROVEMENTS_2026-11.md`; scheduled preview rechecks and left apply timing, 0% semantics, and the 3-second interval unresolved. No UI code changed.

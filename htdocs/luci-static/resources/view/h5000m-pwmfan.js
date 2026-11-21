@@ -194,7 +194,9 @@ return view.extend({
 			click: function() { self.commit({ mode: 'off', drive: 'duty', enabled: '1' }); } }, _('Stop fan'));
 		var fixedGroup = E('section', { 'class': 'pf-method', 'data-selected': String(fixed) }, [ fixedTitle,
 			E('div', { 'class': 'pf-fixed-controls' }, [ E('label', { 'class': 'pf-slider' }, [ E('span', {}, _('Requested duty')), wake, readout ]), stop ]) ]);
-		var curveChildren = [ curveTitle, E('div', { 'class': 'pf-modes', role: 'group', 'aria-label': _('Curve preset') }, this.modeButtons) ];
+		var curveChildren = [ curveTitle,
+			E('div', { 'class': 'pf-modes', role: 'group', 'aria-label': _('Curve preset') }, this.presetButtons),
+			E('div', { 'class': 'pf-modes pf-drives' }, this.driveButtons) ];
 		if (!fixed && curveMode === 'target') curveChildren.push(E('details', { 'class': 'pf-parameters' }, [ E('summary', {}, _('Target drive parameters')), this.targetFields() ]));
 		if (!fixed && curveMode === 'manual') curveChildren.push(E('details', { 'class': 'pf-parameters' }, [ E('summary', {}, _('Curve parameters')), this.editor ]));
 		var curveGroup = E('section', { 'class': 'pf-method', 'data-selected': String(!fixed) }, curveChildren);
@@ -464,9 +466,17 @@ return view.extend({
 			ctx.fillText(tick + (chart.history ? '°' : '%'), left - 6, y(tick) + 4);
 		}
 		ctx.textAlign = 'center';
+		var labelSpacing = (right - left) / 5;
+		var labelWidth = ctx.measureText(chart.history ? localeTime(start) : '100°').width;
+		var labelStep = Math.max(1, Math.ceil((labelWidth * 1.5 + 4) / labelSpacing));
+		var labels = [ 0 ];
+		for (var labelIndex = labelStep; labelIndex < 5; labelIndex += labelStep) labels.push(labelIndex);
+		while (labels.length > 1 && 5 - labels[labels.length - 1] < labelStep) labels.pop();
+		labels.push(5);
 		for (var i = 0; i <= 5; i++) {
 			var value = start + (end - start) * i / 5;
 			coords(x(value), top, x(value), bottom, color('--pf-line'), [ 3, 3 ]);
+			if (labels.indexOf(i) < 0) continue;
 			ctx.textAlign = i === 0 ? 'left' : i === 5 ? 'right' : 'center';
 			ctx.fillText(chart.history ? localeTime(value) : value + '°', x(value), bottom + 17);
 		}
@@ -568,10 +578,13 @@ return view.extend({
 		this.tempMetrics = SENSORS.map(function(sensor) { return self.makeMetric(sensor[0], sensor[2]); });
 		this.outputMetrics = [ this.makeMetric(_('Requested output'), '--pf-blue'), this.makeMetric(_('Actual output'), '--pf-amber'),
 			this.makeMetric(_('Protection output'), '--pf-red'), this.makeMetric(_('Fan speed'), '--pf-muted') ];
-		this.modeButtons = [ 'quiet', 'balanced', 'performance', 'target', 'manual' ].map(function(mode) {
+		var modeButton = function(mode) {
 			return E('button', { type: 'button', 'class': 'btn pf-mode', 'data-mode': mode,
 				click: function() { self.commit({ mode: mode, curve_mode: mode, drive: 'curve', enabled: '1' }); } }, MODES[mode]);
-		});
+		};
+		this.presetButtons = [ 'quiet', 'balanced', 'performance' ].map(modeButton);
+		this.driveButtons = [ 'target', 'manual' ].map(modeButton);
+		this.modeButtons = this.presetButtons.concat(this.driveButtons);
 		this.policy = E('div', { 'class': 'pf-policy' });
 		this.editor = E('div', { 'class': 'pf-editor' });
 		this.saveCurve = E('button', { type: 'button', 'class': 'btn', click: function() {
