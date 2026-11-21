@@ -57,6 +57,9 @@
 
 ## Work queue
 
+- [x] Select Apache-2.0 for the package and include the canonical license text and package metadata.
+- [x] Confirm the current delivery path: compile the package into firmware and validate locally produced APKs; defer a router-facing package feed and its signing setup until the plugin is stable.
+
 - [x] Establish independent package repository and preserve handoff.
 - [x] Configure lightweight engineering checks and planning documents.
 - [x] Confirm Vantage upstream and theme integration approach.
@@ -81,15 +84,19 @@
 - [ ] Gate live PWM/thermal integration on reviewed runtime evidence and a device rollback procedure.
 - [ ] Build and validate the firmware APK with the matching OWT2510 ImmortalWrt buildroot/SDK. The available October SDK produced compatibility APKs only; they are unsigned by the device trust key and its LuCI revision differs from the installed firmware.
 - [ ] Recover an authoritative CI run/release record or pinned source and feed revisions for firmware `r0-a4ba824`; the current main-project workflow clones a moving branch and the reported short hash is not fetchable from the candidate upstream refs.
-- [ ] Establish an approved package-signing path trusted by the target firmware, then verify both package signatures before device installation.
 - [x] Implement one-page LuCI status/control view, ACL/menu, quick dispatch, UCI settings, and zh-Hans translation package.
 - [x] Verify the V3 views under Vantage light/dark/auto and at 320/390/1360px with Playwright and the local firmware assets.
-- [ ] Verify the installed Simplified Chinese translation package with the matching SDK/APK on the device.
+- [ ] Verify the installed Simplified Chinese translation package with the matching SDK/APK on the device; after hot installation, clear browser cache and hard-reload before judging menu or translation visibility.
 - [ ] Prepare optional H5000M thermal-map integration patch for later main-project feature.
 - [ ] Hardware validation and rollback procedure.
-- [ ] Select source redistribution license and replace temporary `UNKNOWN` metadata before publishing.
+
+## Deferred until the plugin is stable
+
+- [ ] Decide whether to submit to an official feed or maintain a self-hosted APK repository; add index signing and device trust only if standalone package updates are still desired.
 
 ## Brief log
+
+- 2026-11-21: User selected Apache-2.0 for the independent package. Added the official license text and declared `PKG_LICENSE`/`PKG_LICENSE_FILES`. Confirmed current delivery remains firmware-integrated with local APK validation; runtime feed and signing setup are deferred until stabilization.
 
 - 2026-11-21: Re-ran `STRICT=1 sh tools/check.sh` (33/33 pass). Host `apk-tools 3.0.5` verified both October-SDK compatibility APK payloads and metadata: main package depends on `libc`/`luci-base`; zh-cn package depends on the main package and contains `h5000m-pwmfan.zh-cn.lmo`. Both signatures are reported untrusted, so neither is eligible for target installation/release verification. The supplied firmware rootfs confirms `r0-a4ba824`, but its source commit was not retrievable from the three candidate upstream repos; the public Releases Atom feed returned no entries and the unauthenticated Actions API was rate-limited. Matching build, trusted signing, device translation/UI verification, and live thermal handover remain open. No router or PWM state was changed.
 - 2026-11-21: At the user's request, installed the compatibility main/zh-cn APKs on the live `r0-a4ba824` router using `--allow-untrusted` for local validation. Verified package registration, `.lmo` presence, sensor reads, disabled control state (`enabled=0`, `kernel_takeover=0`, `requested_pwm=--`, `owner=none`), and current PWM readback `51/255`; the existing `h5000m-fancontrol` remained running and this package has no boot enable link or resident process. Browser-language rendering, matching-build validation, trusted release signature, and hardware takeover remain open. No control UCI values were changed.

@@ -44,8 +44,8 @@ its feeds, or an SDK produced from that same buildroot; do not substitute an
 unrelated stable OpenWrt SDK. Integration into the main firmware project comes
 after package validation.
 
-The redistribution license is undecided. Package metadata temporarily uses
-`UNKNOWN`; do not publish a release until a license is selected and included.
+This package is licensed under Apache-2.0; see [LICENSE](LICENSE). Third-party
+components retain their own licenses and notices.
 
 ## Development checks
 
