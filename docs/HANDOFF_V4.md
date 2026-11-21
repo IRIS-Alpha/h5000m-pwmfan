@@ -5,7 +5,10 @@ Updated: 2026-11-22 (Asia/Shanghai)
 ## Canonical workspaces
 
 - Primary package workspace: `/home/devcc/Projects/h5000m-pwmfan` in WSL
-  Ubuntu-26.04, branch `main`, verified baseline `b5aaed7`.
+  Ubuntu-26.04, branch `main`. Code baseline `b5aaed7`; the handoff and
+  tracker commits (`45ebffa`, `c4cb4af`) sit on top, so `HEAD` is ahead of
+  the code baseline by design. Compare with `git log --oneline -5` instead of
+  expecting `HEAD == b5aaed7`.
 - Associated firmware repository: `/mnt/e/WorkSpace/A20_Project/H5000M-CI-Qmodem-OP-git`
   (Windows: `E:\WorkSpace\A20_Project\H5000M-CI-Qmodem-OP-git`). This is a
   separate project and had pre-existing uncommitted changes when inspected;
@@ -17,8 +20,8 @@ Updated: 2026-11-22 (Asia/Shanghai)
   `/home/devcc/Projects/.h5000m-work`. The October SDK only produced
   compatibility APKs and does not match the installed firmware LuCI baseline.
 - The Windows package checkout `E:\WorkSpace\A20_Project\h5000m-pwmfan`
-  is stale documentation-only history at `4e8de56`. Do not use it as the
-  implementation baseline or overwrite WSL progress with its older tracker.
+  is a stale snapshot at `4e8de56` that also carries untracked scaffolding. Do not
+  use it as the implementation baseline or overwrite WSL progress with its older tracker.
 
 ## Current state
 

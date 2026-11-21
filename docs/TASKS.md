@@ -132,6 +132,8 @@
 - [x] Reconcile the V4 handoff documents with this tracker, confirm the workspace baselines, and keep the five undecided behaviour items unresolved.
 - [ ] Verify the installed Simplified Chinese translation package with the matching SDK/APK on the device; after hot installation, clear browser cache and hard-reload before judging menu or translation visibility.
 - [ ] Prepare optional H5000M thermal-map integration patch for later main-project feature.
+- [x] Confirm zero-duty semantics, control-source placement, statistics removal, and defer the language control (2026-11-22).
+- [ ] Implement Block B control semantics: 1% fixed-request step without a stop button, control source in the badge, statistics line removed.
 - [ ] Hardware validation and rollback procedure.
 
 ## Deferred until the plugin is stable
@@ -165,8 +167,27 @@
 - Acceptance: each finding is fixed in the local preview with no behaviour change.
 - Status: complete for styling. Block B behaviour items (zero-duty semantics, apply timing, 3-second interval) stay queued and unimplemented.
 
+## Active task block: Block B — control semantics and status consolidation
+
+- Goal: implement the confirmed control-semantics changes and keep the documentation aligned with them.
+- Confirmed decisions (user, 2026-11-22):
+  - Fixed request uses a 1% step over 0–100%; the separate stop action is removed and 0% is the stop request, with a visible warning that is not colour-only.
+  - The protection statistics line leaves the dashboard; the control source moves into the running badge.
+  - The language control keeps its three options until the mobile header layout is settled.
+- Pending decision: the apply model and the 3-second minimum mode interval (proposal in `docs/REQUIREMENTS_V3.md`, 讨论中).
+- Expected changes:
+  - [ ] `root/usr/sbin/h5000m-pwmfan`: accept `fixed_duty` 0–100 in 1% steps; keep `requested_pwm` so a 0% request yields 0 and any non-zero request still respects `min_pwm`.
+  - [ ] `tests/controller-lib.bats`: replace the 10%-step rejection with 0% and 1% acceptance plus an out-of-range rejection; assert `requested_pwm=0` at 0% and the minimum floor at 1%.
+  - [ ] `htdocs/luci-static/resources/view/h5000m-pwmfan.js`: slider `min:0 step:1`, stop button removed, stop warning driven by the request value, control source merged into the badge, statistics line removed.
+  - [ ] `htdocs/luci-static/resources/view/h5000m-pwmfan.css`: zero-request warning styling and the wider badge layout.
+  - [ ] Translations and `docs/REQUIREMENTS_V3.md` §13/§14/§15 stay in sync; `docs/UIUX_RECHECK_2026-11-22.md` records the decisions.
+- Verification: `STRICT=1 sh tools/check.sh`, plus local preview at 320/390/500/651/1360px in light and dark for the 0% state and the merged badge.
+- Acceptance: 0% is reachable without the stop button and reports 0 requested PWM on the fixture; non-zero values still respect the minimum; one badge shows state and source; no statistics line; the language control is unchanged.
+- Status: started 2026-11-22; submission-timing changes wait for the apply-model decision.
+
 ## Brief log
 
+- 2026-11-22: User settled the zero-duty question (1% step, no separate stop action, warning shown), asked for the control source to merge into the running badge, and accepted removing the statistics line; the language control stays three-way until the mobile header is settled. Recorded in `docs/REQUIREMENTS_V3.md` §13/§14/§15 and opened the Block B task block. The apply model and the 3-second interval remain a labelled proposal.
 - 2026-11-22: Re-checked project status against the newly added `docs/HANDOFF_V4.md` and `docs/NEW_CHAT_PROMPT_V4.md` (commit `45ebffa`). Code baseline stays `b5aaed7`; HEAD is `45ebffa` because the handoff documents sit on top of it. Preview responses match the worktree byte-for-byte, `STRICT=1 sh tools/check.sh` passes 33/33, and the firmware repository keeps its five pre-existing modifications untouched.
 - 2026-11-22: Fixed the four accepted visual findings in the local views: history-axis label thinning, docked advanced command bar, a single advanced heading with theme card tokens, and 3 + 2 preset/drive grouping. Header controls keep equal width and height with a 172px cap. `STRICT=1 sh tools/check.sh` 33/33; no behaviour change.
 - 2026-11-22: Recorded the fix evidence in `docs/UIUX_RECHECK_2026-11-22.md` section 7. Zero-duty semantics, apply timing, and the 3-second interval remain open for Block B.
