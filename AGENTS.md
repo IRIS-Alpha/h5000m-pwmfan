@@ -15,6 +15,13 @@
 - Confirm material disagreements about behavior, safety policy, or user-configurable parameter ranges promptly; do not silently turn an unresolved proposal into a requirement.
 - Before assigning work to another agent, state the concrete value of delegation and the independent result it is expected to produce. Do not delegate when parallel work has no meaningful benefit.
 
+## Frontend Skill Stages
+
+- For page design or structural redesign, use the project-local `$frontend-design` skill and follow confirmed requirements plus the Vantage theme reference.
+- For repeated visual refinement against the running preview, use `$impeccable`; inspect the rendered page and apply its craft guidance before UI edits.
+- Before completing a UI task, use `$web-design-guidelines` on the changed interface files and resolve applicable findings.
+- Keep these stages distinct: use design guidance while forming the UI, Impeccable during visual iteration, and Web Design Guidelines for the final review.
+
 ## Device Access and Reference Work
 
 - Prefer read-only SSH for router observations when it is more direct and reliable than browser interaction. The router is locally managed by the user; avoid browser simulation for routine device data collection.
