@@ -186,6 +186,9 @@
 - Acceptance: 0% is reachable without the stop button and reports 0 requested PWM on the fixture; non-zero values still respect the minimum; one badge shows state and source; no statistics line; the language control is unchanged.
 - Status: started 2026-11-22; submission-timing changes wait for the apply-model decision.
 
+- [ ] `mode=off` 退场：先按方案 A 把 `off` 降级为重载别名（映射 `fixed` + `fixed_duty=0`，删掉 `requested_pwm` 的 `off:*` 分支），再只读核对路由器 `uci show h5000m_pwmfan`；设备上没有 `mode=off` 且条件允许时升级到方案 B（白名单删除 + 一次性迁移）。
+- [ ] 固定请求滑块的手速档：拖动只更新读数、松手才提交、提交做 2–3 秒合并；后端步进限幅作为独立提案另行确认。
+
 ## Brief log
 
 - 2026-11-22: Re-recorded `docs/UIUX_IMPROVEMENTS_2026-11.md` as the live backlog. The four existing findings stay open for visual acceptance; the new batch covers the one-row header with theme and language switchers, mode-container highlight, the three-row fixed-request block with 1% controls and a floating readout, the conditional warning row, dashboard LuCI actions, and a reusable advanced-settings module style. Noted that `vantage_theme` already owns the theme preference and that deleting `mode=off` would send legacy configs into the full-speed failsafe.
