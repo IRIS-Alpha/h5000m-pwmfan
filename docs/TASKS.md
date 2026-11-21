@@ -129,6 +129,7 @@
 - [x] Implement one-page LuCI status/control view, ACL/menu, quick dispatch, UCI settings, and zh-Hans translation package.
 - [x] Verify the V3 views under Vantage light/dark/auto and at 320/390/1360px with Playwright and the local firmware assets.
 - [x] Apply the four accepted visual corrections and the §13/§14 header sizing rule to the local views; verify at 320/390/500/651/1360px in light and dark.
+- [x] Reconcile the V4 handoff documents with this tracker, confirm the workspace baselines, and keep the five undecided behaviour items unresolved.
 - [ ] Verify the installed Simplified Chinese translation package with the matching SDK/APK on the device; after hot installation, clear browser cache and hard-reload before judging menu or translation visibility.
 - [ ] Prepare optional H5000M thermal-map integration patch for later main-project feature.
 - [ ] Hardware validation and rollback procedure.
@@ -166,6 +167,7 @@
 
 ## Brief log
 
+- 2026-11-22: Re-checked project status against the newly added `docs/HANDOFF_V4.md` and `docs/NEW_CHAT_PROMPT_V4.md` (commit `45ebffa`). Code baseline stays `b5aaed7`; HEAD is `45ebffa` because the handoff documents sit on top of it. Preview responses match the worktree byte-for-byte, `STRICT=1 sh tools/check.sh` passes 33/33, and the firmware repository keeps its five pre-existing modifications untouched.
 - 2026-11-22: Fixed the four accepted visual findings in the local views: history-axis label thinning, docked advanced command bar, a single advanced heading with theme card tokens, and 3 + 2 preset/drive grouping. Header controls keep equal width and height with a 172px cap. `STRICT=1 sh tools/check.sh` 33/33; no behaviour change.
 - 2026-11-22: Recorded the fix evidence in `docs/UIUX_RECHECK_2026-11-22.md` section 7. Zero-duty semantics, apply timing, and the 3-second interval remain open for Block B.
 - 2026-11-22: Rechecked the four accepted UI findings and the nine new proposals in the local preview at 320/390/500/651/1360px in light and dark themes. Issues 1.1, 1.2, and 1.4 reproduce; 1.3 reproduces as duplicated page titles while the dark back-button colour did not reproduce. Recorded `docs/UIUX_RECHECK_2026-11-22.md`; no interface or controller code changed.
