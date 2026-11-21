@@ -134,6 +134,7 @@
 - [ ] Prepare optional H5000M thermal-map integration patch for later main-project feature.
 - [x] Confirm zero-duty semantics, control-source placement, statistics removal, and defer the language control (2026-11-22).
 - [ ] Implement Block B control semantics: 1% fixed-request step without a stop button, control source in the badge, statistics line removed.
+- [ ] Verify the expanded V4 UI proposal set in the local preview, then implement the confirmed top-area, mode-selection, fixed-request, warning, and advanced-settings redesign.
 - [ ] Hardware validation and rollback procedure.
 
 ## Deferred until the plugin is stable
@@ -187,6 +188,7 @@
 
 ## Brief log
 
+- 2026-11-22: Re-recorded `docs/UIUX_IMPROVEMENTS_2026-11.md` as the live backlog. The four existing findings stay open for visual acceptance; the new batch covers the one-row header with theme and language switchers, mode-container highlight, the three-row fixed-request block with 1% controls and a floating readout, the conditional warning row, dashboard LuCI actions, and a reusable advanced-settings module style. Noted that `vantage_theme` already owns the theme preference and that deleting `mode=off` would send legacy configs into the full-speed failsafe.
 - 2026-11-22: User settled the zero-duty question (1% step, no separate stop action, warning shown), asked for the control source to merge into the running badge, and accepted removing the statistics line; the language control stays three-way until the mobile header is settled. Recorded in `docs/REQUIREMENTS_V3.md` §13/§14/§15 and opened the Block B task block. The apply model and the 3-second interval remain a labelled proposal.
 - 2026-11-22: Re-checked project status against the newly added `docs/HANDOFF_V4.md` and `docs/NEW_CHAT_PROMPT_V4.md` (commit `45ebffa`). Code baseline stays `b5aaed7`; HEAD is `45ebffa` because the handoff documents sit on top of it. Preview responses match the worktree byte-for-byte, `STRICT=1 sh tools/check.sh` passes 33/33, and the firmware repository keeps its five pre-existing modifications untouched.
 - 2026-11-22: Fixed the four accepted visual findings in the local views: history-axis label thinning, docked advanced command bar, a single advanced heading with theme card tokens, and 3 + 2 preset/drive grouping. Header controls keep equal width and height with a 172px cap. `STRICT=1 sh tools/check.sh` 33/33; no behaviour change.
