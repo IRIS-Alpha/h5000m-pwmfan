@@ -79,7 +79,9 @@
 - [x] Verify the protection history snapshot and status reader in isolation.
 - [x] Verify the daemon protection-history writer against an isolated PWM fixture.
 - [ ] Gate live PWM/thermal integration on reviewed runtime evidence and a device rollback procedure.
-- [ ] Build and validate the firmware APK with the matching OWT2510 ImmortalWrt buildroot/SDK. The official October SDK produced compatibility APKs, but its dependency closure and LuCI revision differ from the installed firmware.
+- [ ] Build and validate the firmware APK with the matching OWT2510 ImmortalWrt buildroot/SDK. The available October SDK produced compatibility APKs only; they are unsigned by the device trust key and its LuCI revision differs from the installed firmware.
+- [ ] Recover an authoritative CI run/release record or pinned source and feed revisions for firmware `r0-a4ba824`; the current main-project workflow clones a moving branch and the reported short hash is not fetchable from the candidate upstream refs.
+- [ ] Establish an approved package-signing path trusted by the target firmware, then verify both package signatures before device installation.
 - [x] Implement one-page LuCI status/control view, ACL/menu, quick dispatch, UCI settings, and zh-Hans translation package.
 - [x] Verify the V3 views under Vantage light/dark/auto and at 320/390/1360px with Playwright and the local firmware assets.
 - [ ] Verify the installed Simplified Chinese translation package with the matching SDK/APK on the device.
@@ -88,6 +90,8 @@
 - [ ] Select source redistribution license and replace temporary `UNKNOWN` metadata before publishing.
 
 ## Brief log
+
+- 2026-11-21: Re-ran `STRICT=1 sh tools/check.sh` (33/33 pass). Host `apk-tools 3.0.5` verified both October-SDK compatibility APK payloads and metadata: main package depends on `libc`/`luci-base`; zh-cn package depends on the main package and contains `h5000m-pwmfan.zh-cn.lmo`. Both signatures are reported untrusted, so neither is eligible for target installation/release verification. The supplied firmware rootfs confirms `r0-a4ba824`, but its source commit was not retrievable from the three candidate upstream repos; the public Releases Atom feed returned no entries and the unauthenticated Actions API was rate-limited. Matching build, trusted signing, device translation/UI verification, and live thermal handover remain open. No router or PWM state was changed.
 
 - 2026-11-17: Created independent `luci-app-h5000m-pwmfan` workspace and moved the handoff into it; initial commit `757cc30`.
 - 2026-11-17: Added ShellCheck/shfmt/Bats/SDK preparation, CI scaffold, and initial requirements/UI drafts. Tool binaries are not installed in the Windows workspace.
