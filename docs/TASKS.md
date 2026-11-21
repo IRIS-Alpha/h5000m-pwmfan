@@ -177,8 +177,8 @@
   - The language control keeps its three options until the mobile header layout is settled.
 - Confirmed apply model: per-control commits, drag-does-not-commit plus one shared 3-second trailing merge for modes and the fixed slider, no backend slew limit (`docs/REQUIREMENTS_V3.md` §16).
 - Expected changes:
-  - [ ] `root/usr/sbin/h5000m-pwmfan`: accept `fixed_duty` 0–100 in 1% steps; keep `requested_pwm` so a 0% request yields 0 and any non-zero request still respects `min_pwm`.
-  - [ ] `tests/controller-lib.bats`: replace the 10%-step rejection with 0% and 1% acceptance plus an out-of-range rejection; assert `requested_pwm=0` at 0% and the minimum floor at 1%.
+  - [x] `root/usr/sbin/h5000m-pwmfan`: accept `fixed_duty` 0–100 in 1% steps; keep `requested_pwm` so a 0% request yields 0 and any non-zero request still respects `min_pwm`. Done 2026-11-22, together with the scheme-A `off` alias.
+  - [x] `tests/controller-lib.bats`: replaced the 10%-step rejection with 0% and 1% acceptance plus an out-of-range rejection; asserts `requested_pwm=0` at 0% and the 51 floor at 1%. Done 2026-11-22.
   - [ ] `htdocs/luci-static/resources/view/h5000m-pwmfan.js`: slider `min:0 step:1`, stop button removed, stop warning driven by the live request and the actual output, control source merged into the badge, statistics line removed, shared 3-second trailing merge with the `应用中-Ns` countdown in the title-row state slot.
   - [ ] `htdocs/luci-static/resources/view/h5000m-pwmfan.css`: zero-request warning styling and the wider badge layout.
   - [ ] Translations and `docs/REQUIREMENTS_V3.md` §13/§14/§15 stay in sync; `docs/UIUX_RECHECK_2026-11-22.md` records the decisions.
@@ -190,6 +190,8 @@
 - [ ] 固定请求滑块与模式切换共用 3 秒尾随合并器：拖动只更新读数、松手才提交、0% 绕过合并立即提交、标题行显示“应用中-Ns”；不做后端步进限幅（已定案，见 `REQUIREMENTS_V3.md` §16）。
 
 - 2026-11-22: Read-only probe of the V4 proposals (header row, breadcrumb naming, theme switcher source, warning row, fold parameters); findings and three header options recorded in `docs/UIUX_RECHECK_2026-11-22.md` §八.
+
+- 2026-11-22: Block B backend half landed: `fixed_duty` 0–100 in 1% steps, `off` mapped to a zero fixed request as a legacy alias, dead `off:*` branch removed, fixture updated; 33/33 checks pass.
 
 ## Brief log
 

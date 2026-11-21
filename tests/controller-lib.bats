@@ -452,7 +452,14 @@ TEST_MODE=fixed TEST_TEMP=65000 TEST_DUTY=40
 set_pwm() { printf '%s\n' "$1" >"$fixture/pwm"; effective=$1; ACTIVE_OWNER=1; OWNER=userspace; }
 apply_cycle
 grep -Fxq 'requested_pwm=102' "$STATUS_FILE"
-TEST_DUTY=43
+TEST_DUTY=0
+apply_cycle
+[ "$(cat "$fixture/pwm")" = 0 ]
+grep -Fxq 'requested_pwm=0' "$STATUS_FILE"
+TEST_DUTY=1
+apply_cycle
+grep -Fxq 'requested_pwm=51' "$STATUS_FILE"
+TEST_DUTY=101
 if load_settings; then exit 1; fi
 EOF_CYCLE
 	run sh "$fixture/check-cycle" "$fixture"

@@ -228,6 +228,13 @@ load_settings() {
 	[ "$TAKEOVER" = 0 ] || [ "$TAKEOVER" = 1 ] || return 1
 	config_get MODE "$SECTION" mode balanced
 	case "$MODE" in quiet | balanced | performance | custom | manual | kernel | target | fixed | off) ;; *) return 1 ;; esac
+	# Legacy alias: `off` predates the 0 % fixed request. A stored config keeps
+	# working as a zero fixed request instead of failing into the full-speed failsafe.
+	OFF_ALIAS=0
+	if [ "$MODE" = off ]; then
+		MODE=fixed
+		OFF_ALIAS=1
+	fi
 	config_get SENSOR_SELECTION "$SECTION" sensor_sources auto
 	[ -n "$SENSOR_SELECTION" ] || SENSOR_SELECTION=auto
 	raw=
@@ -256,9 +263,12 @@ load_settings() {
 	PROTECTION_RELEASE=$(cfg_number "$raw" 2 100) || return 1
 	case "$MODE" in
 	fixed)
-		config_get raw "$SECTION" fixed_duty 50
-		FIXED_DUTY=$(cfg_number "$raw" 10 100) || return 1
-		[ "$((FIXED_DUTY % 10))" -eq 0 ] || return 1
+		if [ "$OFF_ALIAS" = 1 ]; then
+			FIXED_DUTY=0
+		else
+			config_get raw "$SECTION" fixed_duty 0
+			FIXED_DUTY=$(cfg_number "$raw" 0 100) || return 1
+		fi
 		;;
 	target)
 		config_get raw "$SECTION" target_temp 85
@@ -303,10 +313,6 @@ load_settings() {
 
 requested_pwm() {
 	case "$MODE:$DRIVE" in
-	off:*)
-		printf '0\n'
-		return
-		;;
 	fixed:duty) value=$(((FIXED_DUTY * 255 + 50) / 100)) ;;
 	quiet:duty | balanced:duty | performance:duty) value=$(((DUTY * 255 + 50) / 100)) ;;
 	*) value=$(curve_value "$CURVE" "$CONTROL_TEMP_C") || return 1 ;;
