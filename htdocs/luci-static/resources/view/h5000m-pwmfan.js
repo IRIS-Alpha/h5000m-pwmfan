@@ -178,12 +178,22 @@ return view.extend({
 		var duty = clamp(Number(setting('fixed_duty', 50)), 10, 100);
 		var readout = E('output', {}, duty + '%');
 		var slider = E('input', { type: 'range', value: duty, min: 10, max: 100, step: 10,
-			input: function(event) { readout.textContent = event.currentTarget.value + '%'; },
 			change: function(event) { self.commit({ mode: 'fixed', drive: 'duty', fixed_duty: event.currentTarget.value, enabled: '1' }); } });
+		var wake = E('span', { 'class': 'pf-wake' }, [ slider ]);
+		var wakeTimer;
+		var updateWake = function() {
+			readout.textContent = slider.value + '%';
+			wake.style.setProperty('--pf-wake-pct', ((Number(slider.value) - 10) / 90 * 100) + '%');
+			wake.classList.add('pf-wake-active');
+			clearTimeout(wakeTimer);
+			wakeTimer = setTimeout(function() { wake.classList.remove('pf-wake-active'); }, 320);
+		};
+		slider.addEventListener('input', updateWake);
+		updateWake();
 		var stop = E('button', { type: 'button', 'class': 'btn pf-danger', 'aria-pressed': String(mode === 'off'),
 			click: function() { self.commit({ mode: 'off', drive: 'duty', enabled: '1' }); } }, _('Stop fan'));
 		var fixedGroup = E('section', { 'class': 'pf-method', 'data-selected': String(fixed) }, [ fixedTitle,
-			E('div', { 'class': 'pf-fixed-controls' }, [ E('label', { 'class': 'pf-slider' }, [ E('span', {}, _('Requested duty')), slider, readout ]), stop ]) ]);
+			E('div', { 'class': 'pf-fixed-controls' }, [ E('label', { 'class': 'pf-slider' }, [ E('span', {}, _('Requested duty')), wake, readout ]), stop ]) ]);
 		var curveChildren = [ curveTitle, E('div', { 'class': 'pf-modes', role: 'group', 'aria-label': _('Curve preset') }, this.modeButtons) ];
 		if (!fixed && curveMode === 'target') curveChildren.push(E('details', { 'class': 'pf-parameters' }, [ E('summary', {}, _('Target drive parameters')), this.targetFields() ]));
 		if (!fixed && curveMode === 'manual') curveChildren.push(E('details', { 'class': 'pf-parameters' }, [ E('summary', {}, _('Curve parameters')), this.editor ]));

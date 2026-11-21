@@ -1,6 +1,31 @@
 # Project task tracker
 
-## Active task block: UI interaction and responsive corrections
+## Completed task block: Project-local frontend skills
+
+- Goal: configure the three requested design and review skills inside this repository.
+- Expected changes: add the complete skill resources under `.agents/skills/`, document their intended stages and pinned upstream sources, and add project routing guidance.
+- Progress:
+  - [x] Install `frontend-design`, `impeccable`, and `web-design-guidelines` with their required references and helper files.
+  - [x] Document the design, visual-iteration, and final-review stages in `.agents/skills/README.md` and `AGENTS.md`.
+  - [x] Preserve the upstream licenses/notices that are provided and record the source commit for each skill.
+- Verification: confirm all three skill entry files and referenced supporting files exist; inspect repository status and whitespace checks.
+- Acceptance: Codex can discover each project-local skill by its frontmatter name, and the project documentation identifies when to use it.
+- Status: complete; project-local skill packages and stage routing are in place. Impeccable hooks remain opt-in.
+
+## Completed task block: Fixed-request controls visual follow-up
+
+- Goal: incorporate five browser comments against the local development preview.
+- Expected changes: record the confirmed UI requirements in `docs/REQUIREMENTS_V3.md`; keep top status/language controls equal-sized with whitespace around them; keep the fixed-request label, wake-style slider, value and stop button aligned on one row; separate history units from number fields.
+- Progress:
+  - [x] Keep status and language controls equal-sized with visible whitespace between them.
+  - [x] Align request label, slider, value and stop action on one row across mobile widths.
+  - [x] Apply Wake-style tick marks and fading active trail to the keyboard-accessible range input.
+  - [x] Add separation between history number fields and their units.
+- Verification: strict checks, diff checks, and local preview visual/interaction checks at 320, 390, 500, 651px and desktop in light/dark themes.
+- Verification: `STRICT=1 sh tools/check.sh` (33/33), JavaScript syntax checks, `git diff --check`, and ego-browser measurements at 320, 390, 500, 651, and 1360px in both themes; slider keyboard input advanced by exactly 10%.
+- Acceptance: controls remain aligned without horizontal overflow; slider stays keyboard-accessible and keeps 10% steps and unchanged submission semantics.
+
+## Completed task block: UI interaction and responsive corrections
 
 - Goal: implement the confirmed V3 dashboard and advanced-settings corrections against the local development build.
 - Expected changes: document the confirmed choices, separate fixed requests from curve presets, clarify selected state, unify chart folding and parameter placement, use five chart intervals, improve history controls/status, and fix the narrow advanced source field.
@@ -111,8 +136,26 @@
 
 - [ ] Decide whether to submit to an official feed or maintain a self-hosted APK repository; add index signing and device trust only if standalone package updates are still desired.
 
+- 2026-11-21: Recorded and implemented five local-preview UI corrections: top-control spacing, fixed-request label/slider/stop alignment, Wake-style slider feedback, and history unit spacing. Verified all 10 mobile/desktop theme combinations with no horizontal overflow and confirmed 10% keyboard increments.
+
+## Planned task block: UI/UX backlog verification
+
+- Goal: verify the accepted visual backlog against the current local preview, then settle interaction questions before implementation.
+- Expected changes: first record findings and decisions; update formal requirements only after the user confirms unresolved behavior or parameter choices.
+- Progress:
+  - [x] Add the four previously observed visual issues to the improvement backlog.
+  - [x] Record the newly requested header, mode-selection, fixed-request, warning, accordion, history-settings, LuCI-action, and advanced-settings proposals.
+  - [ ] Recheck reproduction at 320, 390, 500, 651px and desktop in light/dark themes, including expanded settings.
+  - [ ] Report unresolved apply timing, minimum interval, zero-duty semantics, warning triggers, and any conflict with V3 before UI edits.
+- Verification: local preview screenshots/measurements, interaction-state inspection, and `git diff --check` for documentation changes.
+- Acceptance: each visual finding is confirmed, fixed, deferred, or marked not reproducible; unresolved behavior is not silently promoted to formal requirements.
+- Status: queued; this turn records the backlog only and makes no interface changes. Details: `docs/UIUX_IMPROVEMENTS_2026-11.md`.
+
 ## Brief log
 
+- 2026-11-22: Removed a duplicated section 14 in `docs/REQUIREMENTS_V3.md`, clarified the finished UI-corrections block heading, and restored the blank line before the queued UI/UX verification block. Documentation only; no interface or controller change.
+- 2026-11-22: Logged the four accepted visual findings and the new UI proposals in `docs/UIUX_IMPROVEMENTS_2026-11.md`; scheduled preview rechecks and left apply timing, 0% semantics, and the 3-second interval unresolved. No UI code changed.
+- 2026-11-22: Added the three requested project-local UI skills, preserved available upstream license and notice files, pinned the source commits, and documented the design/iteration/final-review stages. Impeccable hooks remain disabled.
 - 2026-11-21: User selected Apache-2.0 for the independent package. Added the official license text and declared `PKG_LICENSE`/`PKG_LICENSE_FILES`. Confirmed current delivery remains firmware-integrated with local APK validation; runtime feed and signing setup are deferred until stabilization.
 
 - 2026-11-21: Re-ran `STRICT=1 sh tools/check.sh` (33/33 pass). Host `apk-tools 3.0.5` verified both October-SDK compatibility APK payloads and metadata: main package depends on `libc`/`luci-base`; zh-cn package depends on the main package and contains `h5000m-pwmfan.zh-cn.lmo`. Both signatures are reported untrusted, so neither is eligible for target installation/release verification. The supplied firmware rootfs confirms `r0-a4ba824`, but its source commit was not retrievable from the three candidate upstream repos; the public Releases Atom feed returned no entries and the unauthenticated Actions API was rate-limited. Matching build, trusted signing, device translation/UI verification, and live thermal handover remain open. No router or PWM state was changed.

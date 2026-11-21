@@ -72,13 +72,24 @@ try {
  await wait('.pf-curve-chart .pf-tooltip:not([hidden])');
  await page.locator('.pf-fixed-controls .pf-danger').click();
  await page.waitForFunction(async () => (await L.require('uci')).get('h5000m_pwmfan','main','mode') === 'off');
- for (const width of [320,390,1360]) {
+ for (const width of [320,390,500,651,1360]) {
   await page.setViewportSize({width,height:900});
   for (const theme of ['light','dark','auto']) {
    await page.locator('#theme').selectOption(theme);
    if(theme==='auto') await page.emulateMedia({colorScheme:'dark'});
    await page.waitForFunction(expected => document.documentElement.dataset.darkmode === expected, String(theme!=='light'));
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth),true,`overflow ${width}, ${theme}`);
+	  const layout = await page.evaluate(() => {
+	   const box = selector => document.querySelector(selector).getBoundingClientRect();
+	   const toolbar=box('.pf-toolbar'),status=box('.pf-live'),language=box('.pf-language'),label=box('.pf-slider'),stop=box('.pf-danger'),text=box('.pf-slider > span'),title=box('.pf-method-title'),input=document.querySelector('.pf-wake input'),unit=document.querySelector('.pf-number-setting input');
+	   return { equal:Math.abs(status.width-language.width)<1, gap:language.left-status.right, ratio:status.width/toolbar.width, row:Math.abs(label.top+label.height/2-stop.top-stop.height/2), text:Math.abs(text.left+parseFloat(getComputedStyle(text).paddingLeft)-title.left-parseFloat(getComputedStyle(title).paddingLeft)), type:input.type,step:input.step,tabIndex:input.tabIndex,hidden:input.closest('.pf-wake').getAttribute('aria-hidden'),unitGap:parseFloat(getComputedStyle(unit).marginRight), overflow:document.documentElement.scrollWidth-innerWidth };
+	  });
+	  assert.equal(layout.equal,true,`toolbar widths ${width}`);
+	  assert.ok(layout.gap>=18 && layout.ratio<.47,`toolbar spacing ${width}`);
+	  assert.ok(layout.row<1,`fixed request row ${width}`);
+	  assert.ok(layout.text<1,`fixed request label alignment ${width}`);
+	  assert.equal(layout.type,'range'); assert.equal(layout.step,'10'); assert.ok(layout.tabIndex>=0); assert.equal(layout.hidden,null);
+	  assert.ok(layout.unitGap>=4); assert.ok(layout.overflow<=0);
   }
  }
  await page.setViewportSize({width:390,height:844});
