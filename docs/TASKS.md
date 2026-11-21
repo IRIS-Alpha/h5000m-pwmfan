@@ -145,14 +145,15 @@
 - Progress:
   - [x] Add the four previously observed visual issues to the improvement backlog.
   - [x] Record the newly requested header, mode-selection, fixed-request, warning, accordion, history-settings, LuCI-action, and advanced-settings proposals.
-  - [ ] Recheck reproduction at 320, 390, 500, 651px and desktop in light/dark themes, including expanded settings.
-  - [ ] Report unresolved apply timing, minimum interval, zero-duty semantics, warning triggers, and any conflict with V3 before UI edits.
+  - [x] Rechecked at 320, 390, 500, 651px and desktop in light/dark themes, including expanded parameter sections and the sticky save bar.
+  - [x] Reported apply timing, minimum interval, zero-duty semantics, warning triggers, and the V3 conflicts in `docs/UIUX_RECHECK_2026-11-22.md`.
 - Verification: local preview screenshots/measurements, interaction-state inspection, and `git diff --check` for documentation changes.
 - Acceptance: each visual finding is confirmed, fixed, deferred, or marked not reproducible; unresolved behavior is not silently promoted to formal requirements.
-- Status: queued; this turn records the backlog only and makes no interface changes. Details: `docs/UIUX_IMPROVEMENTS_2026-11.md`.
+- Status: verification complete for the four findings and the new proposals; no interface or controller code changed. Awaiting decisions on zero-duty semantics, the apply model, and the 3-second interval before implementation. Report: `docs/UIUX_RECHECK_2026-11-22.md`.
 
 ## Brief log
 
+- 2026-11-22: Rechecked the four accepted UI findings and the nine new proposals in the local preview at 320/390/500/651/1360px in light and dark themes. Issues 1.1, 1.2, and 1.4 reproduce; 1.3 reproduces as duplicated page titles while the dark back-button colour did not reproduce. Recorded `docs/UIUX_RECHECK_2026-11-22.md`; no interface or controller code changed.
 - 2026-11-22: Removed a duplicated section 14 in `docs/REQUIREMENTS_V3.md`, clarified the finished UI-corrections block heading, and restored the blank line before the queued UI/UX verification block. Documentation only; no interface or controller change.
 - 2026-11-22: Logged the four accepted visual findings and the new UI proposals in `docs/UIUX_IMPROVEMENTS_2026-11.md`; scheduled preview rechecks and left apply timing, 0% semantics, and the 3-second interval unresolved. No UI code changed.
 - 2026-11-22: Added the three requested project-local UI skills, preserved available upstream license and notice files, pinned the source commits, and documented the design/iteration/final-review stages. Impeccable hooks remain disabled.
