@@ -133,8 +133,9 @@
 - [ ] Verify the installed Simplified Chinese translation package with the matching SDK/APK on the device; after hot installation, clear browser cache and hard-reload before judging menu or translation visibility.
 - [ ] Prepare optional H5000M thermal-map integration patch for later main-project feature.
 - [x] Confirm zero-duty semantics, control-source placement, statistics removal, and defer the language control (2026-11-22).
-- [ ] Implement Block B control semantics: 1% fixed-request step without a stop button, control source in the badge, statistics line removed.
-- [ ] Verify the expanded V4 UI proposal set in the local preview, then implement the confirmed top-area, mode-selection, fixed-request, warning, and advanced-settings redesign.
+- [x] Implement Block B control semantics: 1% fixed-request step without a stop button, control source in the badge, statistics line removed.
+- [x] Implement the confirmed top-area, mode-selection, fixed-request, and warning redesign from the expanded V4 proposal set.
+- [ ] Finish the remaining proposal items: the advanced-settings “mode minimum apply interval” control, a dashboard LuCI action bar, and the curve-panel refinements.
 - [ ] Hardware validation and rollback procedure.
 
 ## Deferred until the plugin is stable
@@ -179,10 +180,12 @@
 - Expected changes:
   - [x] `root/usr/sbin/h5000m-pwmfan`: accept `fixed_duty` 0–100 in 1% steps; keep `requested_pwm` so a 0% request yields 0 and any non-zero request still respects `min_pwm`. Done 2026-11-22, together with the scheme-A `off` alias.
   - [x] `tests/controller-lib.bats`: replaced the 10%-step rejection with 0% and 1% acceptance plus an out-of-range rejection; asserts `requested_pwm=0` at 0% and the 51 floor at 1%. Done 2026-11-22.
-  - [ ] `htdocs/luci-static/resources/view/h5000m-pwmfan.js`: slider `min:0 step:1`, stop button removed, stop warning driven by the live request and the actual output, control source merged into the badge, statistics line removed, shared 3-second trailing merge with the `应用中-Ns` countdown in the title-row state slot.
-  - [ ] `htdocs/luci-static/resources/view/h5000m-pwmfan.css`: zero-request warning styling and the wider badge layout.
-  - [ ] Translations and `docs/REQUIREMENTS_V3.md` §13/§14/§15 stay in sync; `docs/UIUX_RECHECK_2026-11-22.md` records the decisions.
-- Verification: `STRICT=1 sh tools/check.sh`, plus local preview at 320/390/500/651/1360px in light and dark for the 0% state and the merged badge.
+  - [x] `htdocs/luci-static/resources/view/h5000m-pwmfan.js`: slider `min:0 step:1` with − / + steppers and a floating readout bubble, stop button removed, stop warning driven by the live request and the actual output, control source merged into the badge, statistics line removed, shared 3-second trailing merge with the `应用中 N 秒` countdown in the title-row state slot and the 0% bypass. Done 2026-11-22.
+  - [x] `htdocs/luci-static/resources/view/h5000m-pwmfan.js`: single header row “风扇控制” + badge + single-block theme and language switchers; “快速调度” renamed to “模式选择”; the theme switcher owns `data-darkmode`/`color-scheme` and mirrors `vantage_theme.appearance` only when that config exists. Done 2026-11-22.
+  - [x] `htdocs/luci-static/resources/view/h5000m-pwmfan.css`: three-row fixed request, stepper, slider track and bubble, warning chips with the divider and smaller slogan, switch buttons, hover/focus states, and a reduced-motion guard. Done 2026-11-22.
+  - [x] Translations (`po/zh_Hans`) and `menu.d` titles renamed to 风扇控制 / 高级设置. Done 2026-11-22.
+- Verification: `STRICT=1 sh tools/check.sh` 33/33; local preview at 320/390/500/651/1360px in light and dark with no horizontal overflow; merged states observed as `应用中 3 秒` → `应用中 2 秒` → `已选`; the 0% request committed without waiting; a click made during a save was queued and applied afterwards.
+- Status: dashboard work complete. The advanced-settings minimum-interval control, the dashboard LuCI action bar, and the curve-panel refinements stay open.
 - Acceptance: 0% is reachable without the stop button and reports 0 requested PWM on the fixture; non-zero values still respect the minimum; one badge shows state and source; no statistics line; the language control is unchanged.
 - Status: started 2026-11-22; the apply model is settled, so the remaining work is implementation.
 
@@ -253,3 +256,4 @@
 - 2026-11-20: Reviewed the open delivery items. V3 preview and isolated controller checks are complete. Matching firmware package format and build inputs, installed-package checks, and hardware handover remain open. Restored the preview through a hidden Windows WSL process after the transient user service stopped on WSL exit. Both dashboard and advanced routes returned HTTP 200 from Windows.
 - 2026-11-21: Added the OpenWrt package-discovery signature after SDK scanning showed the standalone package was omitted. Built the main H5000M fan-control APK and zh-cn translation APK with the official ImmortalWrt mediatek/filogic SDK (base revision e695009c, LuCI feed ebc4118b); extracted both with the SDK apk tool and confirmed the controller/UI payload and zh-cn LMO. This is a compatibility build only: SDK dependencies were skipped after the reduced SDK lucihttp Lua target failed on missing lua.h, and its October LuCI/kernel baseline does not match firmware r0-a4ba824 / LuCI ad75cde. Unsigned/untrusted APKs were extracted for structural verification only. Exact matching build, signed installation and runtime verification remain open.
 - 2026-11-22: Added a WSL-native V4 handoff and new-chat resume prompt. Confirmed `/home/devcc/Projects/h5000m-pwmfan` as the canonical package workspace; the Windows package checkout is stale documentation history. Recorded the separate main firmware checkout and its pre-existing dirty state so future work preserves it. No product code changed.
+- 2026-11-22: Rebuilt the dashboard header and fixed request per the confirmed proposal: one row with `风扇控制`, the merged `运行中 · 插件控制` badge and single-block theme/language switchers; `模式选择` replaces `快速调度`; the fixed request is three rows (state slot, 1% slider 0–100 with − / + and a floating readout, warning chips over a smaller slogan behind a divider); modes and the slider share one 3-second trailing merge with an `应用中 N 秒` countdown and a 0% bypass; the statistics and control-source lines are gone. Theme switching works without Vantage and only mirrors `vantage_theme.appearance` when that config exists. Verified with `STRICT=1 sh tools/check.sh` 33/33 and preview measurements at five widths in both themes.

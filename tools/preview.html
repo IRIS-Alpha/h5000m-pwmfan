@@ -24,6 +24,7 @@ body { min-height: 100vh; background: var(--v-surface-2); color: var(--v-text); 
 <div id="view"></div>
 </main>
 <script>
+window.PWMFAN_PREVIEW = true;
 const media = matchMedia('(prefers-color-scheme: dark)');
 const theme = document.getElementById('theme');
 for (const [value, label] of [['auto', 'Automatic'], ['light', 'Light'], ['dark', 'Dark']]) {

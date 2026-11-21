@@ -637,3 +637,42 @@ msgstr "控制器每个控制周期读取一次传感器快照，与主页历史
 
 msgid "When enabled, the plugin owns CPU fan control from −20 °C through 100 °C. Kernel thermal-zone control above 100 °C remains active. Hardware verification is pending."
 msgstr "启用后，插件接管 −20 °C 至 100 °C 的 CPU 风扇控制；高于 100 °C 的内核热区控制仍保持开启。硬件验证尚未完成。"
+
+msgid "Fan control"
+msgstr "风扇控制"
+
+msgid "Mode selection"
+msgstr "模式选择"
+
+msgid "Plugin control"
+msgstr "插件控制"
+
+msgid "Decrease duty"
+msgstr "降低占空比"
+
+msgid "Increase duty"
+msgstr "提高占空比"
+
+msgid "Applying in %s s"
+msgstr "应用中 %s 秒"
+
+msgid "Curve too low in the hot zone"
+msgstr "高温区曲线过低"
+
+msgid "Fan stopped"
+msgstr "停转"
+
+msgid "High temperatures may shorten fan life"
+msgstr "过高的温度可能影响设备硬件寿命"
+
+msgid "Automatic theme"
+msgstr "自动明暗"
+
+msgid "Light theme"
+msgstr "亮色"
+
+msgid "Dark theme"
+msgstr "暗色"
+
+msgid "Auto"
+msgstr "自动"

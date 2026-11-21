@@ -1,6 +1,6 @@
 {
 	"admin/system/h5000m_pwmfan": {
-		"title": "H5000M PWM Fan",
+		"title": "风扇控制",
 		"order": 85,
 		"action": {
 			"type": "firstchild"
@@ -11,7 +11,7 @@
 		}
 	},
 	"admin/system/h5000m_pwmfan/dashboard": {
-		"title": "Dashboard",
+		"title": "风扇控制",
 		"order": 10,
 		"action": {
 			"type": "view",
@@ -23,7 +23,7 @@
 		}
 	},
 	"admin/system/h5000m_pwmfan/advanced": {
-		"title": "Advanced Settings",
+		"title": "高级设置",
 		"order": 20,
 		"action": {
 			"type": "view",

@@ -21,6 +21,10 @@ var CURVES = {
 	manual: '30:51,40:64,50:96,60:144,70:208,80:255'
 };
 var HISTORY_LIMIT = 360 * 60 * 1000;
+var MERGE_DELAY = 3000;
+var THEME_KEY = 'pwmfan-theme';
+var THEME_ORDER = [ 'auto', 'light', 'dark' ];
+var LANGUAGE_ORDER = [ 'auto', 'en', 'zh_cn' ];
 
 function setting(key, fallback) {
 	var value = uci.get(CONFIG, SECTION, key);
@@ -108,10 +112,10 @@ return view.extend({
 		return Object.prototype.hasOwnProperty.call(MODES, configured) || configured === 'fixed' || configured === 'off' ? configured : 'balanced';
 	},
 
-	commit: function(changes) {
-		if (this.saving) return;
+	commit: function(changes, kind) {
+		if (this.saving) { this.queued = { changes: changes, kind: kind }; return Promise.resolve(); }
 		this.saving = true;
-		this.modeButtons.concat(this.methodButtons || []).forEach(function(button) { button.disabled = true; });
+		this.lockButtons(true);
 		var previous = {};
 		Object.keys(changes).forEach(function(key) {
 			previous[key] = uci.get(CONFIG, SECTION, key);
@@ -119,37 +123,162 @@ return view.extend({
 		});
 		return uci.save().then(function() { return uci.apply(); }).then(L.bind(function() {
 			this.saving = false;
-			this.modeButtons.concat(this.methodButtons || []).forEach(function(button) { button.disabled = false; });
+			this.lockButtons(false);
 			this.pendingCurve = null;
 			this.refreshPolicy();
+			this.drainQueued();
 			return this.fetchStatus().then(L.bind(this.update, this));
 		}, this)).catch(L.bind(function(error) {
 			this.saving = false;
-			this.modeButtons.concat(this.methodButtons || []).forEach(function(button) { button.disabled = false; });
+			this.lockButtons(false);
 			Object.keys(previous).forEach(function(key) {
 				if (previous[key] == null) uci.unset(CONFIG, SECTION, key);
 				else uci.set(CONFIG, SECTION, key, previous[key]);
 			});
 			ui.addNotification(null, E('p', {}, _('Could not apply policy: %s').format((error.message || String(error)))), 'danger');
 			this.refreshPolicy();
+			this.drainQueued();
 		}, this));
 	},
 
-	languageControl: function() {
-		return E('select', { 'aria-label': _('Language'), 'class': 'pf-language', change: function(event) {
-			var input = event.currentTarget;
-			input.disabled = true;
-			fs.exec('/usr/sbin/h5000m-pwmfan-language', [ input.value ]).then(function(result) {
+	lockButtons: function(locked) {
+		(this.methodButtons || []).concat(this.methodControls || []).forEach(function(button) { button.disabled = locked; });
+	},
+
+	scheduleCommit: function(changes, kind) {
+		if (this.saving) return;
+		this.clearPending();
+		if (Number(changes.fixed_duty) === 0) {
+			this.commit(changes, kind);
+			return;
+		}
+		this.pending = { changes: changes, kind: kind, until: Date.now() + MERGE_DELAY };
+		this.paintPending();
+		this.pendingTimer = setTimeout(L.bind(this.flushPending, this), MERGE_DELAY);
+		this.pendingTicker = setInterval(L.bind(this.paintPending, this), 400);
+	},
+
+	clearPending: function() {
+		clearTimeout(this.pendingTimer);
+		clearInterval(this.pendingTicker);
+		this.pending = null;
+	},
+
+	flushPending: function() {
+		var pending = this.pending;
+		if (!pending) return;
+		clearTimeout(this.pendingTimer);
+		clearInterval(this.pendingTicker);
+		this.pending = null;
+		this.paintPending();
+		this.commit(pending.changes, pending.kind);
+	},
+
+	drainQueued: function() {
+		var queued = this.queued;
+		this.queued = null;
+		if (queued && queued.changes) this.scheduleCommit(queued.changes, queued.kind);
+	},
+
+	paintPending: function() {
+		this.setMethodState(this.fixedState, 'fixed', this.fixedSelected);
+		this.setMethodState(this.curveState, 'curve', this.curveSelected);
+	},
+
+	switcher: function(options) {
+		return E('button', { type: 'button', 'class': 'pf-switch ' + (options.className || ''),
+			'aria-label': options.label, title: options.label }, options.content);
+	},
+
+	themeGlyph: function(mode) {
+		var make = function(shapes) {
+			var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+			svg.setAttribute('viewBox', '0 0 24 24');
+			svg.setAttribute('focusable', 'false');
+			shapes.forEach(function(shape) {
+				var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+				path.setAttribute('d', shape[0]);
+				if (shape[1]) path.setAttribute('class', 'pf-fill');
+				svg.appendChild(path);
+			});
+			return svg;
+		};
+		var glyphs = {
+			auto: make([ [ 'M12 4.5a7.5 7.5 0 1 0 0 15 7.5 7.5 0 0 0 0-15' ], [ 'M12 4.5a7.5 7.5 0 0 1 0 15z', true ] ]),
+			light: make([ [ 'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7' ], [ 'M12 2.6v2' ], [ 'M12 19.4v2' ],
+				[ 'M2.6 12h2' ], [ 'M19.4 12h2' ], [ 'M5.4 5.4l1.4 1.4' ], [ 'M17.2 17.2l1.4 1.4' ],
+				[ 'M18.6 5.4l-1.4 1.4' ], [ 'M6.8 17.2l-1.4 1.4' ] ]),
+			dark: make([ [ 'M20 14.6A8.6 8.6 0 0 1 9.4 4a8.6 8.6 0 1 0 10.6 10.6z' ] ])
+		};
+		return glyphs[mode] || glyphs.auto;
+	},
+
+	themeMode: function() {
+		var stored = null;
+		try { stored = localStorage.getItem(THEME_KEY); } catch (error) { /* Storage is optional. */ }
+		if (THEME_ORDER.indexOf(stored) >= 0) return stored;
+		var shared = null;
+		try { shared = uci.get('vantage_theme', 'main', 'appearance'); } catch (error) { shared = null; }
+		return shared === 'light' || shared === 'dark' ? shared : 'auto';
+	},
+
+	themeLabel: function(mode) {
+		return mode === 'light' ? _('Light theme') : mode === 'dark' ? _('Dark theme') : _('Automatic theme');
+	},
+
+	applyTheme: function(mode) {
+		var dark = mode === 'dark' || (mode === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+		document.documentElement.setAttribute('data-darkmode', dark ? 'true' : 'false');
+		document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+	},
+
+	setTheme: function(mode) {
+		try { localStorage.setItem(THEME_KEY, mode); } catch (error) { /* Storage is optional. */ }
+		this.applyTheme(mode);
+		var shared = null;
+		try { shared = uci.get('vantage_theme', 'main', 'appearance'); } catch (error) { shared = null; }
+		if (shared === null) return;
+		try {
+			uci.set('vantage_theme', 'main', 'appearance', mode);
+			uci.commit('vantage_theme');
+		} catch (error) { /* The theme keeps its own preference. */ }
+	},
+
+	themeSwitcher: function() {
+		var self = this, mode = this.themeMode();
+		var host = E('span', { 'class': 'pf-switch-icon' }, [ this.themeGlyph(mode) ]);
+		var button = this.switcher({ className: 'pf-theme', label: this.themeLabel(mode), content: [ host ] });
+		button.addEventListener('click', function() {
+			var next = THEME_ORDER[(THEME_ORDER.indexOf(self.themeMode()) + 1) % THEME_ORDER.length];
+			self.setTheme(next);
+			host.replaceChildren(self.themeGlyph(next));
+			button.setAttribute('aria-label', self.themeLabel(next));
+			button.title = button.getAttribute('aria-label');
+		});
+		return button;
+	},
+
+	languageMode: function() {
+		var lang = uci.get('luci', 'main', 'lang') || 'auto';
+		return LANGUAGE_ORDER.indexOf(lang) >= 0 ? lang : 'auto';
+	},
+
+	languageSwitcher: function() {
+		var self = this, mode = this.languageMode();
+		var glyph = E('span', { 'class': 'pf-lang-glyph' }, mode === 'zh_cn' ? '中文' : mode === 'en' ? 'EN' : _('Auto'));
+		var button = this.switcher({ className: 'pf-lang', label: _('Language'), content: [ glyph ] });
+		button.addEventListener('click', function() {
+			var next = LANGUAGE_ORDER[(LANGUAGE_ORDER.indexOf(self.languageMode()) + 1) % LANGUAGE_ORDER.length];
+			button.disabled = true;
+			fs.exec('/usr/sbin/h5000m-pwmfan-language', [ next ]).then(function(result) {
 				if (result.code) throw new Error(result.stderr || _('Unavailable'));
 				window.location.reload();
 			}).catch(function(error) {
-				input.disabled = false;
-				input.value = uci.get('luci', 'main', 'lang') || 'auto';
+				button.disabled = false;
 				ui.addNotification(null, E('p', {}, _('Could not change language: %s').format(error.message)), 'danger');
 			});
-		} }, [ [ 'auto', _('Automatic') ], [ 'en', _('English') ], [ 'zh_cn', '简体中文' ] ].map(function(entry) {
-			return E('option', { value: entry[0], selected: entry[0] === (uci.get('luci', 'main', 'lang') || 'auto') ? '' : null }, entry[1]);
-		}));
+		});
+		return button;
 	},
 
 	makeMetric: function(label, color) {
@@ -169,40 +298,106 @@ return view.extend({
 		var self = this;
 		var curveMode = fixed ? setting('curve_mode', 'balanced') : mode;
 		if ([ 'quiet', 'balanced', 'performance', 'target', 'manual' ].indexOf(curveMode) < 0) curveMode = 'balanced';
-		this.modeButtons.forEach(function(button) { button.setAttribute('aria-pressed', String(button.dataset.mode === curveMode && !fixed)); });
-		var fixedTitle = E('button', { type: 'button', 'class': 'pf-method-title', 'aria-pressed': String(fixed),
-			click: function() { self.commit({ mode: 'fixed', drive: 'duty', enabled: '1' }); } }, [ _('Fixed request'), E('span', {}, fixed ? _('Selected') : _('Not selected')) ]);
-		var curveTitle = E('button', { type: 'button', 'class': 'pf-method-title', 'aria-pressed': String(!fixed),
-			click: function() { self.commit({ mode: curveMode, curve_mode: curveMode, drive: 'curve', enabled: '1' }); } }, [ _('Curve preset'), E('span', {}, fixed ? _('Not selected') : _('Selected')) ]);
+		this.fixedSelected = fixed;
+		this.curveSelected = !fixed;
+		this.modeButtons.forEach(function(button) {
+			button.setAttribute('aria-pressed', String(button.dataset.mode === curveMode && !fixed));
+		});
+		var fixedTitle = this.methodTitle(_('Fixed request'), 'fixed', fixed, function() {
+			if (!fixed) self.scheduleCommit({ mode: 'fixed', drive: 'duty', enabled: '1' }, 'fixed');
+		});
+		var curveTitle = this.methodTitle(_('Curve preset'), 'curve', !fixed, function() {
+			if (fixed) self.scheduleCommit({ mode: curveMode, curve_mode: curveMode, drive: 'curve', enabled: '1' }, 'curve');
+		});
 		this.methodButtons = [ fixedTitle, curveTitle ];
-		var duty = clamp(Number(setting('fixed_duty', 50)), 10, 100);
-		var readout = E('output', {}, duty + '%');
-		var slider = E('input', { type: 'range', value: duty, min: 10, max: 100, step: 10,
-			change: function(event) { self.commit({ mode: 'fixed', drive: 'duty', fixed_duty: event.currentTarget.value, enabled: '1' }); } });
-		var wake = E('span', { 'class': 'pf-wake' }, [ slider ]);
-		var wakeTimer;
-		var updateWake = function() {
-			readout.textContent = slider.value + '%';
-			wake.style.setProperty('--pf-wake-pct', ((Number(slider.value) - 10) / 90 * 100) + '%');
-			wake.classList.add('pf-wake-active');
-			clearTimeout(wakeTimer);
-			wakeTimer = setTimeout(function() { wake.classList.remove('pf-wake-active'); }, 320);
-		};
-		slider.addEventListener('input', updateWake);
-		updateWake();
-		var stop = E('button', { type: 'button', 'class': 'btn pf-danger', 'aria-pressed': String(mode === 'off'),
-			click: function() { self.commit({ mode: 'off', drive: 'duty', enabled: '1' }); } }, _('Stop fan'));
-		var fixedGroup = E('section', { 'class': 'pf-method', 'data-selected': String(fixed) }, [ fixedTitle,
-			E('div', { 'class': 'pf-fixed-controls' }, [ E('label', { 'class': 'pf-slider' }, [ E('span', {}, _('Requested duty')), wake, readout ]), stop ]) ]);
 		var curveChildren = [ curveTitle,
 			E('div', { 'class': 'pf-modes', role: 'group', 'aria-label': _('Curve preset') }, this.presetButtons),
 			E('div', { 'class': 'pf-modes pf-drives' }, this.driveButtons) ];
 		if (!fixed && curveMode === 'target') curveChildren.push(E('details', { 'class': 'pf-parameters' }, [ E('summary', {}, _('Target drive parameters')), this.targetFields() ]));
 		if (!fixed && curveMode === 'manual') curveChildren.push(E('details', { 'class': 'pf-parameters' }, [ E('summary', {}, _('Curve parameters')), this.editor ]));
-		var curveGroup = E('section', { 'class': 'pf-method', 'data-selected': String(!fixed) }, curveChildren);
-		this.policy.replaceChildren(fixedGroup, curveGroup);
+		this.policy.replaceChildren(
+			E('section', { 'class': 'pf-method', 'data-selected': String(fixed) }, [ fixedTitle, this.fixedControls(), this.warningRow() ]),
+			E('section', { 'class': 'pf-method', 'data-selected': String(!fixed) }, curveChildren));
 		this.renderEditor();
 		this.drawCharts();
+		this.updateWarnings();
+	},
+
+	methodTitle: function(label, kind, selected, click) {
+		var state = E('span', { 'class': 'pf-method-state' });
+		var button = E('button', { type: 'button', 'class': 'pf-method-title', 'aria-pressed': String(selected), click: click },
+			[ E('span', { 'class': 'pf-method-name' }, label), state ]);
+		this[kind + 'State'] = state;
+		this.setMethodState(state, kind, selected);
+		return button;
+	},
+
+	setMethodState: function(state, kind, selected) {
+		if (!state) return;
+		var pending = this.pending && this.pending.kind === kind ? this.pending : null;
+		state.dataset.pending = pending ? 'true' : 'false';
+		state.textContent = pending
+			? _('Applying in %s s').format(Math.max(1, Math.ceil((pending.until - Date.now()) / 1000)))
+			: selected ? _('Selected') : _('Not selected');
+	},
+
+	fixedControls: function() {
+		var self = this;
+		var duty = clamp(Number(setting('fixed_duty', 50)), 0, 100);
+		var value = E('strong', {}, duty + '%');
+		var bubble = E('output', { 'class': 'pf-bubble' }, duty + '%');
+		var slider = E('input', { type: 'range', min: 0, max: 100, step: 1, value: duty, 'aria-label': _('Requested duty') });
+		var track = E('div', { 'class': 'pf-track' }, [ bubble, slider ]);
+		var paint = function() {
+			value.textContent = slider.value + '%';
+			bubble.textContent = slider.value + '%';
+			track.style.setProperty('--pf-duty', slider.value + '%');
+		};
+		var apply = function() {
+			self.scheduleCommit({ mode: 'fixed', drive: 'duty', fixed_duty: Number(slider.value), enabled: '1' }, 'fixed');
+		};
+		var step = function(delta) {
+			slider.value = clamp(Number(slider.value) + delta, 0, 100);
+			paint();
+			apply();
+		};
+		var minus = E('button', { type: 'button', 'class': 'pf-step', 'aria-label': _('Decrease duty'), click: function() { step(-1); } }, '\u2212');
+		var plus = E('button', { type: 'button', 'class': 'pf-step', 'aria-label': _('Increase duty'), click: function() { step(1); } }, '+');
+		slider.addEventListener('input', paint);
+		slider.addEventListener('change', apply);
+		this.methodControls = [ minus, plus, slider ];
+		paint();
+		return E('div', { 'class': 'pf-fixed' }, [
+			E('p', { 'class': 'pf-fixed-value' }, [ E('span', {}, _('Requested duty')), value ]),
+			E('div', { 'class': 'pf-fixed-row' }, [ minus, track, plus ]) ]);
+	},
+
+	warningRow: function() {
+		this.warnCurve = E('span', { 'class': 'pf-warn pf-warn-low', hidden: true }, _('Curve too low in the hot zone'));
+		this.warnStop = E('span', { 'class': 'pf-warn pf-warn-stop', hidden: true }, _('Fan stopped'));
+		this.warnNote = E('p', { 'class': 'pf-warn-note', hidden: true }, _('High temperatures may shorten fan life'));
+		this.warnRow = E('div', { 'class': 'pf-warnings', hidden: true, 'aria-live': 'polite' }, [ E('div', { 'class': 'pf-warn-chips' }, [ this.warnCurve, this.warnStop ]), this.warnNote ]);
+		return this.warnRow;
+	},
+
+	updateWarnings: function() {
+		if (!this.warnRow) return;
+		var output = (this.readings && this.readings.output) || [];
+		var forced = !!window.PWMFAN_PREVIEW;
+		var stop = forced || (output[0] === 0 && output[1] === 0);
+		var low = forced || this.curveTooLow();
+		this.warnStop.hidden = !stop;
+		this.warnCurve.hidden = !low;
+		this.warnNote.hidden = !(stop || low);
+		this.warnRow.hidden = !(stop || low);
+	},
+
+	curveTooLow: function() {
+		var mode = this.controlMode();
+		if (mode === 'fixed' || mode === 'off') return Number(setting('fixed_duty', 50)) < 50;
+		if (mode === 'target') return false;
+		var points = mode === 'manual' ? parseCurve(setting('curve_manual', CURVES.manual)) : parseCurve(CURVES[mode] || CURVES.balanced);
+		return points.some(function(point) { return point.t != null && point.t >= 60 && point.pwm != null && percent(point.pwm) < 50; });
 	},
 
 	targetFields: function() {
@@ -348,25 +543,21 @@ return view.extend({
 			state = [ _('Status unavailable'), 'idle' ];
 		else if (data.state === 'running' && (data.owner === 'protection' || /^protection_(ramp|lock)$/.test(data.reason || '')))
 			state = states.protection;
+		var sources = { userspace: _('Plugin control'), protection: _('Temperature protection'),
+			kernel: _('Kernel control'), none: _('Not in control') };
+		var source = values.fresh && Object.prototype.hasOwnProperty.call(sources, data.owner) &&
+			!/^(kernel_or_driver_override|pwm_mismatch)$/.test(data.reason || '') ? sources[data.owner] : _('Unknown');
+		var label = source === state[0] ? state[0] : state[0] + ' · ' + source;
 		this.badge.dataset.state = state[1];
-		this.badgeText.textContent = state[0];
-		this.badge.title = data.reason === 'takeover_pending' ? _('Hardware verification is pending.') : state[0];
-		var source = { userspace: _('Plugin'), protection: _('Temperature protection'), kernel: _('Kernel or driver'), none: _('Not in control') };
-		this.source.textContent = values.fresh && Object.prototype.hasOwnProperty.call(source, data.owner) &&
-			!/^(kernel_or_driver_override|pwm_mismatch)$/.test(data.reason || '') ? source[data.owner] : _('Unknown');
-		var counters = [ _('Last 24 hours') + ': ' + (data.protection_count_24h || '—'),
-			_('Total this boot') + ': ' + (data.protection_count_total || '—') ];
-		var trigger = number(data.protection_last_trigger, 1, 9999999999);
-		var peak = number(data.protection_last_cycle_peak_c, -40, 150);
-		if (trigger !== null) counters.push(_('Latest trigger') + ': ' + new Date(trigger * 1000).toLocaleString());
-		if (peak !== null) counters.push(_('Cycle peak') + ': ' + peak + ' °C');
-		this.protectionSummary.textContent = counters.join(' · ');
+		this.badgeText.textContent = label;
+		this.badge.title = data.reason === 'takeover_pending' ? _('Hardware verification is pending.') : label;
 		if (this.historyState) this.historyState.textContent = values.fresh && values.temps.some(function(value) { return value !== null; }) ? _('Live temperature readings') : _('Waiting for temperature readings');
 		var now = Date.now(), time = values.fresh ? values.stamp * 1000 : now, last = this.history[this.history.length - 1];
 		if (!last || time - last.time >= this.interval * 1000) {
 			this.history.push({ time: time, temps: values.temps });
 			this.history = this.history.filter(function(sample) { return sample.time >= now - HISTORY_LIMIT; });
 		}
+		this.updateWarnings();
 		this.drawCharts();
 	},
 
@@ -573,14 +764,12 @@ return view.extend({
 		} catch (error) { /* History preferences are optional. */ }
 		this.badgeText = E('span', {}, _('Status unavailable'));
 		this.badge = E('span', { 'class': 'pf-live', role: 'status', 'data-state': 'idle' }, [ E('i', { 'aria-hidden': 'true' }), this.badgeText ]);
-		this.source = E('strong', {}, _('Unknown'));
-		this.protectionSummary = E('p', { 'class': 'pf-note pf-protection-history' });
 		this.tempMetrics = SENSORS.map(function(sensor) { return self.makeMetric(sensor[0], sensor[2]); });
 		this.outputMetrics = [ this.makeMetric(_('Requested output'), '--pf-blue'), this.makeMetric(_('Actual output'), '--pf-amber'),
 			this.makeMetric(_('Protection output'), '--pf-red'), this.makeMetric(_('Fan speed'), '--pf-muted') ];
 		var modeButton = function(mode) {
 			return E('button', { type: 'button', 'class': 'btn pf-mode', 'data-mode': mode,
-				click: function() { self.commit({ mode: mode, curve_mode: mode, drive: 'curve', enabled: '1' }); } }, MODES[mode]);
+				click: function() { self.scheduleCommit({ mode: mode, curve_mode: mode, drive: 'curve', enabled: '1' }, 'curve'); } }, MODES[mode]);
 		};
 		this.presetButtons = [ 'quiet', 'balanced', 'performance' ].map(modeButton);
 		this.driveButtons = [ 'target', 'manual' ].map(modeButton);
@@ -616,15 +805,19 @@ return view.extend({
 				E('label', { 'class': 'pf-number-setting' }, [ _('Read every'), intervalInput, _('s') ]) ]) ]);
 		this.root = E('div', { 'class': 'pf-page' }, [
 			E('link', { rel: 'stylesheet', href: L.resource('view/h5000m-pwmfan.css') }),
-			E('div', { 'class': 'pf-heading' }, [ E('h2', {}, _('H5000M PWM Fan')) ]),
-			E('div', { 'class': 'pf-toolbar' }, [ this.badge, this.languageControl() ]),
+			E('div', { 'class': 'pf-heading' }, [ E('h2', {}, _('Fan control')), this.badge,
+				E('span', { 'class': 'pf-heading-gap' }), this.themeSwitcher(), this.languageSwitcher() ]),
 			E('div', { 'class': 'pf-boards' }, [ this.makeBoard(_('Temperature array'), this.tempMetrics), this.makeBoard(_('Fan output'), this.outputMetrics) ]),
-			E('section', { 'class': 'pf-card' }, [ E('div', { 'class': 'pf-dispatch-head' }, [ E('h3', {}, _('Quick dispatch')),
-				E('span', { 'class': 'pf-source' }, [ _('Control source'), ' · ', this.source ]) ]),
-				this.policy, this.protectionSummary ]),
+			E('section', { 'class': 'pf-card' }, [ E('div', { 'class': 'pf-dispatch-head' }, [ E('h3', {}, _('Mode selection')) ]),
+				this.policy ]),
 			E('details', { 'class': 'pf-card pf-curve-chart' }, [ E('summary', {}, _('Fan curve')),
 				this.curveChart.element ]), temps
 		]);
+		this.applyTheme(this.themeMode());
+		if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').addEventListener)
+			window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() { self.applyTheme(self.themeMode()); });
+		window.addEventListener('pagehide', function() { self.flushPending(); });
+		document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'hidden') self.flushPending(); });
 		this.refreshPolicy();
 		this.update(data);
 		this.loadTemperatureHistory();
