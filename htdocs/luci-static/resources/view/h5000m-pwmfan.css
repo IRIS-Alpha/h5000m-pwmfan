@@ -82,16 +82,16 @@
 .pf-track input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%;
 	background: var(--pf-surface); border: 2px solid var(--pf-green); }
 .pf-bubble { position: absolute; left: clamp(20px, var(--pf-duty, 0%), calc(100% - 20px)); top: -4px;
-	transform: translate(-50%, -100%); padding: 2px 6px; border-radius: 6px; background: var(--pf-text); color: var(--pf-surface);
-	font-size: 11px; font-variant-numeric: tabular-nums; opacity: 0; transition: opacity .12s ease; pointer-events: none; }
-.pf-track:has(input:active) .pf-bubble, .pf-track:focus-within .pf-bubble { opacity: 1; }
+	transform: translate(-50%, -100%); padding: 3px 8px; border-radius: 6px; background: var(--pf-text); color: var(--pf-surface);
+	font-size: 12px; font-variant-numeric: tabular-nums; opacity: 0; transition: opacity .12s ease; pointer-events: none; }
+.pf-track.is-live .pf-bubble, .pf-track:has(input:active) .pf-bubble, .pf-track:focus-within .pf-bubble { opacity: 1; }
 .pf-track:has(input:focus-visible) { outline: 2px solid var(--pf-blue); outline-offset: 3px; border-radius: 999px; }
 .pf-track input[type=range]:focus-visible { outline: none; }
 .pf-warnings { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin: 0 0 0 auto; }
 .pf-warn { padding: 2px 7px; border: 1px solid; border-radius: 6px; font-size: 11.5px; }
 .pf-warn-low { color: var(--pf-amber); border-color: var(--pf-amber); background: color-mix(in srgb, var(--pf-amber) 10%, transparent); }
 .pf-warn-stop { color: var(--pf-red); border-color: var(--pf-red); background: color-mix(in srgb, var(--pf-red) 10%, transparent); }
-.pf-warn-note { margin: 8px 0 0; padding-top: 7px; border-top: 1px solid var(--pf-line); color: var(--pf-muted); font-size: 11px; text-align: center; }
+.pf-page .pf-warn-note { margin: 14px 0 0; padding-top: 9px; border-top: 1px solid var(--pf-line); color: var(--pf-muted); font-size: 11px; text-align: center; }
 .pf-history-settings { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; }
 .pf-number-setting { display: flex; align-items: center; gap: 6px; color: var(--pf-muted); white-space: nowrap; }
 .pf-number-setting input { width: 4.4em; margin-inline: 4px; text-align: center; }

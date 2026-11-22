@@ -357,18 +357,36 @@ return view.extend({
 			bubble.textContent = slider.value + '%';
 			track.style.setProperty('--pf-duty', slider.value + '%');
 		};
+		var liveTimer = null;
+		var showBubble = function() {
+			track.classList.add('is-live');
+			clearTimeout(liveTimer);
+		};
+		var hideBubbleSoon = function() {
+			clearTimeout(liveTimer);
+			liveTimer = setTimeout(function() { track.classList.remove('is-live'); }, 900);
+		};
 		var apply = function() {
 			self.scheduleCommit({ mode: 'fixed', drive: 'duty', fixed_duty: Number(slider.value), enabled: '1' }, 'fixed');
 		};
 		var step = function(delta) {
 			slider.value = clamp(Number(slider.value) + delta, 0, 100);
 			paint();
+			showBubble();
+			hideBubbleSoon();
 			apply();
 		};
 		var minus = E('button', { type: 'button', 'class': 'pf-step', 'aria-label': _('Decrease duty'), click: function() { step(-1); } }, '\u2212');
 		var plus = E('button', { type: 'button', 'class': 'pf-step', 'aria-label': _('Increase duty'), click: function() { step(1); } }, '+');
-		slider.addEventListener('input', paint);
-		slider.addEventListener('change', apply);
+		slider.addEventListener('input', function() { paint(); showBubble(); });
+		slider.addEventListener('change', function() { showBubble(); hideBubbleSoon(); apply(); });
+		slider.addEventListener('pointerdown', function() {
+			showBubble();
+			try { slider.focus({ preventScroll: true }); } catch (e) {}
+		});
+		slider.addEventListener('pointerup', hideBubbleSoon);
+		slider.addEventListener('pointercancel', hideBubbleSoon);
+		slider.addEventListener('blur', hideBubbleSoon);
 		this.methodControls = [ minus, plus, slider ];
 		paint();
 		return E('div', { 'class': 'pf-fixed' }, [
