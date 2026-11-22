@@ -500,11 +500,17 @@ grep -Fxq 'requested_pwm=102' "$STATUS_FILE"
 grep -Fxq 'floor_limited=0' "$STATUS_FILE"
 TEST_DUTY=101
 if load_settings; then exit 1; fi
-# The floor and the ceiling must stay ordered, and the ceiling may not
-# drop below the 40% the form offers.
-if TEST_DUTY=40 TEST_MIN_PWM=204 TEST_MAX_PWM=153 load_settings; then exit 1; fi
-if TEST_MIN_PWM=51 TEST_MAX_PWM=76 load_settings; then exit 1; fi
+# Out-of-range bounds are clamped instead of rejecting the whole
+# configuration: the ceiling stops at 40%, and a floor above the ceiling
+# lifts the ceiling rather than dropping the floor.
+TEST_DUTY=40 TEST_MIN_PWM=51 TEST_MAX_PWM=76 load_settings || exit 1
+[ "$MAX_PWM" = 102 ] || exit 1
+TEST_DUTY=40 TEST_MIN_PWM=204 TEST_MAX_PWM=153 load_settings || exit 1
+[ "$MAX_PWM" = 204 ] || exit 1
 TEST_DUTY=40 TEST_MIN_PWM=51 TEST_MAX_PWM=102 load_settings || exit 1
+TEST_DUTY=40 TEST_MIN_PWM=51 TEST_MAX_PWM=400 load_settings || exit 1
+[ "$MAX_PWM" = 255 ] || exit 1
+if TEST_DUTY=40 TEST_MIN_PWM=51 TEST_MAX_PWM=high load_settings; then exit 1; fi
 # A duty the user sets applies at once; temperature-driven requests keep the guards.
 MODE=fixed DRIVE=duty
 if hold_down_allowed; then exit 1; fi

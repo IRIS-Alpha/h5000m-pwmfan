@@ -263,13 +263,23 @@ load_settings() {
 	config_get SENSOR_SELECTION "$SECTION" sensor_sources auto
 	[ -n "$SENSOR_SELECTION" ] || SENSOR_SELECTION=auto
 	raw=
+	# The form offers 0-100% for the floor and 40-100% for the ceiling. A value
+	# outside that window is clamped rather than rejecting the whole
+	# configuration, because a rejected load silently keeps the previous
+	# settings and the user sees a save that did nothing. Only a non-numeric
+	# value still counts as a broken setting.
 	config_get raw "$SECTION" min_pwm 51
-	MIN_PWM=$(cfg_number "$raw" 0 255) || return 1
+	is_uint "$raw" || return 1
+	MIN_PWM=$raw
+	[ "$MIN_PWM" -le 255 ] || MIN_PWM=255
 	config_get raw "$SECTION" max_pwm 255
-	# The form offers 40-100%; the ceiling is also the smallest output the
-	# controller may pick, so anything below 40% is treated as a bad setting.
-	MAX_PWM=$(cfg_number "$raw" 102 255) || return 1
-	[ "$MIN_PWM" -le "$MAX_PWM" ] || return 1
+	is_uint "$raw" || return 1
+	MAX_PWM=$raw
+	[ "$MAX_PWM" -ge 102 ] || MAX_PWM=102
+	[ "$MAX_PWM" -le 255 ] || MAX_PWM=255
+	# A floor above the ceiling would leave nothing to honour. The floor is what
+	# keeps the fan turning, so the ceiling moves up instead of the floor down.
+	[ "$MIN_PWM" -le "$MAX_PWM" ] || MAX_PWM=$MIN_PWM
 	config_get raw "$SECTION" kick_pwm 204
 	KICK_PWM=$(cfg_number "$raw" 0 255) || return 1
 	config_get raw "$SECTION" kick_ms 800
