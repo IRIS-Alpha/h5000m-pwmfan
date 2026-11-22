@@ -200,6 +200,7 @@
 - 2026-11-22: Restyled the fixed-request slider: a 4px pill track whose fill is computed from the thumb centre, an 18px thumb that lifts with a soft halo while dragging, and a floating chip readout with rolling digits whose width grows a column at a time; the theme focus glow is suppressed in favour of a thumb ring, and the bubble lingers 700ms after release.
 - 2026-11-22: The local preview shell now renders the view alone; the simulated-data tag and its theme select are gone, and the page's own switcher (persisted under `pwmfan-theme`) drives light/dark.
 - 2026-11-22: Header switchers now carry their own 2px padding instead of the generic 9px control padding, and the language glyph drops to 10px, so 中文/EN keep 5px clearance from the button border at 320px.
+- 2026-11-22: Both header rows (dashboard and advanced) inset their bordered controls 6px from the card edge, so the switchers and the back link no longer sit on the content border.
 
 - 2026-11-22: Block B backend half landed: `fixed_duty` 0–100 in 1% steps, `off` mapped to a zero fixed request as a legacy alias, dead `off:*` branch removed, fixture updated; 33/33 checks pass.
 
