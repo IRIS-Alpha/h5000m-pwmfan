@@ -69,24 +69,47 @@
 .pf-step { width: 34px; height: 34px; padding: 0; font-size: 17px; line-height: 1; border-radius: 8px; color: var(--pf-muted); touch-action: manipulation; }
 .pf-step:hover { color: var(--pf-text); border-color: var(--pf-muted); background: var(--pf-subtle); }
 .pf-step:active { color: var(--pf-text); background: var(--pf-subtle); transform: translateY(1px); }
-.pf-track { position: relative; display: flex; align-items: center; height: 30px; }
-.pf-track::before, .pf-track::after { content: ''; position: absolute; top: 50%; height: 2px; transform: translateY(-50%); border-radius: 2px; }
+.pf-track { position: relative; display: flex; align-items: center; height: 32px; }
+.pf-track::before, .pf-track::after { content: ''; position: absolute; top: 50%; height: 4px; transform: translateY(-50%); border-radius: 999px; }
 .pf-track::before { left: 0; right: 0; background: var(--pf-line); }
-.pf-track::after { left: 0; width: var(--pf-duty, 0%); background: var(--pf-green); }
-.pf-track input[type=range] { position: relative; z-index: 1; width: 100%; height: 30px; margin: 0; padding: 0;
-	appearance: none; background: transparent; cursor: ew-resize; }
-.pf-track input[type=range]::-webkit-slider-runnable-track { height: 30px; background: transparent; }
-.pf-track input[type=range]::-moz-range-track { height: 30px; background: transparent; }
-.pf-track input[type=range]::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; margin-top: 7px; border-radius: 50%;
-	background: var(--pf-surface); border: 2px solid var(--pf-green); box-shadow: 0 1px 3px #0002; }
-.pf-track input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%;
-	background: var(--pf-surface); border: 2px solid var(--pf-green); }
-.pf-bubble { position: absolute; left: clamp(20px, var(--pf-duty, 0%), calc(100% - 20px)); top: -4px;
-	transform: translate(-50%, -100%); padding: 3px 8px; border-radius: 6px; background: var(--pf-text); color: var(--pf-surface);
-	font-size: 12px; font-variant-numeric: tabular-nums; opacity: 0; transition: opacity .12s ease; pointer-events: none; }
-.pf-track.is-live .pf-bubble, .pf-track:has(input:active) .pf-bubble, .pf-track:focus-within .pf-bubble { opacity: 1; }
-.pf-track:has(input:focus-visible) { outline: 2px solid var(--pf-blue); outline-offset: 3px; border-radius: 999px; }
-.pf-track input[type=range]:focus-visible { outline: none; }
+.pf-track::after { left: 0; width: calc(9px + (100% - 18px) * var(--pf-ratio, 0)); background: var(--pf-green); }
+.pf-track input[type=range] { position: relative; z-index: 1; width: 100%; height: 32px; margin: 0; padding: 0;
+	appearance: none; background: transparent; cursor: ew-resize; touch-action: pan-y; }
+.pf-track input[type=range]::-webkit-slider-runnable-track { height: 32px; background: transparent; }
+.pf-track input[type=range]::-moz-range-track { height: 32px; background: transparent; }
+.pf-track input[type=range]::-webkit-slider-thumb { appearance: none; width: 18px; height: 18px; margin-top: 7px; border-radius: 50%;
+	background: var(--pf-surface); border: 2px solid var(--pf-green); box-shadow: 0 1px 4px #00000026;
+	transition: transform .18s cubic-bezier(.34, 1.4, .64, 1), box-shadow .18s ease; }
+.pf-track input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%;
+	background: var(--pf-surface); border: 2px solid var(--pf-green); box-shadow: 0 1px 4px #00000026;
+	transition: transform .18s cubic-bezier(.34, 1.4, .64, 1), box-shadow .18s ease; }
+.pf-track.is-live input[type=range]::-webkit-slider-thumb, .pf-track:has(input:active) input[type=range]::-webkit-slider-thumb {
+	transform: scale(1.16); box-shadow: 0 2px 8px #0000002e, 0 0 0 6px color-mix(in srgb, var(--pf-green) 16%, transparent); }
+.pf-track.is-live input[type=range]::-moz-range-thumb, .pf-track:has(input:active) input[type=range]::-moz-range-thumb {
+	transform: scale(1.16); box-shadow: 0 2px 8px #0000002e, 0 0 0 6px color-mix(in srgb, var(--pf-green) 16%, transparent); }
+.pf-bubble { position: absolute; z-index: 3; top: -8px;
+	left: clamp(24px, calc(9px + (100% - 18px) * var(--pf-ratio, 0)), calc(100% - 24px));
+	display: flex; align-items: center; height: 24px; padding: 0 7px; border-radius: 8px;
+	border: 1px solid var(--pf-line); background: var(--pf-surface); color: var(--pf-text);
+	box-shadow: 0 8px 20px #0000001f, 0 1px 2px #00000014;
+	font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums;
+	transform: translate(-50%, -100%) scale(.86); transform-origin: 50% 100%;
+	opacity: 0; pointer-events: none;
+	transition: opacity .14s ease, transform .2s cubic-bezier(.34, 1.4, .64, 1); }
+.pf-track.is-live .pf-bubble, .pf-track:has(input:active) .pf-bubble, .pf-track:focus-within .pf-bubble {
+	opacity: 1; transform: translate(-50%, -100%) scale(1); }
+.pf-odo { display: inline-flex; overflow: hidden; height: 1.2em; }
+.pf-odo-col { display: inline-block; width: .62em; height: 1.2em; overflow: hidden; transition: width .2s ease; }
+.pf-odo-col[data-hidden=true] { width: 0; }
+.pf-odo-strip { display: block; transition: transform .26s cubic-bezier(.22, 1.24, .52, 1); }
+.pf-odo-strip[data-jump=true] { transition: none; }
+.pf-odo-digit { display: block; height: 1.2em; line-height: 1.2em; text-align: center; }
+.pf-odo-unit { margin-left: 1px; color: var(--pf-muted); font-size: 10.5px; font-weight: 500; }
+.pf-track:has(input:focus-visible) input[type=range]::-webkit-slider-thumb {
+	box-shadow: 0 0 0 3px var(--pf-surface), 0 0 0 5px var(--pf-blue); }
+.pf-track:has(input:focus-visible) input[type=range]::-moz-range-thumb {
+	box-shadow: 0 0 0 3px var(--pf-surface), 0 0 0 5px var(--pf-blue); }
+.pf-page .pf-track input[type=range]:is(:focus, :focus-visible) { outline: none; box-shadow: none; border-color: transparent; }
 .pf-warnings { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin: 0 0 0 auto; }
 .pf-warn { padding: 2px 7px; border: 1px solid; border-radius: 6px; font-size: 11.5px; }
 .pf-warn-low { color: var(--pf-amber); border-color: var(--pf-amber); background: color-mix(in srgb, var(--pf-amber) 10%, transparent); }
@@ -156,6 +179,7 @@ html[data-darkmode=true] .pf-page {
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.pf-switch, .pf-step, .pf-bubble, .pf-method-title { transition: none; }
+	.pf-switch, .pf-step, .pf-bubble, .pf-method-title, .pf-odo-col, .pf-odo-strip { transition: none; }
+	.pf-bubble { transform: translate(-50%, -100%); }
 	.pf-switch:active, .pf-step:active { transform: none; }
 }

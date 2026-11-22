@@ -345,17 +345,73 @@ return view.extend({
 			: selected ? _('Selected') : _('Not selected');
 	},
 
+	odometer: function() {
+		var columns = [2, 1, 0].map(function(place) {
+			var digits = [];
+			for (var repeat = 0; repeat < 2; repeat++) {
+				for (var digit = 0; digit < 10; digit++)
+					digits.push(E('span', { 'class': 'pf-odo-digit' }, String(digit)));
+			}
+			var strip = E('span', { 'class': 'pf-odo-strip' }, digits);
+			var column = { place: place, pos: 0, value: 0, strip: strip, el: E('span', { 'class': 'pf-odo-col' }, [ strip ]) };
+			var place_ = function(instant) {
+				column.strip.style.transform = 'translateY(' + (-column.pos * 1.2) + 'em)';
+				if (instant) {
+					column.strip.dataset.jump = 'true';
+					void column.strip.offsetHeight;
+					column.strip.dataset.jump = 'false';
+				}
+			};
+			column.move = function(digit) {
+				var delta = digit - column.value;
+				if (delta > 5) delta -= 10;
+				if (delta < -5) delta += 10;
+				column.value = digit;
+				if (column.pos > 9 || column.pos < 0) {
+					column.pos = ((column.pos % 10) + 10) % 10;
+					place_(true);
+				}
+				if (!delta) return;
+				column.pos += delta;
+				place_(false);
+			};
+			column.strip.addEventListener('transitionend', function(event) {
+				if (event.propertyName !== 'transform') return;
+				if (column.pos > 9 || column.pos < 0) {
+					column.pos = ((column.pos % 10) + 10) % 10;
+					place_(true);
+				}
+			});
+			return column;
+		});
+		return {
+			el: E('span', { 'class': 'pf-odo' }, columns.map(function(column) { return column.el; })),
+			set: function(number) {
+				var used = String(number).length;
+				columns.forEach(function(column) {
+					var visible = column.place < used;
+					column.el.dataset.hidden = visible ? 'false' : 'true';
+					if (!visible) return;
+					column.move(Math.floor(number / Math.pow(10, column.place)) % 10);
+				});
+			}
+		};
+	},
+
 	fixedControls: function() {
 		var self = this;
 		var duty = clamp(Number(setting('fixed_duty', 50)), 0, 100);
 		var value = E('strong', {}, duty + '%');
-		var bubble = E('output', { 'class': 'pf-bubble' }, duty + '%');
+		var odometer = this.odometer();
+		var bubble = E('output', { 'class': 'pf-bubble', 'aria-hidden': 'true' }, [ odometer.el, E('span', { 'class': 'pf-odo-unit' }, '%') ]);
 		var slider = E('input', { type: 'range', min: 0, max: 100, step: 1, value: duty, 'aria-label': _('Requested duty') });
 		var track = E('div', { 'class': 'pf-track' }, [ bubble, slider ]);
 		var paint = function() {
-			value.textContent = slider.value + '%';
-			bubble.textContent = slider.value + '%';
-			track.style.setProperty('--pf-duty', slider.value + '%');
+			var current = Number(slider.value);
+			value.textContent = current + '%';
+			odometer.set(current);
+			track.style.setProperty('--pf-duty', current + '%');
+			track.style.setProperty('--pf-ratio', String(current / 100));
 		};
 		var liveTimer = null;
 		var showBubble = function() {
@@ -364,7 +420,7 @@ return view.extend({
 		};
 		var hideBubbleSoon = function() {
 			clearTimeout(liveTimer);
-			liveTimer = setTimeout(function() { track.classList.remove('is-live'); }, 900);
+			liveTimer = setTimeout(function() { track.classList.remove('is-live'); }, 700);
 		};
 		var apply = function() {
 			self.scheduleCommit({ mode: 'fixed', drive: 'duty', fixed_duty: Number(slider.value), enabled: '1' }, 'fixed');
