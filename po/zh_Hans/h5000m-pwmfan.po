@@ -721,11 +721,20 @@ msgstr "全部传感器（取最高有效值）"
 msgid "no reading"
 msgstr "无读数"
 
-msgid "On a fault the fan runs at 100%; kernel thermal limits still apply."
-msgstr "故障时全速运行，内核温控仍然生效。"
-
-msgid "A reading counts as valid when the sensor file is readable and the value is within −40…150 °C; sensors without a valid reading are skipped. The curve follows the chosen sensor, or the highest valid one when “all sensors” is selected. Sensors outside the choice still count toward the safety maximum."
-msgstr "传感器文件可读且数值在 −40…150 °C 内才算有效，无有效读数的传感器会被跳过。曲线跟随所选传感器；选“全部传感器”时取其中最高有效值。未选中的传感器仍参与安全最高温仲裁。"
-
 msgid "thermal zone"
 msgstr "温区"
+
+msgid "Live readings"
+msgstr "实时读数"
+
+msgid "Customize"
+msgstr "自定义"
+
+msgid "When a sensor reading is unusable or a PWM write fails, the controller asks for 100% output instead of guessing. This behaviour is fixed and has no switch; CPU throttling and the critical shutdown still belong to the kernel."
+msgstr "传感器读数不可用或 PWM 写入失败时，控制器直接请求 100% 输出，不做猜测。该行为固定、不提供开关；CPU 降频与临界关机仍由内核负责。"
+
+msgid "The controller takes one sensor snapshot per cycle, independent of the sampling interval used by the history chart."
+msgstr "控制器每个控制周期读取一次传感器快照，与主页历史图表的采样间隔相互独立。"
+
+msgid "A reading counts as valid when the sensor file is readable and the value is within −40…150 °C; sensors without a valid reading are skipped. The fan curve above — the temperature-to-output curve, not the history chart — follows this sensor, or the highest valid one when “All sensors” is selected. Sensors outside the choice still count toward the safety maximum."
+msgstr "传感器文件可读且数值在 −40…150 °C 内才算有效，无有效读数的传感器会被跳过。上方风扇曲线（温度到输出的那条曲线，不是历史图表）跟随所选传感器；选“全部传感器”时取其中最高有效值。未选中的传感器仍参与安全最高温仲裁。"

@@ -28,6 +28,7 @@ var THEME_KEY = 'pwmfan-theme';
 var DETAILS_KEY = 'h5000m-pwmfan-details';
 var THEME_ORDER = [ 'auto', 'light', 'dark' ];
 var LANGUAGE_ORDER = [ 'auto', 'en', 'zh_cn' ];
+var REPORT_KEY = 'pwmfan-report';
 
 function setting(key, fallback) {
 	var value = uci.get(CONFIG, SECTION, key);
@@ -335,16 +336,88 @@ return view.extend({
 		return button;
 	},
 
-	makeMetric: function(label, color) {
-		var value = E('strong', {}, _('Unavailable'));
-		var fill = E('i');
-		var bar = E('div', { 'aria-hidden': 'true', 'class': 'pf-bar' }, fill);
-		return { value: value, fill: fill, element: E('div', { 'class': 'pf-metric', style: '--metric-color:var(' + color + ')' },
-			[ E('span', {}, label), value, bar ]) };
+	reportItems: function() {
+		var temps = SENSORS.map(function(sensor, index) {
+			return { id: 'temp' + index, kind: 'temp', index: index, label: sensor[0], color: sensor[2] };
+		});
+		var duties = [ [ _('Requested output'), '--pf-blue' ], [ _('Actual output'), '--pf-amber' ], [ _('Protection output'), '--pf-red' ] ]
+			.map(function(entry, index) {
+				return { id: 'duty' + index, kind: 'duty', index: index, label: entry[0], color: entry[1] };
+			});
+		return temps.concat(duties);
 	},
 
-	makeBoard: function(title, metrics) {
-		return E('section', { 'class': 'pf-card' }, [ E('h3', {}, title), E('div', { 'class': 'pf-metrics' }, metrics.map(function(metric) { return metric.element; })) ]);
+	reportSelection: function() {
+		var known = this.reportItems().map(function(item) { return item.id; }), stored = null;
+		try { stored = JSON.parse(localStorage.getItem(REPORT_KEY) || 'null'); } catch (error) { stored = null; }
+		if (!Array.isArray(stored)) return known;
+		var picked = stored.filter(function(id) { return known.indexOf(id) >= 0; });
+		return picked.length ? picked : known;
+	},
+
+	rememberReport: function(selection) {
+		try { localStorage.setItem(REPORT_KEY, JSON.stringify(selection)); } catch (error) { /* Selection is optional. */ }
+	},
+
+	paintReport: function() {
+		var self = this, selection = this.reportSelection();
+		this.reportRows = {};
+		this.reportBody.replaceChildren.apply(this.reportBody, this.reportItems().filter(function(item) {
+			return selection.indexOf(item.id) >= 0;
+		}).map(function(item) {
+			var value = E('strong', { 'class': 'pf-report-value' }, _('Unavailable'));
+			var fill = E('i');
+			self.reportRows[item.id] = { value: value, fill: fill };
+			return E('div', { 'class': 'pf-report-row', style: '--metric-color:var(' + item.color + ')' }, [
+				E('div', { 'class': 'pf-report-line' }, [ E('span', { 'class': 'pf-report-label' }, item.label), value ]),
+				E('div', { 'class': 'pf-report-bar', 'aria-hidden': 'true' }, fill) ]);
+		}));
+		this.reportPicker.replaceChildren.apply(this.reportPicker, this.reportItems().map(function(item) {
+			var box = E('input', { type: 'checkbox', checked: selection.indexOf(item.id) >= 0 ? '' : null,
+				change: function(event) {
+					var next = self.reportItems().map(function(entry) { return entry.id; }).filter(function(id) {
+						if (id === item.id) return event.currentTarget.checked;
+						var node = self.reportPicker.querySelector('input[data-id="' + id + '"]');
+						return node ? node.checked : true;
+					});
+					if (!next.length) {
+						event.currentTarget.checked = true;
+						return;
+					}
+					self.rememberReport(next);
+					self.paintReport();
+					if (self.readings) self.updateReport(self.readings);
+				} });
+			box.dataset.id = item.id;
+			return E('label', {}, [ box, item.label ]);
+		}));
+	},
+
+	updateReport: function(values) {
+		var self = this;
+		this.reportItems().forEach(function(item) {
+			var row = self.reportRows[item.id];
+			if (!row) return;
+			var value = item.kind === 'temp' ? values.temps[item.index] : values.output[item.index];
+			row.value.textContent = format(value, item.kind === 'temp' ? ' °C' : '%');
+			row.fill.style.width = value === null ? '0%' : clamp(value, 0, 100) + '%';
+		});
+	},
+
+	makeReport: function() {
+		var self = this;
+		this.reportBody = E('div', { 'class': 'pf-report-body' });
+		this.reportPicker = E('div', { 'class': 'pf-report-picker', hidden: '' });
+		var toggle = E('button', { type: 'button', 'class': 'pf-report-edit', 'aria-expanded': 'false', click: function() {
+			var open = self.reportPicker.hidden === false;
+			self.reportPicker.hidden = open ? true : null;
+			toggle.setAttribute('aria-expanded', open ? 'false' : 'true');
+		} }, _('Customize'));
+		this.reportCard = E('section', { 'class': 'pf-card pf-report' }, [
+			E('div', { 'class': 'pf-report-head' }, [ E('h3', {}, _('Live readings')), toggle ]),
+			this.reportBody, this.reportPicker ]);
+		this.paintReport();
+		return this.reportCard;
 	},
 
 	refreshPolicy: function() {
@@ -690,11 +763,7 @@ return view.extend({
 	update: function(data) {
 		this.data = data;
 		var values = this.readings = this.metricValues(data);
-		this.tempMetrics.concat(this.outputMetrics).forEach(function(metric, index) {
-			var value = values.temps.concat(values.output, values.rpm)[index];
-			metric.value.textContent = format(value, index < 4 ? ' °C' : index < 7 ? '%' : ' RPM');
-			metric.fill.style.width = index === 7 || value === null ? '0%' : clamp(value, 0, 100) + '%';
-		});
+		this.updateReport(values);
 		var states = {
 			fault: [ _('Fault'), 'fault' ], failsafe: [ _('Fault'), 'fault' ],
 			kernel_only: [ _('Kernel control'), 'idle' ],
@@ -822,7 +891,7 @@ return view.extend({
 			ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.setLineDash([]);
 		};
 		var localeTime = function(time) { return new Date(time).toLocaleTimeString(document.documentElement.lang || undefined, { hour: '2-digit', minute: '2-digit', hour12: false }); };
-		ctx.font = '11px ' + (color('--pf-font') || 'sans-serif');
+		ctx.font = '11px ' + (color('--pf-chart-font') || 'sans-serif');
 		ctx.fillStyle = color('--pf-muted');
 		ctx.textAlign = 'right';
 		for (var tick = 0; tick <= 100; tick += 20) {
@@ -946,9 +1015,6 @@ return view.extend({
 		} catch (error) { /* History preferences are optional. */ }
 		this.badgeText = E('span', {}, _('Status unavailable'));
 		this.badge = E('span', { 'class': 'pf-live', role: 'status', 'data-state': 'idle' }, [ E('i', { 'aria-hidden': 'true' }), this.badgeText ]);
-		this.tempMetrics = SENSORS.map(function(sensor) { return self.makeMetric(sensor[0], sensor[2]); });
-		this.outputMetrics = [ this.makeMetric(_('Requested output'), '--pf-blue'), this.makeMetric(_('Actual output'), '--pf-amber'),
-			this.makeMetric(_('Protection output'), '--pf-red'), this.makeMetric(_('Fan speed'), '--pf-muted') ];
 		var modeButton = function(mode) {
 			return E('button', { type: 'button', 'class': 'btn pf-mode', 'data-mode': mode,
 				click: function() { self.scheduleCommit({ mode: mode, curve_mode: mode, drive: 'curve', enabled: '1' }, 'curve'); } }, MODES[mode]);
@@ -988,10 +1054,11 @@ return view.extend({
 				E('label', { 'class': 'pf-number-setting' }, [ _('Window'), rangeInput, _('min') ]),
 				E('label', { 'class': 'pf-number-setting' }, [ _('Read every'), intervalInput, _('s') ]) ]) ]);
 		this.root = E('div', { 'class': 'pf-page' }, [
+			E('link', { rel: 'stylesheet', href: L.resource('view/h5000m-pwmfan-font.css') }),
 			E('link', { rel: 'stylesheet', href: L.resource('view/h5000m-pwmfan.css') }),
 			E('div', { 'class': 'pf-heading' }, [ E('h2', {}, _('Fan control')), this.badge,
 				E('span', { 'class': 'pf-heading-gap' }), this.themeSwitcher(), this.languageSwitcher() ]),
-			E('div', { 'class': 'pf-boards' }, [ this.makeBoard(_('Temperature array'), this.tempMetrics), this.makeBoard(_('Fan output'), this.outputMetrics) ]),
+			this.makeReport(),
 			E('section', { 'class': 'pf-card' }, [ E('div', { 'class': 'pf-dispatch-head' }, [ E('h3', {}, _('Mode selection')), this.warnRow ]),
 				this.warnNote, this.policy ]),
 			E('details', { 'class': 'pf-card pf-curve-chart', 'data-detail': 'curve',

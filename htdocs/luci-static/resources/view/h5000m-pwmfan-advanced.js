@@ -87,7 +87,7 @@ return view.extend({
 		var text = 'var(--v-text,var(--text,var(--text-color-high,#171d27)))';
 		var muted = 'var(--v-text-2,var(--text-2,var(--text-color-medium,#737a80)))';
 		return E('style', {}, [
-			'.pwmfan-advanced{font-family:var(--v-font,var(--font,system-ui,-apple-system,"Segoe UI",Roboto,Inter,"Helvetica Neue",Arial,sans-serif))}',
+			'.pwmfan-advanced{font-family:MiSans,"MiSans VF",var(--v-font,var(--font,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans CJK SC","Microsoft YaHei",sans-serif))}',
 			'.pwmfan-advanced .cbi-value-field{min-width:0;max-width:460px}',
 			'.pwmfan-advanced .cbi-value-field select,.pwmfan-advanced .cbi-dropdown{width:100%;max-width:100%;box-sizing:border-box}',
 			'.pwmfan-advanced .cbi-value-description{display:block;max-width:70ch}',
@@ -183,11 +183,14 @@ return view.extend({
 		this.percentOption(section, 'kick_pwm', _('Startup boost output (%)'), 100);
 		var kick = section.option(form.Value, 'kick_ms', _('Startup boost duration (milliseconds)'));
 		kick.datatype = 'range(0,5000)'; kick.default = '750'; kick.rmempty = false;
-		this.group(section, 'fault', _('Fault response'), _('On a fault the fan runs at 100%; kernel thermal limits still apply.'));
-		this.group(section, 'sampling', _('Controller sampling and curve source'), _('A reading counts as valid when the sensor file is readable and the value is within −40…150 °C; sensors without a valid reading are skipped. The curve follows the chosen sensor, or the highest valid one when “all sensors” is selected. Sensors outside the choice still count toward the safety maximum.'));
+		this.group(section, 'fault', _('Fault response'),
+			_('When a sensor reading is unusable or a PWM write fails, the controller asks for 100% output instead of guessing. This behaviour is fixed and has no switch; CPU throttling and the critical shutdown still belong to the kernel.'));
+		this.group(section, 'sampling', _('Controller sampling and curve source'),
+			_('The controller takes one sensor snapshot per cycle, independent of the sampling interval used by the history chart.'));
 		var interval = section.option(form.Value, 'poll_interval', _('Control interval (seconds)'));
 		interval.datatype = 'range(1,30)'; interval.default = '2'; interval.rmempty = false;
 		var source = section.option(form.Value, 'sensor_sources', _('Curve sensor source'));
+		source.description = _('A reading counts as valid when the sensor file is readable and the value is within −40…150 °C; sensors without a valid reading are skipped. The fan curve above — the temperature-to-output curve, not the history chart — follows this sensor, or the highest valid one when “All sensors” is selected. Sensors outside the choice still count toward the safety maximum.');
 		source.width = '100%';
 		source.value('auto', _('All sensors (highest valid reading)'));
 		(this.sensors || []).forEach(function(sensor) {
@@ -291,7 +294,9 @@ return view.extend({
 			this.decorateFlags(formNode);
 			this.decorateNotes(formNode);
 			this.decorateUnits(formNode);
-			return E('div', { 'class': 'pwmfan-advanced' }, [this.style(), formNode]);
+			return E('div', { 'class': 'pwmfan-advanced' }, [
+				E('link', { rel: 'stylesheet', href: L.resource('view/h5000m-pwmfan-font.css') }),
+				this.style(), formNode]);
 		}, this));
 	}
 });

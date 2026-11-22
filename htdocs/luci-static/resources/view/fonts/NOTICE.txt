@@ -1,0 +1,12 @@
+MiSans subset
+=============
+
+Source: npm package misans@5.0.0 (https://www.npmjs.com/package/misans),
+upstream MiSans by Xiaomi (https://hyperos.mi.com/font/).
+License: Apache License 2.0.
+
+Only the glyphs used by this plugin's user interface are kept: every
+font chunk is subset with fontTools to the intersection of its
+unicode-range and the characters present in the UI strings (34 woff2
+files, 148 KB total, Regular and Demibold). Files are otherwise
+unmodified; regenerate them with tools/subset-misans.py.

@@ -10,7 +10,8 @@
 	--pf-violet: light-dark(#8052bc, #c29bff);
 	--pf-red: var(--v-err, light-dark(#b62b42, #ff8a9b));
 	--pf-mono: var(--v-mono, ui-monospace, monospace);
-	--pf-font: var(--v-font, var(--font, system-ui, -apple-system, "Segoe UI", Roboto, Inter, "Helvetica Neue", Arial, sans-serif));
+	--pf-chart-font: var(--v-font, var(--font, system-ui, -apple-system, "Segoe UI", Roboto, Inter, "Helvetica Neue", Arial, sans-serif));
+	--pf-font: MiSans, "MiSans VF", var(--v-font, var(--font, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif));
 	color: var(--pf-text);
 	font: 13px/1.5 var(--pf-font);
 	display: grid;
@@ -47,15 +48,21 @@
 .pf-live:is([data-state=ok], [data-state=warn]) i::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: currentColor; animation: pf-pulse 4s ease-out infinite; }
 @keyframes pf-pulse { from { opacity: .45; transform: scale(1); } 75%, to { opacity: 0; transform: scale(2.4); } }
 @media (prefers-reduced-motion: reduce) { .pf-live i::after { animation: none !important; } }
-.pf-boards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .pf-card { background: var(--pf-surface); border: 1px solid var(--pf-line); border-radius: var(--v-r-lg, 13px); padding: 13px; min-width: 0; }
 .pf-card h3, .pf-card > summary { font-size: 15px; font-weight: 650; }
-.pf-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; margin-top: 9px; }
-.pf-metric { display: grid; grid-template-rows: auto 1fr 3px; align-items: start; padding: 7px 7px 0; background: var(--pf-subtle); border: 1px solid var(--pf-line); border-radius: 7px; overflow: hidden; min-height: 62px; }
-.pf-metric span { color: var(--pf-muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pf-metric strong { font-size: clamp(11px, 1.55vw, 19px); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pf-bar { background: var(--pf-line); height: 3px; margin-inline: -7px; }
-.pf-bar i { display: block; background: var(--metric-color); width: 0; height: 100%; }
+.pf-report-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.pf-report-edit { flex: none; padding: 3px 9px; font: 600 11.5px/1.4 var(--pf-font); color: var(--pf-muted); background: transparent; border: 1px solid var(--pf-line); border-radius: 7px; cursor: pointer; }
+.pf-report-edit:hover { color: var(--pf-text); border-color: var(--pf-muted); }
+.pf-report-body { display: grid; gap: 11px; margin-top: 11px; }
+.pf-report-row { display: grid; gap: 5px; min-width: 0; }
+.pf-report-line { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-width: 0; }
+.pf-report-label { min-width: 0; color: var(--pf-muted); font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.pf-report-value { flex: none; font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.pf-report-bar { height: 6px; background: var(--pf-line); border-radius: 999px; overflow: hidden; }
+.pf-report-bar i { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--metric-color); transition: width .35s ease; }
+.pf-report-picker { display: grid; gap: 8px; margin-top: 12px; padding: 11px 12px 12px; background: var(--pf-subtle); border-radius: 9px; }
+.pf-report-picker label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--pf-text); }
+.pf-report-picker input { margin: 0; accent-color: var(--pf-green); width: 15px; height: 15px; }
 .pf-note, .pf-field { color: var(--pf-muted); font-size: 12px; }
 .pf-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 9px; }
 .pf-modes.pf-drives { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 7px; }
@@ -205,6 +212,7 @@ html[data-darkmode=true] .pf-warn-stop { --pf-glow: 255, 138, 155; }
 .pf-number-setting { display: flex; align-items: center; gap: 6px; color: var(--pf-muted); white-space: nowrap; }
 .pf-number-setting input { width: 4.4em; margin-inline: 4px; text-align: center; font-variant-numeric: tabular-nums; }
 .pf-page button.pf-mode { font-weight: 650; height: auto; min-height: 34px; padding: 6px 7px; line-height: 1.2; white-space: normal; }
+@media (max-width: 380px) { .pf-live { font-size: 11px; padding-inline: 7px; } .pf-live span { letter-spacing: 0; } }
 @media (max-width: 380px) { .pf-page button.pf-mode { font-size: 11px; padding: 6px 4px; } }
 .pf-page .pf-danger { color: var(--pf-red); border-color: var(--pf-red); }
 .pf-page button[aria-pressed=true] { border-color: var(--pf-blue); color: var(--pf-blue); background: color-mix(in srgb, var(--pf-blue) 10%, var(--pf-surface)); }
@@ -238,21 +246,16 @@ html[data-darkmode=true] .pf-warn-stop { --pf-glow: 255, 138, 155; }
 .pf-points-head span:not(:first-child) { padding-left: 9px; }
 .pf-point { padding: 5px 2px; border-top: 1px solid var(--pf-line); }
 .pf-point > span { color: var(--pf-muted); text-align: center; font-variant-numeric: tabular-nums; }
-@media (max-width: 900px) { .pf-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 720px) { .pf-report-body { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px; } }
+@media (min-width: 1100px) { .pf-report-body { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 620px) {
 	.pf-card { padding: 9px; }
-	.pf-boards { gap: 7px; }
-	.pf-metrics { gap: 4px; }
-	.pf-metric { padding-inline: 4px; min-height: 51px; }
-	.pf-bar { margin-inline: -4px; }
 	.pf-fixed-row { grid-template-columns: 32px minmax(0, 1fr) 32px; gap: 6px; }
 	.pf-target { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 	.pf-plot canvas { height: 150px; }
 	.pf-history-settings { column-gap: 12px; row-gap: 8px; }
 }
 @media (max-width: 400px) {
-	.pf-boards { grid-template-columns: minmax(0, 1fr); }
-	.pf-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 /* Resolve plot colors before the canvas reads them. */
 .pf-page {
@@ -271,7 +274,7 @@ html[data-darkmode=true] .pf-page {
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.pf-switch, .pf-step, .pf-bubble, .pf-thumb, .pf-method-title, .pf-odo-col, .pf-odo-strip { transition: none; }
+	.pf-switch, .pf-step, .pf-bubble, .pf-thumb, .pf-method-title, .pf-odo-col, .pf-odo-strip, .pf-report-bar i { transition: none; }
 	.pf-warn.is-pulse, .pf-method[data-selected=true]::before { animation: none; }
 	.pf-track.is-live .pf-thumb, .pf-track:has(input:active) .pf-thumb { transform: translateY(-50%); }
 	.pf-bubble { transform: translate(-50%, -100%); }
