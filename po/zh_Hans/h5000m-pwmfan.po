@@ -280,8 +280,8 @@ msgstr "应用曲线"
 msgid "Advanced settings"
 msgstr "高级设置"
 
-msgid "Temperature history"
-msgstr "温度历史"
+msgid "Temperature monitor"
+msgstr "温度监控"
 
 msgid "Live readings held in browser memory"
 msgstr "实时读数保存在浏览器内存中"
@@ -683,8 +683,8 @@ msgstr "高温区曲线过低"
 msgid "Fan stopped"
 msgstr "停转"
 
-msgid "High temperatures may shorten fan life"
-msgstr "过高的温度可能影响设备硬件寿命"
+msgid "Excessive heat may shorten the hardware life"
+msgstr "高温过高可能影响设备硬件寿命"
 
 msgid "Automatic theme"
 msgstr "自动明暗"
@@ -746,25 +746,31 @@ msgid "The controller takes one sensor snapshot per cycle, independent of the sa
 msgstr "控制器每个控制周期读取一次传感器快照，与主页历史图表的采样间隔相互独立。"
 
 msgid "A reading counts as valid when the sensor file is readable and the value is within −40…150 °C; sensors without a valid reading are skipped. The fan curve above — the temperature-to-output curve, not the history chart — follows this sensor, or the highest valid one when “All sensors” is selected. Sensors outside the choice still count toward the safety maximum."
-msgstr "传感器文件可读且数值在 −40…150 °C 内才算有效，无有效读数的传感器会被跳过。上方风扇曲线（温度到输出的那条曲线，不是历史图表）跟随所选传感器；选“全部传感器”时取其中最高有效值。未选中的传感器仍参与安全最高温仲裁。"
+msgstr "传感器文件可读且数值在 −40…150 °C 内才算有效，无有效读数的传感器会被跳过。上方风扇曲线（温度到输出的那条曲线，不是温度监控图表）跟随所选传感器；选“全部传感器”时取其中最高有效值。未选中的传感器仍参与安全最高温仲裁。"
 
 msgid "No request, protection ramp or startup boost drives the fan above this value. Lowering it caps high-speed noise, including the whine a small fan makes near full duty, at the cost of the highest speed protection can still reach; a fault still asks for a full 100%."
 msgstr "任何请求、保护斜坡或启动助推都不会把风扇推到这个值以上。调低它可以压低高转速风噪，包括小风扇在接近满速时的啸叫；代价是保护能给出的最高转速也随之降低，故障时仍然按 100% 处理。"
 
-msgid "View"
-msgstr "视图"
+msgid "Fan curve settings"
+msgstr "风扇曲线设置"
 
-msgid "How often the controller samples, which sensor feeds the curve, and how the temperature chart is drawn."
-msgstr "控制器多久采样一次、曲线跟随哪个传感器，以及温度历史图怎么绘制。"
+msgid "How often the controller samples and which sensor feeds the fan curve."
+msgstr "控制器多久采样一次，以及风扇曲线跟随哪个传感器。"
 
-msgid "History window (minutes)"
-msgstr "历史窗口（分钟）"
+msgid "Monitor window (minutes)"
+msgstr "监控窗口（分钟）"
 
-msgid "How far back the temperature history chart reaches."
-msgstr "温度历史图向前覆盖的时间范围。"
+msgid "How far back the temperature monitor chart reaches."
+msgstr "温度监控图表向前覆盖的时间范围。"
 
-msgid "History interval (seconds)"
-msgstr "历史间隔（秒）"
+msgid "Monitor interval (seconds)"
+msgstr "监控间隔（秒）"
 
-msgid "How often the history chart asks for a new temperature sample."
-msgstr "温度历史图多久取一次新的温度采样。"
+msgid "How often the temperature monitor chart takes a new sample."
+msgstr "温度监控图表多久取一次新的温度采样。"
+
+msgid "Temperature monitor settings"
+msgstr "温度监控设置"
+
+msgid "How the temperature monitor chart is drawn."
+msgstr "温度监控图表如何绘制。"

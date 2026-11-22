@@ -106,8 +106,9 @@ return view.extend({
 			'.pwmfan-advanced .pf-adv-head .pf-switch svg path.pf-fill{fill:currentColor;stroke:none}',
 			'.pwmfan-advanced .pf-lang-glyph{font-size:11px;font-weight:650;letter-spacing:-.01em;line-height:1;white-space:nowrap}',
 			'.pwmfan-advanced .cbi-value-field{min-width:0;max-width:460px}',
+			'.pwmfan-advanced .cbi-value-field input.cbi-input-text,.pwmfan-advanced .cbi-value-field select,.pwmfan-advanced .cbi-value-field .cbi-dropdown{height:36px;min-height:36px;font-size:13px;padding-top:5px;padding-bottom:5px;box-sizing:border-box}',
 			'.pwmfan-advanced .cbi-value-field select,.pwmfan-advanced .cbi-dropdown{width:100%;max-width:100%;box-sizing:border-box}',
-			'.pwmfan-advanced .cbi-value-description{display:block;max-width:70ch;-webkit-line-clamp:unset;line-clamp:unset;max-height:none;overflow:visible}',
+			'.pwmfan-advanced .cbi-value-description{display:block;max-width:78ch;font-size:12px;line-height:18px;margin:6px 0 0;color:' + muted + ';-webkit-line-clamp:unset;line-clamp:unset;max-height:none;overflow:visible}',
 			'.pwmfan-advanced .cbi-value-description[data-v-end]{clip-path:none !important}',
 			'.pwmfan-advanced .cbi-value > .vt-help{display:none}',
 			'.pwmfan-advanced .cbi-value[data-v-help="fold"] > .cbi-value-field > .vt-help-text{max-height:none;overflow:visible}',
@@ -125,8 +126,7 @@ return view.extend({
 			   label column wraps and leaves a dead gap inside a single wide card. */
 			'@media (max-width: 991px){.pwmfan-advanced .pf-group > .cbi-value{grid-template-columns:minmax(0,1fr);row-gap:8px}'
 				+ '.pwmfan-advanced .pf-group > .cbi-value > .cbi-value-field{grid-column:1}}',
-			'@media (min-width: 992px){.pwmfan-advanced .cbi-section-node{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}'
-				+ '.pwmfan-advanced .pf-group > .cbi-value{grid-template-columns:minmax(0,0.46fr) minmax(0,1fr)}}',
+			'@media (min-width: 992px){.pwmfan-advanced .pf-group > .cbi-value{grid-template-columns:minmax(0,0.46fr) minmax(0,1fr)}}',
 			/* The theme enlarges the dropdown list on narrow screens; keep it at body size. */
 			'.pwmfan-advanced .cbi-dropdown{font-size:13px}'
 				+ '.pwmfan-advanced .cbi-dropdown > ul{font-size:13px}',
@@ -154,15 +154,15 @@ return view.extend({
 			'.pwmfan-advanced .pf-unit-host > input{flex:1 1 auto;min-width:0;max-width:none;text-align:right;padding-right:10px}',
 			'.pwmfan-advanced .pf-unit-host > select,.pwmfan-advanced .pf-unit-host > .cbi-dropdown{flex:1 1 0;min-width:0;width:auto;max-width:100%}',
 			'.pwmfan-advanced .pf-unit{flex:0 0 30px;width:30px;text-align:left;font-size:12px;line-height:1;color:' + muted + ';background:transparent;font-variant-numeric:tabular-nums}',
-			'.pwmfan-advanced .cbi-value > .pf-wide-note{grid-column:1 / -1;margin:8px 0 0;max-width:78ch;line-height:1.55}',
+			'.pwmfan-advanced .cbi-value > .pf-wide-note{grid-column:1 / -1;margin:6px 0 0;max-width:78ch;font-size:12px;line-height:18px}',
 			'.pwmfan-advanced .cbi-value.pf-note-row{padding:8px 0;row-gap:4px}',
 			'.pwmfan-advanced .cbi-value.pf-note-row > .cbi-value-field{min-height:0;padding:0;line-height:1.5}',
 			'.pwmfan-advanced .cbi-value.pf-note-row > .cbi-value-title{font-weight:500;color:' + muted + '}',
-			'.pwmfan-advanced .cbi-value.pf-note-row > .cbi-value-field{color:' + muted + ';font-size:12.5px}',
+			'.pwmfan-advanced .cbi-value.pf-note-row > .cbi-value-field{color:' + muted + ';font-size:12px;line-height:18px}',
 			'@media (prefers-reduced-motion: reduce){.pwmfan-advanced .pf-toggle .pf-track,.pwmfan-advanced .pf-toggle .pf-thumb{transition:none}}',
 			'.pwmfan-group-heading{margin:0 0 10px}',
 			'.pwmfan-group-heading h3{font-size:15.5px;font-weight:650;margin:0}',
-			'.pwmfan-group-heading p{font-size:12px;color:' + muted + ';margin:5px 0 0}'
+			'.pwmfan-group-heading p{font-size:12px;line-height:18px;color:' + muted + ';margin:6px 0 0}'
 		].join(''));
 	},
 
@@ -222,8 +222,8 @@ return view.extend({
 		kick.datatype = 'range(0,5000)'; kick.default = '750'; kick.rmempty = false;
 		this.group(section, 'fault', _('Fault response'),
 			_('When a sensor reading is unusable or a PWM write fails, the controller asks for 100% output instead of guessing. This behaviour is fixed and has no switch; CPU throttling and the critical shutdown still belong to the kernel.'));
-		this.group(section, 'view', _('View'),
-			_('How often the controller samples, which sensor feeds the curve, and how the temperature chart is drawn.'));
+		this.group(section, 'curveview', _('Fan curve settings'),
+			_('How often the controller samples and which sensor feeds the fan curve.'));
 		var interval = section.option(form.Value, 'poll_interval', _('Control interval (seconds)'));
 		interval.datatype = 'range(1,30)'; interval.default = '2'; interval.rmempty = false;
 		var source = section.option(form.Value, 'sensor_sources', _('Curve sensor source'));
@@ -234,12 +234,14 @@ return view.extend({
 			source.value(sensor.label, sensor.title + (sensor.state === 'ok' ? ' · ' + sensor.celsius + ' °C' : ' · ' + _('no reading')));
 		});
 		source.default = 'auto'; source.rmempty = false; source.optional = false;
-		var window = section.option(form.Value, 'history_range', _('History window (minutes)'));
+		this.group(section, 'histview', _('Temperature monitor settings'),
+			_('How the temperature monitor chart is drawn.'));
+		var window = section.option(form.Value, 'history_range', _('Monitor window (minutes)'));
 		window.datatype = 'range(5,360)'; window.default = '15'; window.rmempty = false;
-		window.description = _('How far back the temperature history chart reaches.');
-		var read = section.option(form.Value, 'history_interval', _('History interval (seconds)'));
+		window.description = _('How far back the temperature monitor chart reaches.');
+		var read = section.option(form.Value, 'history_interval', _('Monitor interval (seconds)'));
 		read.datatype = 'range(1,60)'; read.default = '2'; read.rmempty = false;
-		read.description = _('How often the history chart asks for a new temperature sample.');
+		read.description = _('How often the temperature monitor chart takes a new sample.');
 		return map;
 	},
 
@@ -261,8 +263,10 @@ return view.extend({
 		Array.prototype.forEach.call(formNode.querySelectorAll('.cbi-value[data-name="_failsafe"]'), function(row) {
 			row.classList.add('pf-note-row');
 		});
-		/* Long explanations read as a caption under the row, not squeezed into the field column. */
-		Array.prototype.forEach.call(formNode.querySelectorAll('.cbi-value[data-name="sensor_sources"], .cbi-value[data-name="min_pwm"]'), function(row) {
+		/* Every explanation reads as a caption under its whole row, so all captions share
+		   one left edge and one typography instead of drifting with the field column. */
+		Array.prototype.forEach.call(formNode.querySelectorAll('.cbi-value'), function(row) {
+			if (row.classList.contains('pf-flag-row')) return;
 			var field = row.querySelector('.cbi-value-field');
 			var note = field ? field.querySelector('.cbi-value-description') : null;
 			if (!note || note.classList.contains('pf-wide-note')) return;

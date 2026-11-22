@@ -20,6 +20,9 @@
 }
 .pf-page :is(h2, h3, p) { margin: 0; }
 .pf-heading, .pf-dispatch-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.pf-dispatch-head .pf-warnings { margin-left: auto; }
+@media (max-width: 379px) { .pf-dispatch-head > h3 { flex: 1 0 100%; }
+	.pf-dispatch-head > .pf-status { margin-left: auto; } }
 .pf-heading { min-width: 0; padding-top: 6px; }
 .pf-heading h2 { font-size: clamp(17px, 4.6vw, 21px); white-space: nowrap; }
 .pf-heading .pf-live { flex: 0 1 auto; min-width: 0; }
@@ -124,7 +127,7 @@
 .pf-track:has(input:focus-visible) .pf-thumb {
 	box-shadow: 0 0 0 3px var(--pf-surface), 0 0 0 5px var(--pf-blue); }
 .pf-page .pf-track input[type=range]:is(:focus, :focus-visible) { outline: none; box-shadow: none; border-color: transparent; }
-.pf-status { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border: 1px solid color-mix(in srgb, var(--pf-amber) 52%, transparent);
+.pf-status { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border: 1px solid color-mix(in srgb, var(--pf-amber) 52%, transparent);
 	border-radius: 7px; background: color-mix(in srgb, var(--pf-amber) 14%, var(--pf-surface)); color: var(--pf-amber);
 	font-size: 11.5px; font-weight: 650; white-space: nowrap; }
 .pf-legend span.is-off { opacity: .42; }
@@ -198,7 +201,7 @@ html[data-darkmode=true] .pf-warn-stop { --pf-glow: 255, 138, 155; }
 @keyframes pf-warn-in { from { opacity: 0; transform: translateY(-4px) scale(.97); } to { opacity: 1; transform: none; } }
 /* Text and border carry the warning on their own; the motion only draws the eye. */
 .pf-warn.is-pulse { animation: pf-warn-in .22s ease-out 1, pf-warn-pulse 3.3s linear infinite; }
-.pf-page .pf-warn-note { margin: 14px 0 0; padding-top: 9px; border-top: 1px solid var(--pf-line); color: var(--pf-muted); font-size: 11px; text-align: center; }
+.pf-page .pf-warn-note { margin: 8px 0 0; padding-top: 0; border-top: 0; color: var(--pf-muted); font-size: 11px; text-align: center; }
 .pf-history-settings { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; }
 .pf-number-setting { display: flex; align-items: center; gap: 6px; color: var(--pf-muted); white-space: nowrap; }
 .pf-number-setting input { width: 4.4em; margin-inline: 4px; text-align: center; font-variant-numeric: tabular-nums; }

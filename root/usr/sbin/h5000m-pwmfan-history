@@ -1,0 +1,9 @@
+#!/bin/sh
+# Print the temperature history the controller has recorded.
+#
+# The LuCI file RPC on this firmware rejects `exec` calls that carry arguments,
+# so this helper takes none: it always prints the retained window.
+. /usr/lib/h5000m-pwmfan/controller-lib.sh
+
+runtime_dir=/var/run/h5000m-pwmfan
+temperature_history_read "$runtime_dir/temperature-history" "$(date +%s)"

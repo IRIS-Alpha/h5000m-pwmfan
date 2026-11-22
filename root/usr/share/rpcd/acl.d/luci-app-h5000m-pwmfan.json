@@ -3,15 +3,27 @@
 		"description": "Control the H5000M PWM fan",
 		"read": {
 			"file": {
-				"/usr/sbin/h5000m-pwmfan-status": [ "exec" ]
+				"/usr/sbin/h5000m-pwmfan-status": [
+					"exec"
+				],
+				"/usr/sbin/h5000m-pwmfan-history": [
+					"exec"
+				]
 			},
-			"uci": [ "h5000m_pwmfan", "luci" ]
+			"uci": [
+				"h5000m_pwmfan",
+				"luci"
+			]
 		},
 		"write": {
 			"file": {
-				"/usr/sbin/h5000m-pwmfan-language": [ "exec" ]
+				"/usr/sbin/h5000m-pwmfan-language": [
+					"exec"
+				]
 			},
-			"uci": [ "h5000m_pwmfan" ]
+			"uci": [
+				"h5000m_pwmfan"
+			]
 		}
 	}
 }

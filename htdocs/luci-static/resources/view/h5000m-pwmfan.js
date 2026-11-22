@@ -45,7 +45,7 @@ function format(value, unit) { return value == null ? _('Unavailable') : value +
 
 /* The legend is a fixed-width table: "50 %" keeps the unit one space away from
    the number so the right-aligned column stays readable. */
-function legendPercent(value) { return value == null ? _('Unavailable') : Math.round(value) + ' %'; }
+function legendPercent(value) { return value == null ? _('Unavailable') : Math.round(value) + '\u00A0\u00A0%'; }
 function select(label, options, selected, change) {
 	return E('label', { 'class': 'pf-field' }, [ E('span', {}, label), E('select', { change: change },
 		options.map(function(option) { return E('option', { value: option[0], selected: option[0] === selected ? '' : null }, option[1]); })) ]);
@@ -94,7 +94,7 @@ return view.extend({
 	},
 
 	loadTemperatureHistory: function() {
-		return fs.exec('/usr/sbin/h5000m-pwmfan-status', [ 'temperatures' ]).then(L.bind(function(result) {
+		return fs.exec('/usr/sbin/h5000m-pwmfan-history').then(L.bind(function(result) {
 			if (result.code) return;
 			var last = -Infinity, interval = this.interval * 1000;
 			var rows = (result.stdout || '').split('\n').reduce(function(list, row) {
@@ -430,7 +430,7 @@ return view.extend({
 		this.warnCurve = E('span', { 'class': 'pf-warn pf-warn-low', hidden: true }, _('Curve too low in the hot zone'));
 		this.warnStop = E('span', { 'class': 'pf-warn pf-warn-stop', hidden: true }, _('Fan stopped'));
 		this.warnRow = E('div', { 'class': 'pf-warnings', hidden: true, 'aria-live': 'polite' }, [ this.warnCurve, this.warnStop ]);
-		this.warnNote = E('p', { 'class': 'pf-warn-note', hidden: true }, _('High temperatures may shorten fan life'));
+		this.warnNote = E('p', { 'class': 'pf-warn-note', hidden: true }, _('Excessive heat may shorten the hardware life'));
 		return this.warnRow;
 	},
 
@@ -908,20 +908,21 @@ return view.extend({
 		this.saveCurve = E('button', { type: 'button', 'class': 'btn', click: function() {
 			self.commit({ curve_manual: self.pendingCurve.map(function(point) { return point.t + ':' + point.pwm; }).join(',') });
 		} }, _('Apply curve'));
-		this.curveChart = this.makeChart(_('Fan curve'), [ [ _('Curve request'), '--pf-blue', 'request' ], [ _('Actual output'), '--pf-amber', 'actual' ],
-			[ _('Current temperature'), '--pf-green', 'temperature' ], [ _('Temperature protection'), '--pf-red', 'protection' ] ], false);
-		this.tempChart = this.makeChart(_('Temperature history'), SENSORS.map(function(sensor, index) { return [ sensor[0], sensor[2], 'sensor' + index ]; }), true);
+		this.curveChart = this.makeChart(_('Fan curve'), [ [ _('Curve request'), '--pf-blue', 'request' ],
+			[ _('Current temperature'), '--pf-green', 'temperature' ], [ _('Actual output'), '--pf-amber', 'actual' ],
+			[ _('Temperature protection'), '--pf-red', 'protection' ] ], false);
+		this.tempChart = this.makeChart(_('Temperature monitor'), SENSORS.map(function(sensor, index) { return [ sensor[0], sensor[2], 'sensor' + index ]; }), true);
 		this.historyState = E('span', { 'class': 'pf-chart-state' }, _('Waiting for temperature readings'));
 		// Window and interval are controller-side view settings now (advanced → View).
 		var temps = E('details', { 'class': 'pf-card pf-history', 'data-detail': 'history',
-			open: this.detailState('history', true) ? true : null }, [ E('summary', {}, [ _('Temperature history'), this.historyState ]),
+			open: this.detailState('history', true) ? true : null }, [ E('summary', {}, [ _('Temperature monitor'), this.historyState ]),
 			this.tempChart.element ]);
 		this.root = E('div', { 'class': 'pf-page' }, [
 			E('link', { rel: 'stylesheet', href: L.resource('view/h5000m-pwmfan-font.css') }),
 			E('link', { rel: 'stylesheet', href: L.resource('view/h5000m-pwmfan.css') }),
 			E('div', { 'class': 'pf-heading' }, [ E('h2', {}, _('Fan control')), this.badge,
 				E('span', { 'class': 'pf-heading-gap' }), this.themeSwitcher(), this.languageSwitcher() ]),
-			E('section', { 'class': 'pf-card' }, [ E('div', { 'class': 'pf-dispatch-head' }, [ E('h3', {}, _('Mode selection')), this.floorChip(), this.warnRow ]),
+			E('section', { 'class': 'pf-card' }, [ E('div', { 'class': 'pf-dispatch-head' }, [ E('h3', {}, _('Mode selection')), this.warnRow, this.floorChip() ]),
 				this.warnNote, this.policy ]),
 			this.curveCard = E('details', { 'class': 'pf-card pf-curve-chart', 'data-detail': 'curve',
 				open: this.detailState('curve', false) ? true : null }, [ E('summary', {}, _('Fan curve')),
