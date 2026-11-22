@@ -120,7 +120,8 @@
 .pf-history-settings { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; }
 .pf-number-setting { display: flex; align-items: center; gap: 6px; color: var(--pf-muted); white-space: nowrap; }
 .pf-number-setting input { width: 4.4em; margin-inline: 4px; text-align: center; }
-.pf-page .pf-mode { font-weight: 650; }
+.pf-page button.pf-mode { font-weight: 650; height: auto; min-height: 34px; padding: 6px 7px; line-height: 1.2; white-space: normal; }
+@media (max-width: 380px) { .pf-page button.pf-mode { font-size: 11px; padding: 6px 4px; } }
 .pf-page .pf-danger { color: var(--pf-red); border-color: var(--pf-red); }
 .pf-page button[aria-pressed=true] { border-color: var(--pf-blue); color: var(--pf-blue); background: color-mix(in srgb, var(--pf-blue) 10%, var(--pf-surface)); }
 .pf-page .pf-danger[aria-pressed=true] { border-color: var(--pf-red); color: var(--pf-red); background: color-mix(in srgb, var(--pf-red) 10%, var(--pf-surface)); }

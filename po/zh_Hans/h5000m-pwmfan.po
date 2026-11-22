@@ -22,13 +22,13 @@ msgstr "快速调度"
 msgid "Select a ready-to-use policy"
 msgstr "选择控制模式"
 
-msgid "Quiet"
+msgid "Quiet mode"
 msgstr "安静"
 
-msgid "Balanced"
+msgid "Balanced mode"
 msgstr "平衡"
 
-msgid "Performance"
+msgid "Performance mode"
 msgstr "性能"
 
 msgid "Custom curve"

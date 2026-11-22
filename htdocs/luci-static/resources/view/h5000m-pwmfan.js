@@ -6,7 +6,7 @@
 'require uci';
 
 var CONFIG = 'h5000m_pwmfan', SECTION = 'main';
-var MODES = { quiet: _('Quiet'), balanced: _('Balanced'), performance: _('Performance'),
+var MODES = { quiet: _('Quiet mode'), balanced: _('Balanced mode'), performance: _('Performance mode'),
 	target: _('Target drive'), manual: _('Custom curve') };
 var SENSORS = [
 	[ _('CPU'), /^(cpu-thermal|cpu_thermal(?:_temp1)?|CPU)$/i, '--pf-blue' ],
