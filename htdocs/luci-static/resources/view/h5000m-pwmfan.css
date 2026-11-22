@@ -137,27 +137,32 @@ html[data-darkmode=true] .pf-warn-stop { --pf-glow: 255, 138, 155; }
 
 /* Two soft pulses when a chip appears, then silence: the halo fades in and out instead of cutting. */
 @keyframes pf-warn-pulse {
-	/* Hold the soft halo 0.8s, spike for 0.12s, fall back for 0.18s; 0.5s between the two beats. */
-	0% { text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
+	/* Rise window 800ms with the brightening in its last 240ms, then a mirrored 800ms fall. */
+	0% {
+		text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
 		box-shadow: 0 0 7px -1px rgba(var(--pf-glow), .18), inset 0 0 6px -2px rgba(var(--pf-glow), .14); }
-	26.7% { text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
+	15.1% {
+		text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
 		box-shadow: 0 0 7px -1px rgba(var(--pf-glow), .18), inset 0 0 6px -2px rgba(var(--pf-glow), .14); }
-	30.7% { text-shadow: 0 0 10px rgba(var(--pf-glow), .7);
+	21.6% {
+		text-shadow: 0 0 10px rgba(var(--pf-glow), .7);
 		box-shadow: 0 0 16px 1px rgba(var(--pf-glow), .55), inset 0 0 10px -2px rgba(var(--pf-glow), .5); }
-	36.7% { text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
+	28.1%, 56.8% {
+		text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
 		box-shadow: 0 0 7px -1px rgba(var(--pf-glow), .18), inset 0 0 6px -2px rgba(var(--pf-glow), .14); }
-	53.3% { text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
+	71.9% {
+		text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
 		box-shadow: 0 0 7px -1px rgba(var(--pf-glow), .18), inset 0 0 6px -2px rgba(var(--pf-glow), .14); }
-	80% { text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
-		box-shadow: 0 0 7px -1px rgba(var(--pf-glow), .18), inset 0 0 6px -2px rgba(var(--pf-glow), .14); }
-	84% { text-shadow: 0 0 10px rgba(var(--pf-glow), .7);
+	78.4% {
+		text-shadow: 0 0 10px rgba(var(--pf-glow), .7);
 		box-shadow: 0 0 16px 1px rgba(var(--pf-glow), .55), inset 0 0 10px -2px rgba(var(--pf-glow), .5); }
-	90%, 100% { text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
+	84.9%, 100% {
+		text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
 		box-shadow: 0 0 7px -1px rgba(var(--pf-glow), .18), inset 0 0 6px -2px rgba(var(--pf-glow), .14); }
 }
 @keyframes pf-warn-in { from { opacity: 0; transform: translateY(-4px) scale(.97); } to { opacity: 1; transform: none; } }
 /* Text and border carry the warning on their own; the motion only draws the eye. */
-.pf-warn.is-pulse { animation: pf-warn-in .22s ease-out 1, pf-warn-pulse 3s linear infinite; }
+.pf-warn.is-pulse { animation: pf-warn-in .22s ease-out 1, pf-warn-pulse 3.7s linear infinite; }
 .pf-page .pf-warn-note { margin: 14px 0 0; padding-top: 9px; border-top: 1px solid var(--pf-line); color: var(--pf-muted); font-size: 11px; text-align: center; }
 .pf-history-settings { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; }
 .pf-number-setting { display: flex; align-items: center; gap: 6px; color: var(--pf-muted); white-space: nowrap; }
