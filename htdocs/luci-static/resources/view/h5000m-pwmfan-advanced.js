@@ -50,7 +50,7 @@ return view.extend({
 			'.pwmfan-advanced .cbi-value{scroll-margin-bottom:24px}',
 			/* Dock the LuCI command bar: while it floats it covers the field row beneath it. */
 			'.cbi-page-actions{position:static;bottom:auto;margin:18px 0 0 auto}',
-			'.pwmfan-header{display:flex;justify-content:flex-end;margin:0 0 10px;padding-right:6px}',
+			'.pwmfan-header{display:flex;justify-content:flex-end;margin:0 0 10px}',
 			'.pwmfan-header .btn{display:inline-flex;align-items:center;height:30px;padding:0 11px;border:1px solid ' + line + ';border-radius:8px;background:transparent;color:' + muted + ';font-size:12.5px;font-weight:500;text-decoration:none}',
 			'.pwmfan-header .btn:hover{border-color:' + muted + ';color:' + text + '}',
 			'.pwmfan-group-heading{margin:18px 0 10px}',
