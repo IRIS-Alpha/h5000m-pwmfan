@@ -366,7 +366,8 @@ calculate_request() {
 		IFS='|' read -r desired reason locked active boost count PI_INTEGRAL _ <<EOF_TARGET
 $result
 EOF_TARGET
-		if [ "$desired" -le "$MIN_PWM" ]; then FLOOR_LIMITED=1; fi
+		# A zero request is an explicit stop, so the floor never applies to it.
+		if [ "$desired" -gt 0 ] && [ "$desired" -le "$MIN_PWM" ]; then FLOOR_LIMITED=1; fi
 		dispatch="$desired|$reason|$locked|$active|$boost|$count"
 	else
 		PI_INTEGRAL=0
