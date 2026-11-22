@@ -20,8 +20,6 @@ THERMAL_DIR=${H5000M_SYS_CLASS_THERMAL:-/sys/class/thermal}
 MODEM_CACHE_FILE=${H5000M_MODEM_CACHE_FILE:-/tmp/5gmodem/tele.json}
 ACTIVE_OWNER=0
 FAILSAFE_PWM=255
-KEEPALIVE_SECS=30
-LAST_WRITE_AT=0
 MAX_PWM=255
 MODE=balanced
 CURVE=
@@ -36,6 +34,7 @@ LAST_TEMP=
 LAST_CHANGE=0
 LAST_SAMPLE=
 LAST_MODE=
+PWM_WRITES=0
 PI_INTEGRAL=0
 PROTECTION_LOCKED=0
 PROTECTION_ACTIVE=0
@@ -167,6 +166,7 @@ write_status() {
 		printf 'effective_pwm=%s\n' "$effective"
 		printf 'protection_pwm=%s\n' "$PROTECTION_PWM"
 		printf 'mode_pwm=%s\n' "$MODE_PWM"
+		printf 'writes_total=%s\n' "$PWM_WRITES"
 		printf 'sensors=%s\n' "$SENSOR_STATUS"
 		printf 'updated_at=%s\n' "$stamp"
 	} >"$tmp" && mv "$tmp" "$STATUS_FILE"
@@ -175,25 +175,28 @@ write_status() {
 set_pwm() {
 	requested=$1
 	[ -n "$PWM_FILE" ] && [ -w "$PWM_FILE" ] || return 1
+	previous=$(cat "$PWM_FILE" 2>/dev/null) || previous=unknown
+	if [ "$previous" != "$requested" ]; then
+		logger -t h5000m-pwmfan "pwm $previous -> $requested"
+	fi
 	printf '%s\n' "$requested" >"$PWM_FILE" 2>/dev/null || return 1
+	PWM_WRITES=$((PWM_WRITES + 1))
 	effective=$(cat "$PWM_FILE" 2>/dev/null) || return 1
 	in_range "$effective" 0 255 || return 1
 	ACTIVE_OWNER=1
 	OWNER=userspace
-	LAST_WRITE_AT=$(date +%s)
 	return 0
 }
 
 # Re-applying an unchanged duty can glitch the PWM output: the MTK channel
 # recalculates its divider on every apply and the fan is briefly audible.
-# Write only when the value differs, with a periodic keepalive so an external
-# writer is still corrected within KEEPALIVE_SECS.
+# Write only when the readback differs; the readback is taken every cycle, so an
+# external writer is still noticed and corrected on the next poll.
 set_pwm_if_changed() {
 	requested=$1
 	[ -n "$PWM_FILE" ] && [ -w "$PWM_FILE" ] || return 1
 	current=$(cat "$PWM_FILE" 2>/dev/null) || current=
-	now_ts=${now:-$(date +%s)}
-	if [ "$current" = "$requested" ] && [ $((now_ts - LAST_WRITE_AT)) -lt "$KEEPALIVE_SECS" ]; then
+	if [ "$current" = "$requested" ]; then
 		effective=$current
 		ACTIVE_OWNER=1
 		OWNER=userspace

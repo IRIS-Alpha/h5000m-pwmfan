@@ -106,9 +106,15 @@ from the host every 2–3 s instead; no automatic rollback fired and none was ne
 
 The daemon used to write the duty every poll (2 s) even when it had not changed. On this SoC every apply
 recalculates the channel divider, and the fan can be heard as a brief hiccup; the run above showed stalls landing
-on the same second as a redundant write. `set_pwm_if_changed()` now writes only when the value differs, plus a
-30 s keepalive that also corrects an external writer, and the loop logs cycles longer than 5 s to
-`/var/run/h5000m-pwmfan/slow-cycles`. Forced writes (startup kick, failsafe release) still use `set_pwm()`.
+on the same second as a redundant write. `set_pwm_if_changed()` now compares the readback and writes only when it
+differs — the readback happens every cycle, so an external writer (the thermal governor stepping `cur_state`) is
+still noticed on the next poll and corrected. The 30 s keepalive that first shipped with this fix was removed on
+2026-11-22: it forced a same-value write every 30 s, which is exactly the hiccup being avoided. Forced writes
+(startup kick, failsafe release) still call `set_pwm()`.
+
+`set_pwm()` counts applies in `PWM_WRITES`, exposed as `writes_total` in the status file, so a steady-state window
+can be checked for redundant writes without extra tooling. The loop still logs cycles longer than 5 s to
+`/var/run/h5000m-pwmfan/slow-cycles`.
 
 ## Rollback procedure
 
