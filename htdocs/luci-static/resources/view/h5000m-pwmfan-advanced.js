@@ -109,8 +109,8 @@ return view.extend({
 			/* The theme enlarges the dropdown list on narrow screens; keep it at body size. */
 			'.pwmfan-advanced .cbi-dropdown{font-size:13px}'
 				+ '.pwmfan-advanced .cbi-dropdown > ul{font-size:13px}',
-			'.pwmfan-advanced .cbi-dropdown > ul > li{font-size:13px;line-height:1.4;padding:6px 10px}',
-			+ '.pwmfan-advanced .cbi-dropdown > ul > li[placeholder]{display:none}',
+			'.pwmfan-advanced .cbi-dropdown > ul > li{font-size:13px;line-height:1.4;padding:6px 10px}'
+				+ '.pwmfan-advanced .cbi-dropdown > ul > li[placeholder]{display:none}',
 			'.pwmfan-advanced{--sw-on:var(--accent,#8db20f);--sw-off:color-mix(in srgb,var(--text-2,#4a515a) 24%,var(--s3,#eef0f3));--sw-thumb:var(--s2,#ffffff)}',
 			/* Flag rows put the checkbox in a 16px gutter; the description must sit under the label, not under the box. */
 			'.pwmfan-advanced .cbi-value:has(> .cbi-value-field > .cbi-checkbox) > .cbi-value-field > .cbi-value-description{grid-column:2 / -1}',
@@ -129,6 +129,9 @@ return view.extend({
 			'.pwmfan-advanced .pf-switch input:focus-visible + .pf-track{outline:2px solid var(--accent-line,var(--accent));outline-offset:2px}',
 			'.pwmfan-advanced .pf-switch input:disabled + .pf-track{opacity:.45}',
 			'.pwmfan-advanced .pf-switch:has(input:disabled){cursor:not-allowed}',
+			'.pwmfan-advanced .pf-unit-host{display:flex;align-items:center;gap:6px}',
+			'.pwmfan-advanced .pf-unit-host > input{flex:1 1 auto;min-width:0}',
+			'.pwmfan-advanced .pf-unit{flex:none;font-size:12px;line-height:1;color:' + muted + ';font-variant-numeric:tabular-nums}',
 			'.pwmfan-advanced .cbi-value.pf-note-row{padding:8px 0;row-gap:4px}',
 			'.pwmfan-advanced .cbi-value.pf-note-row > .cbi-value-field{min-height:0;padding:0;line-height:1.5}',
 			'.pwmfan-advanced .cbi-value.pf-note-row > .cbi-value-title{font-weight:500;color:' + muted + '}',
@@ -220,6 +223,21 @@ return view.extend({
 		});
 	},
 
+	decorateUnits: function(formNode) {
+		var units = /^\s*(.*?)\s*[（(]\s*([^（）()]{1,14}?)\s*[）)]\s*$/;
+		formNode.querySelectorAll('.cbi-value').forEach(function(row) {
+			var title = row.querySelector('.cbi-value-title');
+			var input = row.querySelector('input.cbi-input-text');
+			if (!title || !input) return;
+			var m = units.exec(title.textContent || '');
+			if (!m || !m[1] || !m[2]) return;
+			var host = input.parentNode;
+			title.textContent = m[1];
+			host.classList.add('pf-unit-host');
+			host.appendChild(E('span', { 'class': 'pf-unit' }, m[2]));
+		});
+	},
+
 	decorateFlags: function(formNode) {
 		Array.prototype.forEach.call(formNode.querySelectorAll('.cbi-value'), function(row) {
 			var box = row.querySelector('.cbi-checkbox');
@@ -259,6 +277,7 @@ return view.extend({
 			this.groupCards(formNode);
 			this.decorateFlags(formNode);
 			this.decorateNotes(formNode);
+			this.decorateUnits(formNode);
 			return E('div', { 'class': 'pwmfan-advanced' }, [this.style(), formNode]);
 		}, this));
 	}
