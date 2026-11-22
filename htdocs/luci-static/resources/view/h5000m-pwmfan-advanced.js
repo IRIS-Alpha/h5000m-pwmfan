@@ -90,7 +90,7 @@ return view.extend({
 		var muted = 'var(--v-text-2,var(--text-2,var(--text-color-medium,#737a80)))';
 		return E('style', {}, [
 			'.pwmfan-advanced{font-family:var(--v-font,var(--font,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans CJK SC","Microsoft YaHei",sans-serif))}',
-			'.pwmfan-advanced{--pf-surface:var(--v-surface,light-dark(#fff,#1c2129));--pf-subtle:var(--v-surface-2,light-dark(#f5f7fa,#222832));--pf-line:var(--v-line,light-dark(#dbe2eb,#364150));--pf-text:var(--v-text,light-dark(#171d27,#ebeff6));--pf-muted:var(--v-text-2,light-dark(#505e70,#b5c1d1));--pf-green:var(--v-ok,#169974);--pf-amber:light-dark(#a95c00,#ffc26d);--pf-red:var(--v-err,light-dark(#b62b42,#ff8a9b))}',
+			'.pwmfan-advanced{--pf-surface:var(--v-surface,light-dark(#fff,#1c2129));--pf-subtle:var(--v-surface-2,light-dark(#f5f7fa,#222832));--pf-line:var(--v-line,light-dark(#dbe2eb,#364150));--pf-text:var(--v-text,light-dark(#171d27,#ebeff6));--pf-muted:var(--v-text-2,light-dark(#505e70,#b5c1d1));--pf-green:var(--v-ok,#169974);--pf-amber:light-dark(#8f4c00,#ffc26d);--pf-red:var(--v-err,light-dark(#b62b42,#ff8a9b))}',
 			'.pwmfan-advanced .pf-adv-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 12px}',
 			'.pwmfan-advanced .pf-heading-gap{flex:1 1 auto}',
 			'.pwmfan-advanced .pf-adv-head .pf-live{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 10px;color:var(--pf-muted);background:var(--pf-surface);border:1px solid var(--pf-line);border-radius:9px;white-space:nowrap}',
@@ -116,8 +116,6 @@ return view.extend({
 			'.pwmfan-advanced .cbi-map > h2{font-size:21px;margin:0 0 4px}',
 			'.pwmfan-advanced .cbi-map-descr{margin:0 0 14px;font-size:13px}',
 			'.pwmfan-advanced .cbi-value{scroll-margin-bottom:24px}',
-			/* Dock the LuCI command bar: while it floats it covers the field row beneath it. */
-			'.cbi-page-actions{position:static;bottom:auto;margin:18px 0 0 auto}',
 			/* Each behavior group becomes its own card so the six blocks read as sections. */
 			'.pwmfan-advanced .cbi-map > .cbi-section{padding:0;background:none;border:0;box-shadow:none}',
 			'.pwmfan-advanced .cbi-section-node{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:start;padding:0}',
@@ -156,6 +154,13 @@ return view.extend({
 			   spinner lands in the top-left corner. The bar sits outside the view node, so
 			   markActions() tags it with .pf-actions. */
 			'.pf-actions .cbi-button.spinning{align-items:center}',
+			/* Keep the apply bar in reach on a long form: it floats over the page
+			   like the stock settings pages, with the pending count on the left. */
+			'.pf-actions{position:sticky;bottom:0;z-index:20;display:flex;align-items:center;justify-content:flex-end;'
+				+ 'gap:8px;width:100%;box-sizing:border-box;flex-wrap:nowrap;margin:18px 0 0;padding:10px 12px;border:1px solid ' + line + ';border-radius:10px;'
+				+ 'background:color-mix(in srgb,var(--v-surface,var(--s1,light-dark(#ffffff,#1c2129))) 94%,transparent);'
+				+ '-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,.16)}',
+			'.pf-actions .pf-actions-hint{flex:1 1 auto;min-width:0;margin-right:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:18px;color:' + muted + '}',
 			'.pwmfan-advanced .pf-unit{flex:0 0 30px;width:30px;text-align:left;font-size:12px;line-height:1;color:' + muted + ';background:transparent;font-variant-numeric:tabular-nums}',
 			'.pwmfan-advanced .cbi-value > .pf-wide-note{grid-column:1 / -1;margin:6px 0 0;max-width:78ch;font-size:12px;line-height:18px}',
 			'.pwmfan-advanced .cbi-value.pf-note-row{padding:8px 0;row-gap:4px}',
@@ -350,10 +355,27 @@ return view.extend({
 		});
 	},
 
-	/* The action bar lives outside the view node, so tag it for the spinner fix. */
+	/* The action bar lives outside the view node, so tag it for the spinner fix and
+	   fill it with the same pending count LuCI shows in the header. */
 	markActions: function() {
 		var bar = document.querySelector('.cbi-page-actions');
-		if (bar) bar.classList.add('pf-actions');
+		if (!bar) return;
+		bar.classList.add('pf-actions');
+		if (!this.actionsHint) this.actionsHint = E('span', { 'class': 'pf-actions-hint', role: 'status' });
+		if (this.actionsHint.parentNode !== bar) bar.insertBefore(this.actionsHint, bar.firstChild);
+		if (!this.actionsTimer) this.actionsTimer = window.setInterval(L.bind(this.paintActions, this), 1500);
+		this.paintActions();
+	},
+
+	paintActions: function() {
+		var hint = this.actionsHint;
+		if (!hint || !hint.isConnected || document.hidden) return;
+		uci.changes().then(L.bind(function(changes) {
+			var count = 0;
+			Object.keys(changes || {}).forEach(function(config) { count += (changes[config] || []).length; });
+			this.actionsDirty = count > 0;
+			hint.textContent = count ? _('%d unsaved change(s)').format(count) : _('No unsaved changes');
+		}, this)).catch(function() { /* The hint is cosmetic. */ });
 	},
 
 	/* LuCI re-renders the form after a save/apply; redecorate the fresh nodes. */
@@ -416,6 +438,12 @@ return view.extend({
 			this.decorateUnits(formNode);
 			this.markActions();
 			window.setTimeout(L.bind(this.markActions, this), 0);
+			window.addEventListener('beforeunload', function(event) {
+				/* Only guard real unsaved edits; the banner stays silent otherwise. */
+				if (!this.actionsDirty) return;
+				event.preventDefault();
+				event.returnValue = '';
+			}.bind(this));
 			this.watchForm(formNode);
 			shared.applyTheme(shared.themeMode());
 			this._sensorTimer = window.setInterval(L.bind(this.refreshSensorOptions, this), 5000);

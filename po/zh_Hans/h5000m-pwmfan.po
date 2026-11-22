@@ -789,3 +789,21 @@ msgstr "正在应用…"
 
 msgid "Apply now"
 msgstr "立即应用"
+
+msgid "Time"
+msgstr "时间"
+
+msgid "Temperature"
+msgstr "温度"
+
+msgid "Fan curve data"
+msgstr "风扇曲线数据"
+
+msgid "Temperature monitor data"
+msgstr "温度监控数据"
+
+msgid "No unsaved changes"
+msgstr "没有未保存的更改"
+
+msgid "%d unsaved change(s)"
+msgstr "%d 项未保存"

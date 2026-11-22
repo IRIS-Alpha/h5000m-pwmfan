@@ -128,6 +128,18 @@ return view.extend({
 		return Object.prototype.hasOwnProperty.call(MODES, configured) || configured === 'fixed' ? configured : 'balanced';
 	},
 
+	/* LuCI counts unsaved changes for the header indicator. The dashboard writes
+	   through the same uci layer, so the count has to be reset here; otherwise
+	   the page keeps insisting there are unsaved changes after a successful
+	   apply. */
+	clearChangesIndicator: function() {
+		try {
+			if (!ui.changes) return;
+			ui.changes.changes = {};
+			if (typeof ui.changes.setIndicator === 'function') ui.changes.setIndicator(0);
+		} catch (error) { /* The indicator is cosmetic. */ }
+	},
+
 	applyOnce: function() {
 		var transient = function(error) {
 			var message = String((error && error.message) || error);
@@ -174,6 +186,7 @@ return view.extend({
 		Object.keys(diff).forEach(function(key) { uci.set(CONFIG, SECTION, key, String(diff[key])); });
 		return uci.save().then(L.bind(this.applyOnce, this)).then(L.bind(function() {
 			this.saving = false;
+			this.clearChangesIndicator();
 			this.paintSaveBar();
 			this.pendingCurve = null;
 			this.curveTargetDirty = false;
@@ -240,24 +253,29 @@ return view.extend({
 		this.paintSaveBar();
 	},
 
-	/* The dashboard saves on a short merge delay; the bar shows that delay and
-	   offers the same immediate apply, so both pages behave predictably. */
+	/* The dashboard saves on a short merge delay. A floating strip shows that
+	   delay and offers the same immediate apply, like the apply bar the stock
+	   settings pages keep at the bottom; it hides while nothing is staging so
+	   it never covers the chart on a phone. */
 	makeSaveBar: function() {
 		var self = this;
 		this.saveLabel = E('span', { 'class': 'pf-savebar-label' }, _('All changes applied'));
 		this.saveButton = E('button', { type: 'button', 'class': 'btn pf-savebar-apply', disabled: true,
 			click: function() { self.flushPending(); } }, _('Apply now'));
-		return E('footer', { 'class': 'pf-savebar' }, [ this.saveLabel, this.saveButton ]);
+		this.saveBar = E('footer', { 'class': 'pf-savebar', hidden: true, role: 'status', 'aria-live': 'polite' },
+			[ this.saveLabel, this.saveButton ]);
+		return this.saveBar;
 	},
 
 	paintSaveBar: function() {
-		if (!this.saveLabel) return;
-		var pending = this.pending;
+		if (!this.saveLabel || !this.saveBar) return;
+		var pending = this.pending, committing = this.saving;
 		var seconds = pending ? Math.max(0, Math.ceil((pending.until - Date.now()) / 1000)) : 0;
-		this.saveLabel.textContent = this.saving
+		this.saveLabel.textContent = committing
 			? _('Applying changes…')
 			: pending ? _('Applies automatically in %d s').format(seconds) : _('All changes applied');
-		this.saveButton.disabled = !pending || this.saving;
+		this.saveButton.disabled = !pending || committing;
+		this.saveBar.hidden = !pending && !committing;
 	},
 
 	switcher: function(options) { return shared.switcher(options); },
@@ -694,6 +712,7 @@ return view.extend({
 			this.history = this.history.filter(function(sample) { return sample.time >= now - HISTORY_LIMIT; });
 		}
 		this.updateWarnings();
+		this.drawVersion = (this.drawVersion || 0) + 1;
 		this.drawCharts();
 	},
 
@@ -716,7 +735,17 @@ return view.extend({
 			}
 			return E('span', series[2] ? { 'data-key': series[2] } : {}, parts);
 		}));
-		chart.element = E('div', { 'class': 'pf-chart' }, [ legendNode, plot ]);
+		/* Canvas pixels are invisible to a screen reader, so the same numbers are
+		   repeated in a visually hidden table. */
+		chart.table = E('table', { 'class': 'pf-sr-only' }, [
+			E('caption', {}, history ? _('Temperature monitor data') : _('Fan curve data')),
+			E('thead', {}, E('tr', {}, (history
+				? [ _('Time') ].concat(SENSORS.map(function(sensor) { return sensor[0]; }))
+				: [ _('Temperature'), _('Requested output') ])
+				.map(function(head) { return E('th', { scope: 'col' }, head); }))),
+			E('tbody', {})
+		]);
+		chart.element = E('div', { 'class': 'pf-chart' }, [ legendNode, plot, chart.table ]);
 		plot.addEventListener('pointerdown', function(event) {
 			var rect = canvas.getBoundingClientRect(), points = self.curvePoints();
 			var x = event.clientX - rect.left, y = event.clientY - rect.top, geometry = chart.geometry;
@@ -770,6 +799,34 @@ return view.extend({
 		return chart;
 	},
 
+	/* Mirror the plotted data into the hidden table so keyboard and screen
+	   reader users get the numbers the canvas draws. */
+	paintChartTable: function(chart) {
+		var table = chart && chart.table;
+		if (!table || !table.tBodies[0]) return;
+		var rows = [], locale = document.documentElement.lang || undefined;
+		if (chart.history) {
+			this.history.slice(-12).forEach(function(sample) {
+				var time = new Date(sample.time).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false });
+				rows.push([ time ].concat(sample.temps.map(function(value) {
+					return value == null ? _('Unavailable') : value.toFixed(1) + ' °C';
+				})));
+			});
+		} else {
+			this.curvePoints().forEach(function(point) {
+				rows.push([ point.t + ' °C', (Math.round(percent(point.pwm) * 10) / 10) + ' %' ]);
+			});
+		}
+		if (!rows.length) rows.push([ _('Waiting for samples…'), '—' ]);
+		var key = JSON.stringify(rows);
+		if (chart.tableKey === key) return;
+		chart.tableKey = key;
+		var body = table.tBodies[0];
+		body.replaceChildren.apply(body, rows.map(function(row) {
+			return E('tr', {}, row.map(function(cell) { return E('td', {}, String(cell)); }));
+		}));
+	},
+
 	drawChart: function(chart) {
 		var canvas = chart.canvas, width = canvas.clientWidth, height = canvas.clientHeight;
 		if (!width || !height) {
@@ -782,6 +839,15 @@ return view.extend({
 		}
 		this.redrawTries = 0;
 		if (chart.empty) chart.empty.hidden = !(chart.history && this.history.length < 2);
+		/* Resize observers fire on every card reflow; repainting identical pixels
+		   is wasted work, so only redraw when the box, the data or the cursor
+		   actually moved. */
+		var paintKey = [ width, height, this.drawVersion || 0, chart.cursor == null ? '' : Math.round(chart.cursor) ].join(':');
+		if (chart.paintKey === paintKey && canvas.width === Math.round(width * (window.devicePixelRatio || 1))) {
+			this.paintChartTable(chart);
+			return;
+		}
+		chart.paintKey = paintKey;
 		var scale = window.devicePixelRatio || 1;
 		canvas.width = Math.round(width * scale);
 		canvas.height = Math.round(height * scale);
@@ -993,8 +1059,10 @@ return view.extend({
 			window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() { self.applyTheme(self.themeMode()); });
 		window.addEventListener('pagehide', function() { self.flushPending(); });
 		document.addEventListener('visibilitychange', function() {
-			if (document.visibilityState === 'hidden') self.flushPending();
-			else window.setTimeout(function() { self.drawCharts(); }, 0);
+			if (document.visibilityState === 'hidden') { self.flushPending(); return; }
+			/* Coming back refreshes at once instead of waiting for the next tick,
+			   so the chart never shows a gap that already closed. */
+			self.fetchStatus().then(self.update.bind(self)).catch(function() { });
 		});
 		this.root.addEventListener('toggle', function(event) {
 			var node = event.target;
@@ -1008,7 +1076,12 @@ return view.extend({
 		observer.observe(this.root);
 		var media = window.matchMedia('(prefers-color-scheme: dark)');
 		media.addEventListener('change', this.drawCharts.bind(this));
-		poll.add(function() { return self.fetchStatus().then(self.update.bind(self)); }, 1);
+		poll.add(function() {
+			/* A hidden tab needs no pixels; the daemon keeps sampling, so the next
+			   visible tick is complete again. */
+			if (document.hidden) return Promise.resolve();
+			return self.fetchStatus().then(self.update.bind(self));
+		}, 1);
 		self.drawCharts();
 		window.setTimeout(function() { self.drawCharts(); }, 0);
 		return this.root;

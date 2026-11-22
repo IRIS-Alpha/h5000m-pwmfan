@@ -6,6 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import mimetypes
 from pathlib import Path
+import copy
 import re
 import subprocess
 import time
@@ -39,6 +40,29 @@ def demo_status(mode):
 
 def make_handler(rootfs, messages):
     config = settings()
+    # Snapshot of what the router would have on disk, so `uci changes` can report
+    # edits the way the real RPC does (the apply bar counts them).
+    saved = copy.deepcopy(config)
+
+    def pending_changes():
+        result = {}
+        for name, package in config.items():
+            rows = []
+            for section, values in package.items():
+                for key, value in values.items():
+                    if key.startswith('.'):
+                        continue
+                    if saved.get(name, {}).get(section, {}).get(key) != value:
+                        rows.append(f'{name}.{section}.{key}={value}')
+            for section, values in saved.get(name, {}).items():
+                for key in values:
+                    if key.startswith('.'):
+                        continue
+                    if key not in package.get(section, {}):
+                        rows.append(f'{name}.{section}.{key}')
+            if rows:
+                result[name] = rows
+        return result
 
     class Preview(BaseHTTPRequestHandler):
         timeout = 10
@@ -112,7 +136,14 @@ def make_handler(rootfs, messages):
                     for key in args.get('options', []):
                         package[args['section']].pop(key, None)
                     return [0]
-                if method in ('apply', 'confirm', 'changes'):
+                if method == 'changes':
+                    return [0, {'changes': pending_changes()}]
+                if method == 'apply':
+                    for section, values in (saved.get('h5000m_pwmfan') or {}).items():
+                        for key, value in (package.get(section) or {}).items():
+                            values[key] = value
+                    return [0]
+                if method == 'confirm':
                     return [0]
             if name == 'session' and method == 'access':
                 return [0, {'access': True}]
