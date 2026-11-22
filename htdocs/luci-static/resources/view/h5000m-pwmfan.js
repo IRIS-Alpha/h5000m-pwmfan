@@ -25,6 +25,7 @@ var CURVES = {
 var HISTORY_LIMIT = 360 * 60 * 1000;
 var MERGE_DELAY = 3000;
 var THEME_KEY = 'pwmfan-theme';
+var DETAILS_KEY = 'h5000m-pwmfan-details';
 var THEME_ORDER = [ 'auto', 'light', 'dark' ];
 var LANGUAGE_ORDER = [ 'auto', 'en', 'zh_cn' ];
 
@@ -249,6 +250,22 @@ return view.extend({
 		return glyphs[mode] || glyphs.auto;
 	},
 
+	detailState: function(name, fallback) {
+		try {
+			var stored = JSON.parse(localStorage.getItem(DETAILS_KEY) || '{}');
+			if (typeof stored[name] === 'boolean') return stored[name];
+		} catch (error) { /* Panel state is optional. */ }
+		return fallback;
+	},
+
+	rememberDetail: function(name, open) {
+		try {
+			var stored = JSON.parse(localStorage.getItem(DETAILS_KEY) || '{}');
+			stored[name] = !!open;
+			localStorage.setItem(DETAILS_KEY, JSON.stringify(stored));
+		} catch (error) { /* Panel state is optional. */ }
+	},
+
 	themeMode: function() {
 		var stored = null;
 		try { stored = localStorage.getItem(THEME_KEY); } catch (error) { /* Storage is optional. */ }
@@ -296,15 +313,16 @@ return view.extend({
 
 	languageMode: function() {
 		var lang = uci.get('luci', 'main', 'lang') || 'auto';
-		return LANGUAGE_ORDER.indexOf(lang) >= 0 ? lang : 'auto';
+		if (lang === 'zh_cn' || lang === 'en') return lang;
+		return /^zh/i.test(document.documentElement.lang || '') ? 'zh_cn' : 'en';
 	},
 
 	languageSwitcher: function() {
 		var self = this, mode = this.languageMode();
-		var glyph = E('span', { 'class': 'pf-lang-glyph' }, mode === 'zh_cn' ? '中文' : mode === 'en' ? 'EN' : _('Auto'));
-		var button = this.switcher({ className: 'pf-lang', label: _('Language'), content: [ glyph ] });
+		var glyph = E('span', { 'class': 'pf-lang-glyph' }, mode === 'zh_cn' ? 'CN' : 'EN');
+		var button = this.switcher({ className: 'pf-lang', label: mode === 'zh_cn' ? _('Switch to English') : _('Switch to Chinese'), content: [ glyph ] });
 		button.addEventListener('click', function() {
-			var next = LANGUAGE_ORDER[(LANGUAGE_ORDER.indexOf(self.languageMode()) + 1) % LANGUAGE_ORDER.length];
+			var next = self.languageMode() === 'zh_cn' ? 'en' : 'zh_cn';
 			button.disabled = true;
 			fs.exec('/usr/sbin/h5000m-pwmfan-language', [ next ]).then(function(result) {
 				if (result.code) throw new Error(result.stderr || _('Unavailable'));
@@ -349,8 +367,10 @@ return view.extend({
 		var curveChildren = [ curveTitle,
 			E('div', { 'class': 'pf-modes', role: 'group', 'aria-label': _('Curve preset') }, this.presetButtons),
 			E('div', { 'class': 'pf-modes pf-drives' }, this.driveButtons) ];
-		if (!fixed && curveMode === 'target') curveChildren.push(E('details', { 'class': 'pf-parameters' }, [ E('summary', {}, _('Target drive parameters')), this.targetFields() ]));
-		if (!fixed && curveMode === 'manual') curveChildren.push(E('details', { 'class': 'pf-parameters' }, [ E('summary', {}, _('Curve parameters')), this.editor ]));
+		if (!fixed && curveMode === 'target') curveChildren.push(E('details', { 'class': 'pf-parameters', 'data-detail': 'target',
+			open: this.detailState('target', false) ? true : null }, [ E('summary', {}, _('Target drive parameters')), this.targetFields() ]));
+		if (!fixed && curveMode === 'manual') curveChildren.push(E('details', { 'class': 'pf-parameters', 'data-detail': 'manual',
+			open: this.detailState('manual', false) ? true : null }, [ E('summary', {}, _('Curve parameters')), this.editor ]));
 		this.policy.replaceChildren(
 			E('section', { 'class': 'pf-method', 'data-selected': String(fixed) }, [ fixedTitle, this.fixedControls() ]),
 			E('section', { 'class': 'pf-method', 'data-selected': String(!fixed) }, curveChildren));
@@ -711,7 +731,8 @@ return view.extend({
 		if (!history) {
 			for (var i = 0; i < 6; i++) chart.handles.push(E('span', { 'class': 'pf-touch-point', 'aria-hidden': 'true', hidden: '' }));
 		}
-		var plot = E('div', { 'class': 'pf-plot' }, [ canvas, tip ].concat(chart.handles));
+		chart.empty = E('p', { 'class': 'pf-chart-empty', hidden: '' }, _('No data · refresh the page'));
+		var plot = E('div', { 'class': 'pf-plot' }, [ canvas, tip, chart.empty ].concat(chart.handles));
 		var legendNode = E('div', { 'class': 'pf-legend' }, legend.map(function(series) {
 			return E('span', {}, [ E('i', { style: 'background:var(' + series[1] + ')' }), series[0] ]);
 		}));
@@ -771,7 +792,16 @@ return view.extend({
 
 	drawChart: function(chart) {
 		var canvas = chart.canvas, width = canvas.clientWidth, height = canvas.clientHeight;
-		if (!width || !height) return;
+		if (!width || !height) {
+			if (chart.empty) chart.empty.hidden = false;
+			if ((this.redrawTries || 0) < 12) {
+				this.redrawTries = (this.redrawTries || 0) + 1;
+				this.scheduleRedraw();
+			}
+			return;
+		}
+		this.redrawTries = 0;
+		if (chart.empty) chart.empty.hidden = !(chart.history && this.history.length < 2);
 		var scale = window.devicePixelRatio || 1;
 		canvas.width = Math.round(width * scale);
 		canvas.height = Math.round(height * scale);
@@ -895,6 +925,15 @@ return view.extend({
 		this.drawChart(this.tempChart);
 	},
 
+	scheduleRedraw: function() {
+		if (this.redrawTimer) return;
+		var self = this;
+		this.redrawTimer = window.setTimeout(function() {
+			self.redrawTimer = null;
+			if (self.root && self.root.isConnected) self.drawCharts();
+		}, 250);
+	},
+
 	render: function(data) {
 		var self = this;
 		this.history = [];
@@ -943,7 +982,8 @@ return view.extend({
 		};
 		rangeInput.addEventListener('change', function() { updatePreference('range', rangeInput, 5, 360, 5); });
 		intervalInput.addEventListener('change', function() { updatePreference('interval', intervalInput, 1, 60, 1); });
-		var temps = E('details', { 'class': 'pf-card pf-history', open: true }, [ E('summary', {}, [ _('Temperature history'), this.historyState ]),
+		var temps = E('details', { 'class': 'pf-card pf-history', 'data-detail': 'history',
+			open: this.detailState('history', true) ? true : null }, [ E('summary', {}, [ _('Temperature history'), this.historyState ]),
 			this.tempChart.element, E('div', { 'class': 'pf-history-settings' }, [
 				E('label', { 'class': 'pf-number-setting' }, [ _('Window'), rangeInput, _('min') ]),
 				E('label', { 'class': 'pf-number-setting' }, [ _('Read every'), intervalInput, _('s') ]) ]) ]);
@@ -954,7 +994,8 @@ return view.extend({
 			E('div', { 'class': 'pf-boards' }, [ this.makeBoard(_('Temperature array'), this.tempMetrics), this.makeBoard(_('Fan output'), this.outputMetrics) ]),
 			E('section', { 'class': 'pf-card' }, [ E('div', { 'class': 'pf-dispatch-head' }, [ E('h3', {}, _('Mode selection')), this.warnRow ]),
 				this.warnNote, this.policy ]),
-			E('details', { 'class': 'pf-card pf-curve-chart' }, [ E('summary', {}, _('Fan curve')),
+			E('details', { 'class': 'pf-card pf-curve-chart', 'data-detail': 'curve',
+				open: this.detailState('curve', false) ? true : null }, [ E('summary', {}, _('Fan curve')),
 				this.curveChart.element ]), temps
 		]);
 		this.applyTheme(this.themeMode());
@@ -965,6 +1006,10 @@ return view.extend({
 			if (document.visibilityState === 'hidden') self.flushPending();
 			else window.setTimeout(function() { self.drawCharts(); }, 0);
 		});
+		this.root.addEventListener('toggle', function(event) {
+			var node = event.target;
+			if (node && node.dataset && node.dataset.detail) self.rememberDetail(node.dataset.detail, node.open);
+		}, true);
 		this.refreshPolicy();
 		this.update(data);
 		this.loadTemperatureHistory();

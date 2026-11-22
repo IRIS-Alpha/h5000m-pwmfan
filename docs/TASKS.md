@@ -103,6 +103,7 @@
 - [x] 占空比类模式立即生效：把回差保持与降速等待限定在温度驱动请求上（`hold_down_allowed()`），固定请求与 `drive=duty` 的预设改多少立刻下发。
 - [x] 连续点击的误报：同值提交连带跳过 `save`/`apply`，`uci.apply` 遇 ubus code 5 自动重试一次，提交期间控件不再禁用而是进队列。
 - [x] 界面缺陷修复（2026-11-22）：滑块圆点改为自绘并按 `--pf-ratio` 定位；警示标签出现时快闪两次；图表不再依赖 `requestAnimationFrame` 并与标签页可见性联动；下发失败改为 `uci revert` 丢弃暂存，确认失败才提示（code 5 且 `uci changes` 已空时视为已生效）。
+- [x] 交互与视觉修订（2026-11-22）：选中态高亮移到整个模式容器并加边框流光；警示标签加圆点、底色与长周期呼吸；折叠面板展开状态写入本地存储；语言交换器改为 CN/EN 两态；绘图区在无数据或画布尺寸为 0 时显示“无数据 · 请刷新页面”并按 250 毫秒重试。
 - [x] Select Apache-2.0 for the package and include the canonical license text and package metadata.
 - [x] Confirm the current delivery path: compile the package into firmware and validate locally produced APKs; defer a router-facing package feed and its signing setup until the plugin is stable.
 
@@ -233,6 +234,8 @@
 验收：默认配置下真机行为不变；只有在 `takeover_verified=1`、PWM 可写且存在 `pwm-fan` 冷却设备时才真正接管；文档与界面不再表述“100 °C 以上由内核接管风扇”。
 
 ## Brief log
+
+- 2026-11-22: 第二轮界面修订。模式容器改为选中态载体（绿色描边 + `conic-gradient` 流光，标题行去边框），设备与预览均确认动画生效；警示标签加实心圆点与 16% 底色填充，出现时快闪两次后按 5.2 秒周期呼吸；风扇曲线/温度历史/参数面板的展开状态写入 `h5000m-pwmfan-details`，刷新后保持；语言交换器改为 CN/EN 两态（`auto` 时按页面实际语言显示）；绘图区在画布尺寸为 0 或采样不足时显示“无数据 · 请刷新页面”，并按 250 毫秒最多重试 12 次。实测：390/320 明暗主题下无横向溢出，设备上流光动画、CN 标签与折叠持久化均通过。
 
 - 2026-11-22: 修复用户报告的四个界面缺陷。滑块圆点改为页面自绘（原生输入透明、只留交互），实测 320/390/1360 与设备上圆点中线偏移均为 0；警示标签出现时快闪两次（1.1 秒，`prefers-reduced-motion` 下不闪）；曲线图与温度历史首次绘制不再走 `requestAnimationFrame`，标签页重新可见时重绘；提交失败路径改为 `uci revert` + 重新加载配置，设备实测失败后 `uci changes` 为空、界面回到已保存值并弹出一次提示，不再残留三条“未保存”标记。
 

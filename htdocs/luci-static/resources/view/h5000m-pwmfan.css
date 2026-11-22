@@ -58,10 +58,22 @@
 .pf-note, .pf-field { color: var(--pf-muted); font-size: 12px; }
 .pf-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 9px; }
 .pf-modes.pf-drives { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 7px; }
-.pf-method { margin-top: 9px; padding: 9px; border: 1px solid var(--pf-line); border-radius: 7px; background: var(--pf-subtle); }
+.pf-method { position: relative; margin-top: 9px; padding: 10px; border: 1px solid var(--pf-line); border-radius: 8px; background: var(--pf-subtle); }
+.pf-method[data-selected=true] { border-color: color-mix(in srgb, var(--pf-green) 52%, var(--pf-line));
+	background: color-mix(in srgb, var(--pf-green) 6%, var(--pf-subtle)); }
+/* Star-border beam: the selection highlight belongs to the whole block, not its title row. */
+.pf-method[data-selected=true]::before { content: ''; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none;
+	background: conic-gradient(from var(--pf-beam-angle, 0deg), transparent 0 205deg,
+		color-mix(in srgb, var(--pf-green) 75%, transparent) 262deg, var(--pf-green) 296deg, transparent 344deg);
+	-webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+	mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
+	animation: pf-beam 4.6s linear infinite; }
+@property --pf-beam-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+@keyframes pf-beam { to { --pf-beam-angle: 360deg; } }
 .pf-method-title { display: flex; justify-content: space-between; align-items: center; width: 100%; text-align: left; font-weight: 650;
-	transition: color .15s ease, border-color .15s ease; }
-.pf-method-title:hover { border-color: var(--pf-muted); }
+	transition: color .15s ease; }
+.pf-page button.pf-method-title { height: auto; padding: 0; border-color: transparent; background: transparent; }
+.pf-page button.pf-method-title:is(:hover, [aria-pressed=true]) { border-color: transparent; background: transparent; color: var(--pf-green); }
 .pf-method-title span, .pf-chart-state { color: var(--pf-muted); font-size: 12px; font-weight: 400; }
 .pf-method-state[data-pending=true], .pf-method-state[data-draft=true] { color: var(--pf-amber); }
 .pf-fixed { display: grid; gap: 8px; margin-top: 9px; }
@@ -113,9 +125,12 @@
 	box-shadow: 0 0 0 3px var(--pf-surface), 0 0 0 5px var(--pf-blue); }
 .pf-page .pf-track input[type=range]:is(:focus, :focus-visible) { outline: none; box-shadow: none; border-color: transparent; }
 .pf-warnings { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin: 0 0 0 auto; }
-.pf-warn { padding: 2px 7px; border: 1px solid; border-radius: 6px; font-size: 11.5px; }
-.pf-warn-low { color: var(--pf-amber); border-color: var(--pf-amber); background: color-mix(in srgb, var(--pf-amber) 10%, transparent); }
-.pf-warn-stop { color: var(--pf-red); border-color: var(--pf-red); background: color-mix(in srgb, var(--pf-red) 10%, transparent); }
+.pf-warn { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border: 1px solid; border-radius: 7px;
+	font-size: 11.5px; font-weight: 650; }
+.pf-warn::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+	box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 20%, transparent); }
+.pf-warn-low { color: var(--pf-amber); border-color: color-mix(in srgb, var(--pf-amber) 62%, transparent); background: color-mix(in srgb, var(--pf-amber) 16%, var(--pf-surface)); }
+.pf-warn-stop { color: var(--pf-red); border-color: color-mix(in srgb, var(--pf-red) 62%, transparent); background: color-mix(in srgb, var(--pf-red) 16%, var(--pf-surface)); }
 
 /* Two quick pulses when a chip appears, then silence: the text carries the state. */
 @keyframes pf-warn-pulse {
@@ -124,7 +139,10 @@
 	46% { box-shadow: 0 0 0 0 transparent; }
 	70% { box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 34%, transparent); }
 }
-.pf-warn.is-pulse { animation: pf-warn-pulse 1.1s ease-out 1; }
+@keyframes pf-warn-in { from { opacity: 0; transform: translateY(-4px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes pf-warn-breathe { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 50% { box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 24%, transparent); } }
+/* Text and border carry the warning on their own; the motion only draws the eye. */
+.pf-warn.is-pulse { animation: pf-warn-in .26s ease-out 1, pf-warn-pulse 1.1s ease-out .1s 1, pf-warn-breathe 5.2s ease-in-out 1.5s infinite; }
 .pf-page .pf-warn-note { margin: 14px 0 0; padding-top: 9px; border-top: 1px solid var(--pf-line); color: var(--pf-muted); font-size: 11px; text-align: center; }
 .pf-history-settings { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; }
 .pf-number-setting { display: flex; align-items: center; gap: 6px; color: var(--pf-muted); white-space: nowrap; }
@@ -146,6 +164,9 @@
 .pf-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .pf-legend i { border-radius: 8px; width: 10px; height: 3px; }
 .pf-plot { position: relative; border-radius: 8px; background: var(--pf-subtle); }
+.pf-chart-empty { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; color: var(--pf-muted);
+	font-size: 12px; pointer-events: none; }
+.pf-chart-empty[hidden] { display: none; }
 .pf-plot canvas { display: block; width: 100%; height: 196px; touch-action: pan-y; }
 .pf-tooltip { position: absolute; top: 7px; z-index: 1; padding: 5px 8px; background: var(--pf-surface); color: var(--pf-text); border: 1px solid var(--pf-line); border-radius: 7px; box-shadow: 0 2px 8px #0002; font: 11px/1.55 var(--pf-mono); white-space: pre-line; pointer-events: none; }
 .pf-page summary { display: flex; justify-content: space-between; align-items: center; gap: 8px; list-style: none; }
@@ -194,7 +215,7 @@ html[data-darkmode=true] .pf-page {
 
 @media (prefers-reduced-motion: reduce) {
 	.pf-switch, .pf-step, .pf-bubble, .pf-thumb, .pf-method-title, .pf-odo-col, .pf-odo-strip { transition: none; }
-	.pf-warn.is-pulse { animation: none; }
+	.pf-warn.is-pulse, .pf-method[data-selected=true]::before { animation: none; }
 	.pf-track.is-live .pf-thumb, .pf-track:has(input:active) .pf-thumb { transform: translateY(-50%); }
 	.pf-bubble { transform: translate(-50%, -100%); }
 	.pf-switch:active, .pf-step:active { transform: none; }
