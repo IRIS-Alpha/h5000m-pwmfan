@@ -160,7 +160,8 @@ return view.extend({
 			return (uci.get(CONFIG, sectionId, 'enabled') === '1' && uci.get(CONFIG, sectionId, 'kernel_takeover') === '1') ? '1' : null;
 		};
 		takeover.readonly = !verified;
-		this.percentOption(section, 'min_pwm', _('Minimum fan output (%)'), 20);
+		var floor = this.percentOption(section, 'min_pwm', _('Non-zero request floor (%)'), 20);
+		floor.description = _('Except for an explicit 0% stop request, no request drives the fan below this value. A higher floor keeps an aging or dusty fan turning at low duty.');
 		this.percentOption(section, 'max_pwm', _('Maximum curve output (%)'), 100);
 		this.group(section, 'temperature', _('Temperature protection'), _('Protection ramps up before the threshold, locks at 100%, and releases below the threshold by the configured hysteresis.'));
 		var safety = section.option(form.Value, 'protection_temp', _('Full-speed temperature threshold (°C)'));
@@ -227,7 +228,7 @@ return view.extend({
 			row.classList.add('pf-note-row');
 		});
 		/* Long explanations read as a caption under the row, not squeezed into the field column. */
-		Array.prototype.forEach.call(formNode.querySelectorAll('.cbi-value[data-name="sensor_sources"]'), function(row) {
+		Array.prototype.forEach.call(formNode.querySelectorAll('.cbi-value[data-name="sensor_sources"], .cbi-value[data-name="min_pwm"]'), function(row) {
 			var field = row.querySelector('.cbi-value-field');
 			var note = field ? field.querySelector('.cbi-value-description') : null;
 			if (!note) return;

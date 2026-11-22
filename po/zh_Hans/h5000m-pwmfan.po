@@ -706,8 +706,14 @@ msgstr "切换到中文"
 
 msgid "No data · refresh the page"
 msgstr "无数据 · 请刷新页面"
-msgid "Minimum fan output (%)"
-msgstr "风扇最低输出（%）"
+msgid "Non-zero request floor (%)"
+msgstr "非零请求下限（%）"
+
+msgid ""
+"Except for an explicit 0% stop request, no request drives the fan below this "
+"value. A higher floor keeps an aging or dusty fan turning at low duty."
+msgstr ""
+"除 0% 停转请求外，任何请求的输出都不会低于这个值。抬高下限可以让老化、积灰的风扇在低占空比下更容易维持转动。"
 
 msgid "Maximum curve output (%)"
 msgstr "曲线最高输出（%）"
