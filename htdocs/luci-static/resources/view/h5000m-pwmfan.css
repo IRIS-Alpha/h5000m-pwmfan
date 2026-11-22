@@ -151,8 +151,6 @@ html[data-darkmode=true] .pf-status { --pf-glow: 255, 194, 109; }
 		inset 0 0 5px -0.5px rgba(var(--pf-glow), .16),
 		inset 0 0 9px -1px rgba(var(--pf-glow), .09);
 	border-color: rgba(var(--pf-glow), .58); }
-.pf-warn::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor;
-	box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 20%, transparent); }
 .pf-warn-low { --pf-glow: 169, 92, 0; color: var(--pf-amber); background: color-mix(in srgb, var(--pf-amber) 16%, var(--pf-surface)); }
 .pf-warn-stop { --pf-glow: 182, 43, 66; color: var(--pf-red); background: color-mix(in srgb, var(--pf-red) 16%, var(--pf-surface)); }
 html[data-darkmode=true] .pf-warn-low { --pf-glow: 255, 194, 109; }
