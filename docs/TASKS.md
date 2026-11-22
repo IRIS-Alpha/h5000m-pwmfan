@@ -213,7 +213,23 @@
 
 - 2026-11-22: Block B backend half landed: `fixed_duty` 0–100 in 1% steps, `off` mapped to a zero fixed request as a legacy alias, dead `off:*` branch removed, fixture updated; 33/33 checks pass.
 
+## Active task block: Block C — kernel fan handover (verified gate)
+
+目标：把“接管内核保护”改成语义正确的“接管风扇控制”，并让接管必须经过核验才生效。只改门禁与文案，本轮不改真机运行行为。
+
+- [x] 记录只读证据：`cooling-levels`、三条 cooling map、`pwm_fan` 驱动写入路径
+- [x] 新增 `kernel_takeover_ready_dir`（thermal 目录 + PWM 路径 + 两个开关 + `pwm-fan` 冷却设备）
+- [x] 守护进程读取 `takeover_verified`，门禁改用新函数，配置默认 `takeover_verified '0'`
+- [x] 高级设置文案改为“接管风扇控制”与全温度区间说明；zh_Hans 同步
+- [x] Bats 覆盖门禁真假组合（34/34）
+- [ ] 重建并安装 APK，确认门禁仍关闭且文案生效
+- [ ] 真机有界交棒实测：需要用户批准，含看门狗自动回滚
+
+验收：默认配置下真机行为不变；只有在 `takeover_verified=1`、PWM 可写且存在 `pwm-fan` 冷却设备时才真正接管；文档与界面不再表述“100 °C 以上由内核接管风扇”。
+
 ## Brief log
+
+- 2026-11-22：内核交棒改为全局接管 + 核验门禁。`kernel_takeover_ready_dir` 要求 `kernel_takeover=1`、`takeover_verified=1`、PWM 可写且存在 `pwm-fan` 冷却设备；守护进程新增 `takeover_verified` 解析，配置默认 0；高级设置文案改为“接管风扇控制”；Bats 34/34。
 
 - 2026-11-22: Re-recorded `docs/UIUX_IMPROVEMENTS_2026-11.md` as the live backlog. The four existing findings stay open for visual acceptance; the new batch covers the one-row header with theme and language switchers, mode-container highlight, the three-row fixed-request block with 1% controls and a floating readout, the conditional warning row, dashboard LuCI actions, and a reusable advanced-settings module style. Noted that `vantage_theme` already owns the theme preference and that deleting `mode=off` would send legacy configs into the full-speed failsafe.
 - 2026-11-22: User settled the zero-duty question (1% step, no separate stop action, warning shown), asked for the control source to merge into the running badge, and accepted removing the statistics line; the language control stays three-way until the mobile header is settled. Recorded in `docs/REQUIREMENTS_V3.md` §13/§14/§15 and opened the Block B task block. The apply model and the 3-second interval remain a labelled proposal.

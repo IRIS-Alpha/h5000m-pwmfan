@@ -62,10 +62,10 @@ return view.extend({
 		var section = map.section(form.NamedSection, SECTION, 'settings');
 		section.anonymous = true;
 		this.group(section, 'kernel', _('Kernel protection'), '');
-		var takeover = section.option(form.Flag, 'kernel_takeover', _('Take over kernel protection'));
+		var takeover = section.option(form.Flag, 'kernel_takeover', _('Take over fan control'));
 		takeover.default = '0'; takeover.rmempty = false;
 		takeover.readonly = true;
-		takeover.description = _('When enabled, the plugin owns CPU fan control from −20 °C through 100 °C. Kernel thermal-zone control above 100 °C remains active. Hardware verification is pending.');
+		takeover.description = _('When enabled, the plugin drives the fan at every temperature; CPU throttling and the critical shutdown stay with the kernel. Takeover begins only after the handover has been verified.');
 		var enabled = section.option(form.Flag, 'enabled', _('Enable fan control'));
 		enabled.default = '0'; enabled.rmempty = false;
 		enabled.description = _('When disabled, the controller releases PWM ownership and keeps status visible.');

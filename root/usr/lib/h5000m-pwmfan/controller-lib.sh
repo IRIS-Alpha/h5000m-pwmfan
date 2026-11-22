@@ -487,6 +487,20 @@ EOF_PI
 # Print the stored lock flag and summary, followed by retained timestamp|peak
 # rows. Missing files represent a fresh history. Invalid snapshots fail closed
 # so a later update cannot replace the existing counters with an empty history.
+# A verified, writable PWM channel plus a pwm-fan cooling device are the minimum
+# evidence that the kernel handover can be attempted. Args: thermal dir, pwm path,
+# kernel_takeover flag, takeover_verified flag.
+kernel_takeover_ready_dir() (
+	thermal_dir=$1
+	pwm_path=$2
+	[ "$3" = 1 ] && [ "$4" = 1 ] || exit 1
+	[ -n "$pwm_path" ] && [ -w "$pwm_path" ] || exit 1
+	for cdev in "$thermal_dir"/cooling_device*; do
+		[ "$(cat "$cdev/type" 2>/dev/null)" = "pwm-fan" ] && exit 0
+	done
+	exit 1
+)
+
 protection_history_load() (
 	file=$1 now=$2
 	locked=0 total=0 rows=

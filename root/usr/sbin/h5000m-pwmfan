@@ -226,6 +226,8 @@ load_settings() {
 	[ "$ENABLED" = 0 ] || [ "$ENABLED" = 1 ] || return 1
 	config_get TAKEOVER "$SECTION" kernel_takeover 0
 	[ "$TAKEOVER" = 0 ] || [ "$TAKEOVER" = 1 ] || return 1
+	config_get TAKEOVER_VERIFIED "$SECTION" takeover_verified 0
+	[ "$TAKEOVER_VERIFIED" = 0 ] || [ "$TAKEOVER_VERIFIED" = 1 ] || return 1
 	config_get MODE "$SECTION" mode balanced
 	case "$MODE" in quiet | balanced | performance | custom | manual | kernel | target | fixed) ;; *) return 1 ;; esac
 	config_get SENSOR_SELECTION "$SECTION" sensor_sources auto
@@ -350,9 +352,8 @@ EOF_DISPATCH
 }
 
 kernel_takeover_ready() {
-	# The V3 preview does not verify an installed kernel handover mechanism.
-	# The controller test supplies an isolated handover against fake sysfs.
-	return 1
+	pwm=$(find_fan) || pwm=
+	kernel_takeover_ready_dir "${THERMAL_DIR:-/sys/class/thermal}" "$pwm" "$TAKEOVER" "$TAKEOVER_VERIFIED"
 }
 
 apply_cycle() {

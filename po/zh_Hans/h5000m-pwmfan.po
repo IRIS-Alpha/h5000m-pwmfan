@@ -557,8 +557,8 @@ msgstr "曲线参数"
 msgid "Takeover applies to fan control between −20 °C and 100 °C. Kernel thermal control above 100 °C remains active."
 msgstr "接管内核在 −20 °C 到 100 °C 的风扇控制。高于 100 °C 的内核热区控制始终开启。"
 
-msgid "Take over kernel protection"
-msgstr "接管内核保护"
+msgid "Take over fan control"
+msgstr "接管风扇控制"
 
 msgid "Hardware verification is pending."
 msgstr "等待实机接管验证。"
@@ -635,8 +635,8 @@ msgstr "控制采样与曲线来源"
 msgid "The controller reads one sensor snapshot per control cycle. This is separate from the dashboard history sampling interval. Sensors not selected for curve control still participate in the safety maximum."
 msgstr "控制器每个控制周期读取一次传感器快照，与主页历史图表的采样间隔相互独立。未选作曲线控制来源的传感器仍参与安全最高温仲裁。"
 
-msgid "When enabled, the plugin owns CPU fan control from −20 °C through 100 °C. Kernel thermal-zone control above 100 °C remains active. Hardware verification is pending."
-msgstr "启用后，插件接管 −20 °C 至 100 °C 的 CPU 风扇控制；高于 100 °C 的内核热区控制仍保持开启。硬件验证尚未完成。"
+msgid "When enabled, the plugin drives the fan at every temperature; CPU throttling and the critical shutdown stay with the kernel. Takeover begins only after the handover has been verified."
+msgstr "启用后，插件在全部温度区间驱动风扇；CPU 降频与临界关机仍由内核负责。完成交棒核验后才会实际接管。"
 
 msgid "Fan control"
 msgstr "风扇控制"

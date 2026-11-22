@@ -301,6 +301,17 @@ PWM cooling levels 为 `[0,128,192,255]`：40°C `active-low` 通过名为 `cpu-
 - 后端不做固定请求步进限幅：0% 必须立即生效，降速方向已有回差保持与降速等待兜底（`root/usr/sbin/h5000m-pwmfan:428-436`），手速档的中间值由合并窗口消化。
 - 提交在 `pagehide`/`visibilitychange` 时冲刷，避免关页丢失。
 
+## 17. 内核风扇交棒（全局接管）
+
+日期：2026-11-22。决策：启用接管时，插件在全部温度区间驱动风扇，不再把内核热区当作风扇保护层。
+
+- 语义：启用接管且通过核验后，插件在所有温度区间驱动 `pwm1`；不再出现“高于 100 °C 由内核热区接管风扇”的说法。CPU 降频（passive trip）与 125 °C 临界关机仍由内核负责，不受插件影响。
+- 依据：`pwm_fan_write()` 每次写入都会把驱动缓存状态重置为 0（`pwm_fan_update_state(ctx, val)`），`pwm_fan_set_cur_state()` 只在目标状态与缓存不同才下发档位，因此用户态每个控制周期写入都会让 governor 在 40/85/115 °C 设置的档位只生效不到一个周期。设备实测：`cooling-levels = 0,128,192,255`，`cdev2/cdev1/cdev0` 分别绑定 40/85/115 °C。
+- 门槛：`kernel_takeover=1` 单独不足以接管，必须同时 `takeover_verified=1`（`root/etc/config/h5000m_pwmfan` 默认 0），且被控 PWM 可写、`/sys/class/thermal` 下存在 `type` 为 `pwm-fan` 的冷却设备；否则守护进程继续报 `state=disabled reason=takeover_pending` 并释放风扇。
+- 核验：`takeover_verified` 只能在一轮有界实测之后由人工置 1；实测步骤与回滚命令见 `docs/KERNEL_HANDOVER.md`。
+- 文案：高级设置中该项标签为“接管风扇控制”，说明为“启用后，插件在全部温度区间驱动风扇；CPU 降频与临界关机仍由内核负责。完成交棒核验后才会实际接管。”
+- 安全余量：插件温度保护阈值默认 90 °C（可调 80–100），高于内核 85 °C 的 192/255 档位，全局接管不削弱过温响应。
+
 ## 讨论中（未定案）
 
 以下细节尚未确认，不构成要求。

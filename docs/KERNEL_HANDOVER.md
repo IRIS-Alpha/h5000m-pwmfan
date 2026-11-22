@@ -44,6 +44,14 @@ falls back to the userspace value within one poll interval. At 115 °C the gover
   least as strong as the kernel's 85 °C → 192 step. The gap is only the 40 °C → 128 step, which a low fixed duty or a
   low curve can sit below.
 
+## Decision (2026-11-22)
+
+Option B, phrased as a **global fan takeover** (`docs/REQUIREMENTS_V3.md` §17):
+
+- While enabled, the plugin drives the fan at every temperature. The claim that the kernel thermal zone keeps the fan above 100 °C is dropped; CPU throttling and the 125 °C critical shutdown stay with the kernel.
+- Takeover now requires evidence: `kernel_takeover=1` **and** `takeover_verified=1`, a writable PWM channel, and a cooling device whose `type` is `pwm-fan`. Until then the daemon keeps reporting `state=disabled reason=takeover_pending` and leaves the fan released.
+- `takeover_verified` is set by hand only after the bounded live test below, and defaults to `0` in `root/etc/config/h5000m_pwmfan`.
+
 ## Options
 
 | Option | Behaviour | Cost |

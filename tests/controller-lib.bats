@@ -344,6 +344,27 @@ EOF
 	done
 }
 
+@test "kernel takeover needs the verified flag, a writable PWM and a pwm-fan cooling device" {
+	thermal="$BATS_TEST_TMPDIR/thermal"
+	mkdir -p "$thermal/cooling_device0"
+	printf 'pwm-fan\n' >"$thermal/cooling_device0/type"
+	pwm="$BATS_TEST_TMPDIR/pwm1"
+	printf '51\n' >"$pwm"
+	run kernel_takeover_ready_dir "$thermal" "$pwm" 1 0
+	[ "$status" -ne 0 ]
+	run kernel_takeover_ready_dir "$thermal" "$pwm" 0 1
+	[ "$status" -ne 0 ]
+	run kernel_takeover_ready_dir "$thermal" "$pwm" 1 1
+	[ "$status" -eq 0 ]
+	run kernel_takeover_ready_dir "$thermal" "$BATS_TEST_TMPDIR/absent" 1 1
+	[ "$status" -ne 0 ]
+	printf 'cpu\n' >"$thermal/cooling_device0/type"
+	run kernel_takeover_ready_dir "$thermal" "$pwm" 1 1
+	[ "$status" -ne 0 ]
+	run kernel_takeover_ready_dir "$BATS_TEST_TMPDIR/absent-dir" "$pwm" 1 1
+	[ "$status" -ne 0 ]
+}
+
 @test "status command reads history when available and preserves fan status when it is damaged" {
 	runtime_dir=$BATS_TEST_TMPDIR
 	status_command="$runtime_dir/status-command"
