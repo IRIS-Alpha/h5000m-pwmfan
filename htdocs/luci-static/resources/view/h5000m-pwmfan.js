@@ -422,7 +422,7 @@ return view.extend({
 	},
 
 	floorChip: function() {
-		this.floorStatus = E('span', { 'class': 'pf-status pf-floor', hidden: true }, _('Non-zero request floor'));
+		this.floorStatus = E('span', { 'class': 'pf-status pf-floor is-pulse', hidden: true }, _('Non-zero request floor'));
 		return this.floorStatus;
 	},
 
@@ -430,7 +430,7 @@ return view.extend({
 		this.warnCurve = E('span', { 'class': 'pf-warn pf-warn-low', hidden: true }, _('Curve too low in the hot zone'));
 		this.warnStop = E('span', { 'class': 'pf-warn pf-warn-stop', hidden: true }, _('Fan stopped'));
 		this.warnRow = E('div', { 'class': 'pf-warnings', hidden: true, 'aria-live': 'polite' }, [ this.warnCurve, this.warnStop ]);
-		this.warnNote = E('p', { 'class': 'pf-warn-note', hidden: true }, _('Excessive heat may shorten the hardware life'));
+		this.warnNote = E('p', { 'class': 'pf-warn-note', hidden: true }, _('Excessive temperature may shorten the hardware life'));
 		return this.warnRow;
 	},
 
@@ -767,7 +767,7 @@ return view.extend({
 			ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.setLineDash([]);
 		};
 		var localeTime = function(time) { return new Date(time).toLocaleTimeString(document.documentElement.lang || undefined, { hour: '2-digit', minute: '2-digit', hour12: false }); };
-		ctx.font = '11px ' + (color('--pf-chart-font') || 'sans-serif');
+		ctx.font = '11px ' + (color('--pf-font') || 'sans-serif');
 		ctx.fillStyle = color('--pf-muted');
 		ctx.textAlign = 'right';
 		for (var tick = 0; tick <= 100; tick += 20) {
@@ -918,7 +918,6 @@ return view.extend({
 			open: this.detailState('history', true) ? true : null }, [ E('summary', {}, [ _('Temperature monitor'), this.historyState ]),
 			this.tempChart.element ]);
 		this.root = E('div', { 'class': 'pf-page' }, [
-			E('link', { rel: 'stylesheet', href: L.resource('view/h5000m-pwmfan-font.css') }),
 			E('link', { rel: 'stylesheet', href: L.resource('view/h5000m-pwmfan.css') }),
 			E('div', { 'class': 'pf-heading' }, [ E('h2', {}, _('Fan control')), this.badge,
 				E('span', { 'class': 'pf-heading-gap' }), this.themeSwitcher(), this.languageSwitcher() ]),

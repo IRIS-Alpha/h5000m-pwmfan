@@ -683,8 +683,8 @@ msgstr "高温区曲线过低"
 msgid "Fan stopped"
 msgstr "停转"
 
-msgid "Excessive heat may shorten the hardware life"
-msgstr "高温过高可能影响设备硬件寿命"
+msgid "Excessive temperature may shorten the hardware life"
+msgstr "温度过高可能影响设备硬件寿命"
 
 msgid "Automatic theme"
 msgstr "自动明暗"

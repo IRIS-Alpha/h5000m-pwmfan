@@ -11,7 +11,7 @@
 	--pf-red: var(--v-err, light-dark(#b62b42, #ff8a9b));
 	--pf-mono: var(--v-mono, ui-monospace, monospace);
 	--pf-chart-font: var(--v-font, var(--font, system-ui, -apple-system, "Segoe UI", Roboto, Inter, "Helvetica Neue", Arial, sans-serif));
-	--pf-font: MiSans, "MiSans VF", var(--v-font, var(--font, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif));
+	--pf-font: var(--v-font, var(--font, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif));
 	color: var(--pf-text);
 	font: 13px/1.5 var(--pf-font);
 	display: grid;
@@ -21,8 +21,6 @@
 .pf-page :is(h2, h3, p) { margin: 0; }
 .pf-heading, .pf-dispatch-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .pf-dispatch-head .pf-warnings { margin-left: auto; }
-@media (max-width: 379px) { .pf-dispatch-head > h3 { flex: 1 0 100%; }
-	.pf-dispatch-head > .pf-status { margin-left: auto; } }
 .pf-heading { min-width: 0; padding-top: 6px; }
 .pf-heading h2 { font-size: clamp(17px, 4.6vw, 21px); white-space: nowrap; }
 .pf-heading .pf-live { flex: 0 1 auto; min-width: 0; }
@@ -127,9 +125,20 @@
 .pf-track:has(input:focus-visible) .pf-thumb {
 	box-shadow: 0 0 0 3px var(--pf-surface), 0 0 0 5px var(--pf-blue); }
 .pf-page .pf-track input[type=range]:is(:focus, :focus-visible) { outline: none; box-shadow: none; border-color: transparent; }
-.pf-status { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border: 1px solid color-mix(in srgb, var(--pf-amber) 52%, transparent);
-	border-radius: 7px; background: color-mix(in srgb, var(--pf-amber) 14%, var(--pf-surface)); color: var(--pf-amber);
-	font-size: 11.5px; font-weight: 650; white-space: nowrap; }
+.pf-status { --pf-glow: 169, 92, 0; display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px;
+	border: 1px solid rgba(var(--pf-glow), .58); border-radius: 7px;
+	background: color-mix(in srgb, var(--pf-amber) 14%, var(--pf-surface)); color: var(--pf-amber);
+	font-size: 11.5px; font-weight: 650; white-space: nowrap;
+	text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
+	box-shadow: 0 0 2px 0 rgba(var(--pf-glow), .30),
+		0 0 5px -0.5px rgba(var(--pf-glow), .18),
+		0 0 9px -1px rgba(var(--pf-glow), .10),
+		inset 0 0 2px 0 rgba(var(--pf-glow), .26),
+		inset 0 0 5px -0.5px rgba(var(--pf-glow), .16),
+		inset 0 0 9px -1px rgba(var(--pf-glow), .09); }
+html[data-darkmode=true] .pf-status { --pf-glow: 255, 194, 109; }
+.pf-status { margin-left: auto; }
+.pf-status.is-pulse { animation: pf-warn-in .22s ease-out 1, pf-warn-pulse 3.3s linear infinite; }
 .pf-legend span.is-off { opacity: .42; }
 .pf-warnings { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin: 0 0 0 auto; }
 .pf-warn { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border: 1px solid; border-radius: 7px;

@@ -89,7 +89,7 @@ return view.extend({
 		var text = 'var(--v-text,var(--text,var(--text-color-high,#171d27)))';
 		var muted = 'var(--v-text-2,var(--text-2,var(--text-color-medium,#737a80)))';
 		return E('style', {}, [
-			'.pwmfan-advanced{font-family:MiSans,"MiSans VF",var(--v-font,var(--font,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans CJK SC","Microsoft YaHei",sans-serif))}',
+			'.pwmfan-advanced{font-family:var(--v-font,var(--font,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans CJK SC","Microsoft YaHei",sans-serif))}',
 			'.pwmfan-advanced{--pf-surface:var(--v-surface,light-dark(#fff,#1c2129));--pf-subtle:var(--v-surface-2,light-dark(#f5f7fa,#222832));--pf-line:var(--v-line,light-dark(#dbe2eb,#364150));--pf-text:var(--v-text,light-dark(#171d27,#ebeff6));--pf-muted:var(--v-text-2,light-dark(#505e70,#b5c1d1));--pf-green:var(--v-ok,#169974);--pf-amber:light-dark(#a95c00,#ffc26d);--pf-red:var(--v-err,light-dark(#b62b42,#ff8a9b))}',
 			'.pwmfan-advanced .pf-adv-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 12px}',
 			'.pwmfan-advanced .pf-heading-gap{flex:1 1 auto}',
@@ -137,8 +137,12 @@ return view.extend({
 			'.pwmfan-advanced .cbi-value:has(> .cbi-value-field > .cbi-checkbox) > .cbi-value-field > .cbi-value-description{grid-column:2 / -1}',
 			'.pwmfan-advanced .cbi-value{padding:8px 0;row-gap:8px}',
 			/* Boolean rows: label and help on the left, one switch pinned to the right edge. */
-			'.pwmfan-advanced .pf-flag-row{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:8px 0}',
-			'.pwmfan-advanced .pf-flag-main{flex:1 1 auto;min-width:0}',
+			'.pwmfan-advanced .pf-flag-row{display:grid;grid-template-columns:minmax(0,1fr);row-gap:8px;align-items:start;padding:8px 0}',
+			'.pwmfan-advanced .pf-flag-main{min-width:0}',
+			'@media (min-width:992px){.pwmfan-advanced .pf-flag-row{grid-template-columns:minmax(0,0.46fr) minmax(0,1fr);column-gap:20px}}',
+			'.pwmfan-advanced .pf-flag-row > .pf-flag-main{grid-column:1}',
+			'.pwmfan-advanced .pf-flag-row > .pf-toggle{grid-column:1;justify-self:start}',
+			'@media (min-width:992px){.pwmfan-advanced .pf-flag-row > .pf-toggle{grid-column:2}}',
 			'.pwmfan-advanced .pf-flag-main .cbi-value-title{display:block;line-height:24px;margin:0}',
 			'.pwmfan-advanced .pf-flag-main .cbi-value-description{margin-top:6px;max-width:60ch}',
 			'.pwmfan-advanced .pf-toggle{position:relative;display:inline-flex;flex:none;margin-top:1px;cursor:pointer;-webkit-tap-highlight-color:transparent}',
@@ -378,8 +382,7 @@ return view.extend({
 			this.watchForm(formNode);
 			shared.applyTheme(shared.themeMode());
 			return E('div', { 'class': 'pwmfan-advanced' }, [
-				E('link', { rel: 'stylesheet', href: L.resource('view/h5000m-pwmfan-font.css') }),
-				this.style(), this.headerRow(), formNode]);
+					this.style(), this.headerRow(), formNode]);
 		}, this));
 	}
 });
