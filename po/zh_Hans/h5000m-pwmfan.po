@@ -777,3 +777,15 @@ msgstr "温度监控图表如何绘制。"
 
 msgid "Temperature history unavailable"
 msgstr "温度历史读取失败"
+
+msgid "All changes applied"
+msgstr "所有更改已应用"
+
+msgid "Applies automatically in %d s"
+msgstr "%d 秒后自动应用"
+
+msgid "Applying changes…"
+msgstr "正在应用…"
+
+msgid "Apply now"
+msgstr "立即应用"

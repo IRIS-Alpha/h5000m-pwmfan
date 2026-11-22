@@ -170,9 +170,11 @@ return view.extend({
 			return this.fetchStatus().then(L.bind(this.update, this));
 		}
 		this.saving = true;
+		this.paintSaveBar();
 		Object.keys(diff).forEach(function(key) { uci.set(CONFIG, SECTION, key, String(diff[key])); });
 		return uci.save().then(L.bind(this.applyOnce, this)).then(L.bind(function() {
 			this.saving = false;
+			this.paintSaveBar();
 			this.pendingCurve = null;
 			this.curveTargetDirty = false;
 			this.refreshPolicy();
@@ -180,6 +182,7 @@ return view.extend({
 			return this.fetchStatus().then(L.bind(this.update, this));
 		}, this)).catch(L.bind(function(error) {
 			this.saving = false;
+			this.paintSaveBar();
 			var self = this;
 			// Drop the staged values instead of keeping them as an unsaved
 			// difference: the page then reloads the previous configuration.
@@ -221,6 +224,7 @@ return view.extend({
 		clearInterval(this.pendingTicker);
 		this.pending = null;
 		this.paintPending();
+		this.paintSaveBar();
 		this.commit(pending.changes, pending.kind);
 	},
 
@@ -233,6 +237,27 @@ return view.extend({
 	paintPending: function() {
 		this.setMethodState(this.fixedState, 'fixed', this.fixedSelected);
 		this.setMethodState(this.curveState, 'curve', this.curveSelected);
+		this.paintSaveBar();
+	},
+
+	/* The dashboard saves on a short merge delay; the bar shows that delay and
+	   offers the same immediate apply, so both pages behave predictably. */
+	makeSaveBar: function() {
+		var self = this;
+		this.saveLabel = E('span', { 'class': 'pf-savebar-label' }, _('All changes applied'));
+		this.saveButton = E('button', { type: 'button', 'class': 'btn pf-savebar-apply', disabled: true,
+			click: function() { self.flushPending(); } }, _('Apply now'));
+		return E('footer', { 'class': 'pf-savebar' }, [ this.saveLabel, this.saveButton ]);
+	},
+
+	paintSaveBar: function() {
+		if (!this.saveLabel) return;
+		var pending = this.pending;
+		var seconds = pending ? Math.max(0, Math.ceil((pending.until - Date.now()) / 1000)) : 0;
+		this.saveLabel.textContent = this.saving
+			? _('Applying changes…')
+			: pending ? _('Applies automatically in %d s').format(seconds) : _('All changes applied');
+		this.saveButton.disabled = !pending || this.saving;
 	},
 
 	switcher: function(options) { return shared.switcher(options); },
@@ -784,21 +809,42 @@ return view.extend({
 			coords(left, y(tick), right, y(tick), color('--pf-line'), tick ? [ 3, 3 ] : []);
 			ctx.fillText(tick + (chart.history ? '°C' : '%'), left - 6, y(tick) + 4);
 		}
-		ctx.textAlign = 'center';
-		var labelSpacing = (right - left) / 5;
-		var labelWidth = ctx.measureText(chart.history ? localeTime(start) : '100°C').width;
-		var labelStep = Math.max(1, Math.ceil((labelWidth * 1.5 + 4) / labelSpacing));
-		var labels = [ 0 ];
-		for (var labelIndex = labelStep; labelIndex < 5; labelIndex += labelStep) labels.push(labelIndex);
-		while (labels.length > 1 && 5 - labels[labels.length - 1] < labelStep) labels.pop();
-		labels.push(5);
+		/* Keep all six ticks so the five segments stay readable. Upright labels only
+		   fit on wide screens; on phones they would touch, so tilt them by 45°. */
+		var ticks = [];
 		for (var i = 0; i <= 5; i++) {
 			var value = start + (end - start) * i / 5;
-			coords(x(value), top, x(value), bottom, color('--pf-line'), [ 3, 3 ]);
-			if (labels.indexOf(i) < 0) continue;
-			ctx.textAlign = i === 0 ? 'left' : i === 5 ? 'right' : 'center';
-			ctx.fillText(chart.history ? localeTime(value) : value + '°C', x(value), bottom + 17);
+			var text = chart.history ? localeTime(value) : value + '°C';
+			var inkWidth = ctx.measureText(text).width;
+			var anchor = x(value);
+			var align = i === 0 ? 'left' : i === 5 ? 'right' : 'center';
+			var boxLeft = align === 'left' ? anchor : align === 'right' ? anchor - inkWidth : anchor - inkWidth / 2;
+			ticks.push({ value: value, text: text, align: align, boxLeft: boxLeft, boxRight: boxLeft + inkWidth });
 		}
+		var tilt = ticks.some(function(tick, index) {
+			return index > 0 && tick.boxLeft < ticks[index - 1].boxRight + 5;
+		});
+		if (tilt) {
+			/* The tilted run of text descends to the right, so give it room under
+			   and beside the plot instead of letting it run into the y labels. */
+			bottom = height - 40;
+			right = width - 30;
+			chart.geometry = { x: x, y: y, input: input, left: left, bottom: bottom, height: bottom - top };
+		}
+		ticks.forEach(function(tick) {
+			coords(x(tick.value), top, x(tick.value), bottom, color('--pf-line'), [ 3, 3 ]);
+			if (!tilt) {
+				ctx.textAlign = tick.align;
+				ctx.fillText(tick.text, x(tick.value), bottom + 17);
+				return;
+			}
+			ctx.save();
+			ctx.translate(x(tick.value) + 1, bottom + 7);
+			ctx.rotate(Math.PI / 4);
+			ctx.textAlign = 'left';
+			ctx.fillText(tick.text, 0, 0);
+			ctx.restore();
+		});
 		var trace = function(points, stroke, fill) {
 			if (!points.length) return;
 			ctx.beginPath(); ctx.moveTo(x(points[0][0]), y(points[0][1]));
@@ -939,7 +985,8 @@ return view.extend({
 				this.warnNote, this.policy ]),
 			this.curveCard = E('details', { 'class': 'pf-card pf-curve-chart', 'data-detail': 'curve',
 				open: this.detailState('curve', false) ? true : null }, [ E('summary', {}, E('h3', {}, _('Fan curve'))),
-				this.curveChart.element, this.curveParams ]), temps
+				this.curveChart.element, this.curveParams ]), temps,
+			this.makeSaveBar()
 		]);
 		this.applyTheme(this.themeMode());
 		if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').addEventListener)
