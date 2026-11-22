@@ -289,6 +289,7 @@ PWM cooling levels 为 `[0,128,192,255]`：40°C `active-low` 通过名为 `cpu-
 - “保护输出”的色块与图例只表示温度保护（`reason=protection_ramp|protection_lock` 时 `PROTECTION_PWM=$desired`，`root/usr/sbin/h5000m-pwmfan:478-479`），与非零请求下限（`floor_pwm`/`floor_limited`）无关；保护未生效时画布不画色块，图例降到 42%。
 - 状态芯片不带前置圆点（圆点是告警的语义，状态芯片是静态说明）。
 - 高级设置最后一组为“视图”分组，容纳：控制周期（`poll_interval`）、曲线温度来源（`sensor_sources`）、历史窗口（`history_range`，分钟）、历史间隔（`history_interval`，秒）。后两项替代原先仪表盘卡片底部的行内设置，仪表盘仅读取 uci 值（缺省 15 分钟 / 2 秒），因此仪表盘不再拥有第二套保存逻辑。
+- `floor_limited` 只在“非零请求被抬高”时置 1：目标驱动模式下输出为 0 属于显式停转，不算被下限抬高；否则芯片会在风扇主动停转时误报。
 - 目标驱动面板的按钮顺序为“撤销 → 应用目标”，与曲线编辑器的“恢复默认曲线 → 应用曲线”一致，并右对齐（`.pf-target-actions{justify-content:flex-end}`）。
 - 高级设置页不再渲染 `<h2>` 页面标题（标签条已经有一个），改为一行头部：状态徽标 + 主题切换 + 语言切换，与仪表盘同一套组件；主题切换写入 `vantage_theme.appearance.theme`（`uci.save()` 后调用 `uci commit` RPC，因为该固件的 `uci.js` 没有 `commit()`），所以两个页面与主题自身的开关保持一致。
 - 数值项的物理单位不再写进标签，而是渲染在输入框右侧：输入框内数值右对齐（右侧留 10px 内边距），单位放在固定 30px 宽的透明容器里左对齐，间距 6px、垂直居中，因此各行单位起点永远对齐。时间类单位统一用简写（秒/seconds → `s`，毫秒/milliseconds → `ms`），中英文下都不会超出这个 30px 容器；`%` 与 `°C` 保持原样。
