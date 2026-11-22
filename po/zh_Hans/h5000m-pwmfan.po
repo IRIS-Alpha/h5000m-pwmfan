@@ -382,6 +382,9 @@ msgstr "启动助推输出"
 msgid "Startup boost duration (milliseconds)"
 msgstr "启动助推时长（毫秒）"
 
+msgid "A sensor or controller fault requests 100% output; kernel thermal safeguards stay active."
+msgstr "传感器或控制器故障时请求全速输出；内核温控保护保持生效。"
+
 msgid "Fault response"
 msgstr "故障响应"
 

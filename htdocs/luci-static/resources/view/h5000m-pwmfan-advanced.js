@@ -67,14 +67,15 @@ return view.extend({
 			'.pwmfan-advanced .pf-flag-main .cbi-value-description{margin-top:5px;max-width:60ch}',
 			'.pwmfan-advanced .pf-switch{position:relative;display:inline-flex;flex:none;margin-top:1px;cursor:pointer;-webkit-tap-highlight-color:transparent}',
 			'.pwmfan-advanced .pf-switch input{position:absolute;width:0;height:0;opacity:0}',
-			'.pwmfan-advanced .pf-switch .pf-track{position:relative;display:block;width:46px;height:26px;border-radius:7px;background:var(--sw-off);transition:background .28s ease}',
-			'.pwmfan-advanced .pf-switch .pf-thumb{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:5px;background:var(--sw-thumb);box-shadow:0 1px 2px rgba(0,0,0,.28);transition:transform .28s cubic-bezier(.22,1,.36,1)}',
+			'.pwmfan-advanced .pf-switch .pf-track{position:relative;display:block;width:44px;height:24px;border-radius:6px;background:var(--sw-off);transition:background .28s ease}',
+			'.pwmfan-advanced .pf-switch .pf-thumb{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:4px;background:var(--sw-thumb);box-shadow:0 1px 2px rgba(0,0,0,.28);transition:transform .28s cubic-bezier(.22,1,.36,1)}',
 			'.pwmfan-advanced .pf-switch input:checked + .pf-track{background:var(--sw-on)}',
 			'.pwmfan-advanced .pf-switch input:checked + .pf-track .pf-thumb{transform:translateX(20px)}',
 			'.pwmfan-advanced .pf-switch input:focus-visible + .pf-track{outline:2px solid var(--accent-line,var(--accent));outline-offset:2px}',
 			'.pwmfan-advanced .pf-switch input:disabled + .pf-track{opacity:.45}',
 			'.pwmfan-advanced .pf-switch:has(input:disabled){cursor:not-allowed}',
-			'.pwmfan-advanced .cbi-value.pf-note-row{padding:4px 0}',
+			'.pwmfan-advanced .cbi-value.pf-note-row{padding:8px 0;row-gap:4px}',
+			'.pwmfan-advanced .cbi-value.pf-note-row > .cbi-value-field{min-height:0;padding:0;line-height:1.5}',
 			'.pwmfan-advanced .cbi-value.pf-note-row > .cbi-value-title{font-weight:500;color:' + muted + '}',
 			'.pwmfan-advanced .cbi-value.pf-note-row > .cbi-value-field{color:' + muted + ';font-size:12.5px}',
 			'@media (prefers-reduced-motion: reduce){.pwmfan-advanced .pf-switch .pf-track,.pwmfan-advanced .pf-switch .pf-thumb{transition:none}}',
@@ -123,9 +124,7 @@ return view.extend({
 		this.percentOption(section, 'kick_pwm', _('Startup boost output'), 100);
 		var kick = section.option(form.Value, 'kick_ms', _('Startup boost duration (milliseconds)'));
 		kick.datatype = 'range(0,5000)'; kick.default = '750'; kick.rmempty = false;
-		this.group(section, 'fault', _('Fault response'), _('Invalid temperature data or a failed PWM write requests full output.'));
-		var failure = section.option(form.DummyValue, '_failsafe', _('Sensor or controller fault'));
-		failure.default = _('Request 100% output; kernel thermal safeguards remain active.');
+		this.group(section, 'fault', _('Fault response'), _('A sensor or controller fault requests 100% output; kernel thermal safeguards stay active.'));
 		this.group(section, 'sampling', _('Controller sampling and curve source'), _('The controller reads one sensor snapshot per control cycle. This is separate from the dashboard history sampling interval. Sensors not selected for curve control still participate in the safety maximum.'));
 		var interval = section.option(form.Value, 'poll_interval', _('Control interval (seconds)'));
 		interval.datatype = 'range(1,30)'; interval.default = '2'; interval.rmempty = false;
