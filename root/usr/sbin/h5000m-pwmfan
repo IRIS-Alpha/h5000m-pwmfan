@@ -536,10 +536,16 @@ cleanup() {
 daemon() {
 	mkdir -p "$RUNDIR"
 	printf '%s\n' "$$" >"$PID_FILE"
-	trap ':' HUP
+	trap 'RELOAD_REQUESTED=1' HUP
 	trap 'exit 0' INT TERM
 	trap cleanup EXIT
 	while :; do
+		# A reload keeps the daemon (and the fan) running: pick up the new
+		# settings instead of dropping to the failsafe duty and back.
+		if [ "${RELOAD_REQUESTED:-0}" = 1 ]; then
+			RELOAD_REQUESTED=0
+			load_settings || logger -t h5000m-pwmfan "kept the previous settings"
+		fi
 		cycle_start=$(date +%s)
 		apply_cycle
 		cycle_elapsed=$(($(date +%s) - cycle_start))

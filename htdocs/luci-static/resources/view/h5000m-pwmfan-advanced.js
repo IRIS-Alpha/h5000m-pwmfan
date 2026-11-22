@@ -141,15 +141,15 @@ return view.extend({
 			'.pwmfan-advanced .pf-flag-main{flex:1 1 auto;min-width:0}',
 			'.pwmfan-advanced .pf-flag-main .cbi-value-title{display:block;line-height:24px;margin:0}',
 			'.pwmfan-advanced .pf-flag-main .cbi-value-description{margin-top:6px;max-width:60ch}',
-			'.pwmfan-advanced .pf-switch{position:relative;display:inline-flex;flex:none;margin-top:1px;cursor:pointer;-webkit-tap-highlight-color:transparent}',
-			'.pwmfan-advanced .pf-switch input{position:absolute;width:0;height:0;opacity:0}',
-			'.pwmfan-advanced .pf-switch .pf-track{position:relative;display:block;width:44px;height:24px;border-radius:6px;background:var(--sw-off);transition:background .28s ease}',
-			'.pwmfan-advanced .pf-switch .pf-thumb{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:4px;background:var(--sw-thumb);box-shadow:0 1px 2px rgba(0,0,0,.28);transition:transform .28s cubic-bezier(.22,1,.36,1)}',
-			'.pwmfan-advanced .pf-switch input:checked + .pf-track{background:var(--sw-on)}',
-			'.pwmfan-advanced .pf-switch input:checked + .pf-track .pf-thumb{transform:translateX(20px)}',
-			'.pwmfan-advanced .pf-switch input:focus-visible + .pf-track{outline:2px solid var(--accent-line,var(--accent));outline-offset:2px}',
-			'.pwmfan-advanced .pf-switch input:disabled + .pf-track{opacity:.45}',
-			'.pwmfan-advanced .pf-switch:has(input:disabled){cursor:not-allowed}',
+			'.pwmfan-advanced .pf-toggle{position:relative;display:inline-flex;flex:none;margin-top:1px;cursor:pointer;-webkit-tap-highlight-color:transparent}',
+			'.pwmfan-advanced .pf-toggle input{position:absolute;width:0;height:0;opacity:0}',
+			'.pwmfan-advanced .pf-toggle .pf-track{position:relative;display:block;width:44px;height:24px;border-radius:6px;background:var(--sw-off);transition:background .28s ease}',
+			'.pwmfan-advanced .pf-toggle .pf-thumb{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:4px;background:var(--sw-thumb);box-shadow:0 1px 2px rgba(0,0,0,.28);transition:transform .28s cubic-bezier(.22,1,.36,1)}',
+			'.pwmfan-advanced .pf-toggle input:checked + .pf-track{background:var(--sw-on)}',
+			'.pwmfan-advanced .pf-toggle input:checked + .pf-track .pf-thumb{transform:translateX(20px)}',
+			'.pwmfan-advanced .pf-toggle input:focus-visible + .pf-track{outline:2px solid var(--accent-line,var(--accent));outline-offset:2px}',
+			'.pwmfan-advanced .pf-toggle input:disabled + .pf-track{opacity:.45}',
+			'.pwmfan-advanced .pf-toggle:has(input:disabled){cursor:not-allowed}',
 			'.pwmfan-advanced .pf-unit-host{display:flex;align-items:center;gap:6px}',
 			'.pwmfan-advanced .pf-unit-host > input{flex:1 1 auto;min-width:0;max-width:none;text-align:right;padding-right:10px}',
 			'.pwmfan-advanced .pf-unit-host > select,.pwmfan-advanced .pf-unit-host > .cbi-dropdown{flex:1 1 0;min-width:0;width:auto;max-width:100%}',
@@ -159,7 +159,7 @@ return view.extend({
 			'.pwmfan-advanced .cbi-value.pf-note-row > .cbi-value-field{min-height:0;padding:0;line-height:1.5}',
 			'.pwmfan-advanced .cbi-value.pf-note-row > .cbi-value-title{font-weight:500;color:' + muted + '}',
 			'.pwmfan-advanced .cbi-value.pf-note-row > .cbi-value-field{color:' + muted + ';font-size:12.5px}',
-			'@media (prefers-reduced-motion: reduce){.pwmfan-advanced .pf-switch .pf-track,.pwmfan-advanced .pf-switch .pf-thumb{transition:none}}',
+			'@media (prefers-reduced-motion: reduce){.pwmfan-advanced .pf-toggle .pf-track,.pwmfan-advanced .pf-toggle .pf-thumb{transition:none}}',
 			'.pwmfan-group-heading{margin:0 0 10px}',
 			'.pwmfan-group-heading h3{font-size:15.5px;font-weight:650;margin:0}',
 			'.pwmfan-group-heading p{font-size:12px;color:' + muted + ';margin:5px 0 0}'
@@ -181,6 +181,19 @@ return view.extend({
 			return (uci.get(CONFIG, sectionId, 'enabled') === '1' && uci.get(CONFIG, sectionId, 'kernel_takeover') === '1') ? '1' : null;
 		};
 		takeover.readonly = !verified;
+		// The daemon needs `enabled` and `kernel_takeover` to agree, so one switch
+		// writes both keys; reading them back off the DOM broke after a re-render.
+		takeover.write = function(sectionId, value) {
+			// LuCI hands the checked state over as a string, a boolean or ''.
+			// Read the switch itself when it is on screen so both forms agree.
+			var input = document.querySelector('label.pf-toggle input');
+			var on = input
+				? (input.checked ? '1' : '0')
+				: (value === '1' || value === true || value === 1 ? '1' : '0');
+			uci.set(CONFIG, sectionId, 'enabled', on);
+			uci.set(CONFIG, sectionId, 'kernel_takeover', on);
+			return on;
+		};
 		var floor = this.percentOption(section, 'min_pwm', _('Non-zero request floor (%)'), 20);
 		floor.description = _('Except for an explicit 0% stop request, no request drives the fan below this value. A higher floor keeps an aging or dusty fan turning at low duty.');
 		var ceiling = this.percentOption(section, 'max_pwm', _('Curve output ceiling (%)'), 100);
@@ -231,13 +244,6 @@ return view.extend({
 	},
 
 	handleSave: function() {
-		// One switch owns both uci keys: the daemon needs them to agree.
-		var input = document.querySelector('.pf-switch input');
-		if (input) {
-			var on = input.checked ? '1' : '0';
-			uci.set(CONFIG, SECTION, 'enabled', on);
-			uci.set(CONFIG, SECTION, 'kernel_takeover', on);
-		}
 		return this.map.save();
 	},
 
@@ -259,7 +265,7 @@ return view.extend({
 		Array.prototype.forEach.call(formNode.querySelectorAll('.cbi-value[data-name="sensor_sources"], .cbi-value[data-name="min_pwm"]'), function(row) {
 			var field = row.querySelector('.cbi-value-field');
 			var note = field ? field.querySelector('.cbi-value-description') : null;
-			if (!note) return;
+			if (!note || note.classList.contains('pf-wide-note')) return;
 			note.classList.add('pf-wide-note');
 			row.appendChild(note);
 		});
@@ -287,6 +293,7 @@ return view.extend({
 				}
 			}
 			var host = control.parentNode;
+			if (host.classList.contains('pf-unit-host')) return;
 			host.classList.add('pf-unit-host');
 			host.appendChild(E('span', { 'class': 'pf-unit' }, unit));
 		});
@@ -297,16 +304,34 @@ return view.extend({
 			var box = row.querySelector('.cbi-checkbox');
 			var input = box ? box.querySelector('input[type="checkbox"]') : null;
 			if (!input) return;
+			if (row.classList.contains('pf-flag-row') && row.querySelector('label.pf-toggle input')) return;
 			var title = row.querySelector('.cbi-value-title');
 			var desc = row.querySelector('.cbi-value-description');
 			var main = E('div', { 'class': 'pf-flag-main' }, desc ? [title, desc] : [title]);
-			var sw = E('label', { 'class': 'pf-switch' }, [
+			var sw = E('label', { 'class': 'pf-toggle' }, [
 				input,
 				E('span', { 'class': 'pf-track' }, [E('span', { 'class': 'pf-thumb' })])
 			]);
 			row.classList.add('pf-flag-row');
 			row.replaceChildren(main, sw);
 		});
+	},
+
+	/* LuCI re-renders the form after a save/apply; redecorate the fresh nodes. */
+	watchForm: function(formNode) {
+		if (typeof MutationObserver !== 'function') return;
+		var pending = null;
+		var self = this;
+		var observer = new MutationObserver(function() {
+			if (pending) return;
+			pending = window.setTimeout(function() {
+				pending = null;
+				self.decorateFlags(formNode);
+				self.decorateNotes(formNode);
+				self.decorateUnits(formNode);
+			}, 30);
+		});
+		observer.observe(formNode, { childList: true, subtree: true });
 	},
 
 	groupCards: function(formNode) {
@@ -346,6 +371,7 @@ return view.extend({
 			this.decorateFlags(formNode);
 			this.decorateNotes(formNode);
 			this.decorateUnits(formNode);
+			this.watchForm(formNode);
 			shared.applyTheme(shared.themeMode());
 			return E('div', { 'class': 'pwmfan-advanced' }, [
 				E('link', { rel: 'stylesheet', href: L.resource('view/h5000m-pwmfan-font.css') }),
