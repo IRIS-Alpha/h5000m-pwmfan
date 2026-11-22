@@ -99,7 +99,7 @@ return view.extend({
 			'.pwmfan-advanced .pf-adv-head .pf-live[data-state=ok] i{color:var(--pf-green)}',
 			'.pwmfan-advanced .pf-adv-head .pf-live[data-state=warn] i{color:var(--pf-amber)}',
 			'.pwmfan-advanced .pf-adv-head .pf-live[data-state=fault] i{color:var(--pf-red)}',
-			'.pwmfan-advanced .pf-adv-head .pf-switch{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;flex:none;border-radius:9px;color:var(--pf-muted);background:var(--pf-surface);box-shadow:none}',
+			'.pwmfan-advanced .pf-adv-head .pf-switch{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;flex:none;border:1px solid var(--pf-line);border-radius:9px;color:var(--pf-muted);background:var(--pf-surface);box-shadow:none}',
 			'.pwmfan-advanced .pf-adv-head .pf-switch:hover{color:var(--pf-text);border-color:var(--pf-muted);background:var(--pf-subtle)}',
 			'.pwmfan-advanced .pf-adv-head .pf-switch-icon,.pwmfan-advanced .pf-adv-head .pf-switch-icon svg{display:block;width:16px;height:16px}',
 			'.pwmfan-advanced .pf-adv-head .pf-switch svg path{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}',
