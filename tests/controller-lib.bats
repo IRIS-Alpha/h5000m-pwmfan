@@ -507,3 +507,72 @@ EOF_CYCLE
 	run sh "$fixture/check-cycle" "$fixture"
 	[ "$status" -eq 0 ]
 }
+
+@test "the thermal takeover pins the two coldest pwm-fan trips and restores them" {
+	thermal="$BATS_TEST_TMPDIR/pin"
+	zone="$thermal/thermal_zone0"
+	mkdir -p "$zone" "$thermal/cooling_device0" "$thermal/cooling_device1"
+	printf 'pwm-fan\n' >"$thermal/cooling_device0/type"
+	printf 'cpu\n' >"$thermal/cooling_device1/type"
+	ln -s "$thermal/cooling_device0" "$zone/cdev0"
+	ln -s "$thermal/cooling_device0" "$zone/cdev1"
+	ln -s "$thermal/cooling_device0" "$zone/cdev2"
+	ln -s "$thermal/cooling_device1" "$zone/cdev3"
+	printf '115000\n' >"$zone/trip_point_3_temp"
+	printf '85000\n' >"$zone/trip_point_4_temp"
+	printf '40000\n' >"$zone/trip_point_5_temp"
+	printf '125000\n' >"$zone/trip_point_0_temp"
+	printf '3\n' >"$zone/cdev0_trip_point"
+	printf '4\n' >"$zone/cdev1_trip_point"
+	printf '5\n' >"$zone/cdev2_trip_point"
+	printf '0\n' >"$zone/cdev3_trip_point"
+	printf 'step_wise\n' >"$zone/policy"
+	printf 'step_wise user_space\n' >"$zone/available_policies"
+	printf '38000\n' >"$zone/temp"
+	state="$BATS_TEST_TMPDIR/pin.state"
+
+	[ "$(thermal_fan_zone "$thermal")" = "$zone" ]
+	[ "$(thermal_fan_trips "$zone" | tr '\n' ' ')" = "40000 5 85000 4 115000 3 " ]
+
+	run thermal_takeover_apply "$thermal" "$state"
+	[ "$status" -eq 0 ]
+	[ "$(cat "$zone/trip_point_5_temp")" -eq 1000 ]
+	[ "$(cat "$zone/trip_point_4_temp")" -eq 114000 ]
+	[ "$(cat "$zone/trip_point_3_temp")" -eq 115000 ]
+	[ "$(cat "$zone/trip_point_0_temp")" -eq 125000 ]
+
+	run thermal_takeover_apply "$thermal" "$state"
+	[ "$status" -eq 0 ]
+	[ "$(cat "$zone/trip_point_5_temp")" -eq 1000 ]
+
+	run thermal_takeover_restore "$thermal" "$state"
+	[ "$status" -eq 0 ]
+	[ "$(cat "$zone/trip_point_5_temp")" -eq 40000 ]
+	[ "$(cat "$zone/trip_point_4_temp")" -eq 85000 ]
+	[ ! -e "$state" ]
+
+	printf 'user_space\n' >"$zone/policy"
+	[ "$(thermal_policy_ensure "$thermal")" = "repaired" ]
+	[ "$(cat "$zone/policy")" = "step_wise" ]
+}
+
+@test "the thermal takeover refuses a zone with fewer than three fan trips" {
+	thermal="$BATS_TEST_TMPDIR/thin"
+	zone="$thermal/thermal_zone0"
+	mkdir -p "$zone" "$thermal/cooling_device0"
+	printf 'pwm-fan\n' >"$thermal/cooling_device0/type"
+	ln -s "$thermal/cooling_device0" "$zone/cdev0"
+	ln -s "$thermal/cooling_device0" "$zone/cdev1"
+	printf '38000\n' >"$zone/temp"
+	printf '115000\n' >"$zone/trip_point_3_temp"
+	printf '85000\n' >"$zone/trip_point_4_temp"
+	printf '3\n' >"$zone/cdev0_trip_point"
+	printf '4\n' >"$zone/cdev1_trip_point"
+	state="$BATS_TEST_TMPDIR/thin.state"
+	[ "$(thermal_fan_zone "$thermal")" = "$zone" ]
+	run thermal_takeover_apply "$thermal" "$state"
+	[ "$status" -ne 0 ]
+	[ ! -e "$state" ]
+	[ "$(cat "$zone/trip_point_3_temp")" -eq 115000 ]
+	[ "$(cat "$zone/trip_point_4_temp")" -eq 85000 ]
+}

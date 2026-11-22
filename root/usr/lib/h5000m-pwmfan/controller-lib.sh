@@ -490,6 +490,109 @@ EOF_PI
 # A verified, writable PWM channel plus a pwm-fan cooling device are the minimum
 # evidence that the kernel handover can be attempted. Args: thermal dir, pwm path,
 # kernel_takeover flag, takeover_verified flag.
+# Print the thermal zone whose cooling-device bindings include a pwm-fan.
+# Args: thermal dir.
+thermal_fan_zone() (
+	for zone in "$1"/thermal_zone*; do
+		[ -r "$zone/temp" ] || continue
+		for cdev in "$zone"/cdev[0-9]*; do
+			case "${cdev##*/}" in
+			*_trip_point | *_weight) continue ;;
+			esac
+			[ -e "$cdev" ] || continue
+			device=$(readlink -f "$cdev" 2>/dev/null) || continue
+			[ "$(cat "$device/type" 2>/dev/null)" = "pwm-fan" ] || continue
+			echo "$zone"
+			exit 0
+		done
+	done
+	exit 1
+)
+
+# Print "<temperature> <trip-index>" for every zone trip bound to the pwm-fan,
+# coldest first. Args: zone dir.
+thermal_fan_trips() (
+	zone=$1
+	for cdev in "$zone"/cdev[0-9]*; do
+		case "${cdev##*/}" in
+		*_trip_point | *_weight) continue ;;
+		esac
+		[ -e "$cdev" ] || continue
+		device=$(readlink -f "$cdev" 2>/dev/null) || continue
+		[ "$(cat "$device/type" 2>/dev/null)" = "pwm-fan" ] || continue
+		index=${cdev##*cdev}
+		trip=$(cat "$zone/cdev${index}_trip_point" 2>/dev/null) || continue
+		case "$trip" in '' | *[!0-9]*) continue ;; esac
+		temp=$(cat "$zone/trip_point_${trip}_temp" 2>/dev/null) || continue
+		case "$temp" in '' | *[!0-9]*) continue ;; esac
+		printf '%s %s\n' "$temp" "$trip"
+	done | sort -n
+)
+
+# Pin the two coldest pwm-fan trips so the thermal governor can no longer ask for
+# a zero duty or override a configurable over-temperature policy: the coldest is
+# held permanently active, the next moves just below the following trip. The
+# original temperatures are recorded so the change can be reverted. Args: thermal
+# dir, state file.
+thermal_takeover_apply() (
+	pin_thermal=$1
+	pin_state=$2
+	[ -e "$pin_state" ] && exit 0
+	zone=$(thermal_fan_zone "$pin_thermal") || exit 1
+	trips=$(thermal_fan_trips "$zone") || exit 1
+	[ "$(printf '%s\n' "$trips" | wc -l)" -ge 3 ] || exit 1
+	cold=$(printf '%s\n' "$trips" | sed -n 1p)
+	next=$(printf '%s\n' "$trips" | sed -n 2p)
+	top=$(printf '%s\n' "$trips" | sed -n 3p)
+	cold_temp=${cold% *}
+	cold_index=${cold#* }
+	next_temp=${next% *}
+	next_index=${next#* }
+	top_temp=${top% *}
+	case "$top_temp" in '' | *[!0-9]*) exit 1 ;; esac
+	[ "$top_temp" -gt 2000 ] || exit 1
+	printf 'v1 %s %s %s %s\n' "$cold_index" "$cold_temp" "$next_index" "$next_temp" >"$pin_state" || exit 1
+	if ! printf '%s\n' "$((top_temp - 1000))" >"$zone/trip_point_${next_index}_temp"; then
+		rm -f "$pin_state"
+		exit 1
+	fi
+	if ! printf '%s\n' 1000 >"$zone/trip_point_${cold_index}_temp"; then
+		printf '%s\n' "$next_temp" >"$zone/trip_point_${next_index}_temp"
+		rm -f "$pin_state"
+		exit 1
+	fi
+	exit 0
+)
+
+# Put the pinned trip temperatures back and drop the record. Args: thermal dir,
+# state file.
+thermal_takeover_restore() (
+	[ -f "$2" ] || exit 0
+	read -r version cold_index cold_temp next_index next_temp <"$2" || true
+	if [ "$version" = "v1" ]; then
+		zone=$(thermal_fan_zone "$1") || zone=
+		if [ -n "$zone" ]; then
+			printf '%s\n' "$next_temp" >"$zone/trip_point_${next_index}_temp" 2>/dev/null || true
+			printf '%s\n' "$cold_temp" >"$zone/trip_point_${cold_index}_temp" 2>/dev/null || true
+		fi
+	fi
+	rm -f "$2"
+	exit 0
+)
+
+thermal_policy_ensure() (
+	zone=$(thermal_fan_zone "$1") || exit 1
+	policy=$(cat "$zone/policy" 2>/dev/null) || exit 1
+	[ "$policy" = "user_space" ] || exit 0
+	case " $(cat "$zone/available_policies" 2>/dev/null) " in
+	*" step_wise "*) ;;
+	*) exit 1 ;;
+	esac
+	printf '%s\n' step_wise >"$zone/policy" || exit 1
+	echo repaired
+	exit 0
+)
+
 kernel_takeover_ready_dir() (
 	thermal_dir=$1
 	pwm_path=$2

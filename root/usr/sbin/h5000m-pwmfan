@@ -10,6 +10,8 @@ umask 077
 CONFIG=h5000m_pwmfan
 SECTION=main
 RUNDIR=/var/run/h5000m-pwmfan
+TAKEOVER_STATE=$RUNDIR/thermal-takeover
+TAKEOVER_TRIED=0
 HISTORY_FILE=$RUNDIR/protection-history
 TEMP_HISTORY_FILE=$RUNDIR/temperature-history
 NEXT_HISTORY_PRUNE=0
@@ -400,6 +402,8 @@ apply_cycle() {
 	OWNER=none
 	collect_sensors || true
 	if [ "$ENABLED" != 1 ] || [ "$MODE" = kernel ] || ! kernel_takeover_ready; then
+		thermal_takeover_restore "${THERMAL_DIR:-/sys/class/thermal}" "$TAKEOVER_STATE" || true
+		TAKEOVER_TRIED=0
 		was_owner=$ACTIVE_OWNER
 		release_fan
 		[ "$was_owner" = 1 ] && return
@@ -415,6 +419,21 @@ apply_cycle() {
 	if [ -z "$PWM_FILE" ]; then
 		write_status fault pwmfan_not_found "$FAILSAFE_PWM" --
 		return
+	fi
+	# The kernel may still stop or override the fan through the thermal zone:
+	# pin the low pwm-fan trips once so the governor cannot ask for a zero duty
+	# or bypass the configurable over-temperature policy.
+	if [ "$TAKEOVER_TRIED" != 1 ]; then
+		TAKEOVER_TRIED=1
+		pin_dir=${THERMAL_DIR:-/sys/class/thermal}
+		case "$(thermal_policy_ensure "$pin_dir" 2>/dev/null)" in
+		repaired) logger -t h5000m-pwmfan "restored the step_wise thermal governor" ;;
+		esac
+		if thermal_takeover_apply "$pin_dir" "$TAKEOVER_STATE"; then
+			logger -t h5000m-pwmfan "pinned the low pwm-fan trips for the takeover"
+		else
+			logger -t h5000m-pwmfan "could not pin the low pwm-fan trips"
+		fi
 	fi
 	if ! valid_temp_mc "$CONTROL_TEMP_MC" || ! valid_temp_mc "$SAFETY_TEMP_MC"; then
 		failsafe no_valid_temperature
@@ -489,6 +508,7 @@ apply_cycle() {
 
 cleanup() {
 	trap - EXIT INT TERM HUP
+	thermal_takeover_restore "${THERMAL_DIR:-/sys/class/thermal}" "$TAKEOVER_STATE" || true
 	if [ "$ACTIVE_OWNER" = 1 ]; then
 		PWM_FILE=$(find_fan) || PWM_FILE=
 		if [ -n "$PWM_FILE" ] && set_pwm "$FAILSAFE_PWM"; then

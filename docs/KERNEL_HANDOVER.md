@@ -116,6 +116,27 @@ still noticed on the next poll and corrected. The 30 s keepalive that first ship
 can be checked for redundant writes without extra tooling. The loop still logs cycles longer than 5 s to
 `/var/run/h5000m-pwmfan/slow-cycles`.
 
+## Trip pinning during a takeover
+
+Measured on 2026-11-22: the `step_wise` governor and the plugin fight over `pwm1` near the 40 °C trip. `step_wise`
+writes only when its target state changes, so dropping to state 0 writes 0 %, and the plugin's 2 s readback then
+restores the duty. Two logged stalls match two `pwm 0 -> 191` corrections to the second, so the fan really stopped
+for up to one poll.
+
+On takeover start the daemon therefore raises the two coldest `pwm-fan` trips:
+
+| trip | before | after | why |
+| --- | --- | --- | --- |
+| coldest (40 °C) | 40000 | 1000 | the governor can no longer request 0 % |
+| next (85 °C) | 85000 | 114000 (next trip − 1000) | the governor can no longer override the configurable over-temperature policy with 192/255 |
+| 115 °C | 115000 | unchanged | our own protection reaches 255, the kernel value is identical, and it stays a free backstop |
+| 125 °C critical | 125000 | unchanged | independent kernel shutdown |
+
+The original values are recorded in `$RUNDIR/thermal-takeover` and restored when the fan is released, on
+`mode=kernel`, and on exit. A failed write is logged and the record is dropped, so the next start retries. The zone
+`policy` is checked on start and repaired to `step_wise` if a previous release left it at `user_space`; the plugin
+never switches the whole zone to `user_space`.
+
 ## Rollback procedure
 
 ```sh
