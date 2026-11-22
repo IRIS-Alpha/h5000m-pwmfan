@@ -434,6 +434,8 @@ config_get() {
 	mode) setting=$TEST_MODE ;;
 	drive) setting=${TEST_DRIVE:-duty} ;;
 	fixed_duty) setting=$TEST_DUTY ;;
+	min_pwm) setting=${TEST_MIN_PWM:-51} ;;
+	max_pwm) setting=${TEST_MAX_PWM:-255} ;;
 	kick_ms) setting=0 ;;
 	hysteresis) setting=${TEST_HYST:-0} ;;
 	down_delay) setting=${TEST_DOWN_DELAY:-0} ;;
@@ -498,6 +500,11 @@ grep -Fxq 'requested_pwm=102' "$STATUS_FILE"
 grep -Fxq 'floor_limited=0' "$STATUS_FILE"
 TEST_DUTY=101
 if load_settings; then exit 1; fi
+# The floor and the ceiling must stay ordered, and the ceiling may not
+# drop below the 40% the form offers.
+if TEST_DUTY=40 TEST_MIN_PWM=204 TEST_MAX_PWM=153 load_settings; then exit 1; fi
+if TEST_MIN_PWM=51 TEST_MAX_PWM=76 load_settings; then exit 1; fi
+TEST_DUTY=40 TEST_MIN_PWM=51 TEST_MAX_PWM=102 load_settings || exit 1
 # A duty the user sets applies at once; temperature-driven requests keep the guards.
 MODE=fixed DRIVE=duty
 if hold_down_allowed; then exit 1; fi

@@ -266,15 +266,17 @@ load_settings() {
 	config_get raw "$SECTION" min_pwm 51
 	MIN_PWM=$(cfg_number "$raw" 0 255) || return 1
 	config_get raw "$SECTION" max_pwm 255
-	MAX_PWM=$(cfg_number "$raw" 1 255) || return 1
+	# The form offers 40-100%; the ceiling is also the smallest output the
+	# controller may pick, so anything below 40% is treated as a bad setting.
+	MAX_PWM=$(cfg_number "$raw" 102 255) || return 1
 	[ "$MIN_PWM" -le "$MAX_PWM" ] || return 1
-	config_get raw "$SECTION" kick_pwm 255
+	config_get raw "$SECTION" kick_pwm 204
 	KICK_PWM=$(cfg_number "$raw" 0 255) || return 1
-	config_get raw "$SECTION" kick_ms 750
+	config_get raw "$SECTION" kick_ms 800
 	KICK_MS=$(cfg_number "$raw" 0 5000) || return 1
-	config_get raw "$SECTION" hysteresis 3
+	config_get raw "$SECTION" hysteresis 2
 	HYSTERESIS=$(cfg_number "$raw" 0 30) || return 1
-	config_get raw "$SECTION" down_delay 10
+	config_get raw "$SECTION" down_delay 5
 	DOWN_DELAY=$(cfg_number "$raw" 0 600) || return 1
 	config_get raw "$SECTION" poll_interval 2
 	POLL_INTERVAL=$(cfg_number "$raw" 1 30) || return 1
@@ -284,7 +286,7 @@ load_settings() {
 	SAFETY_TEMP=$(cfg_number "$raw" 80 100) || return 1
 	config_get raw "$SECTION" protection_radius 15
 	PROTECTION_RADIUS=$(cfg_number "$raw" 15 "$((SAFETY_TEMP + 40))") || return 1
-	config_get raw "$SECTION" protection_release 5
+	config_get raw "$SECTION" protection_release 3
 	PROTECTION_RELEASE=$(cfg_number "$raw" 2 100) || return 1
 	case "$MODE" in
 	fixed)
@@ -327,7 +329,9 @@ load_settings() {
 		;;
 	manual | custom)
 		config_get CURVE "$SECTION" "curve_$MODE" '30:51,40:64,50:96,60:144,70:208,80:255'
-		curve_validate "$CURVE" "$MIN_PWM" "$MAX_PWM" 6 100 || return 1
+		# The floor and the ceiling are applied per request, so a curve may sit
+		# outside them without making the whole configuration invalid.
+		curve_validate "$CURVE" 0 255 6 100 || return 1
 		;;
 	esac
 }

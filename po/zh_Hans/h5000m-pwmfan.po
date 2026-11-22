@@ -807,3 +807,9 @@ msgstr "没有未保存的更改"
 
 msgid "%d unsaved change(s)"
 msgstr "%d 项未保存"
+
+msgid "The non-zero request floor must not exceed the curve output ceiling."
+msgstr "非零请求下限不能高于曲线输出上限。"
+
+msgid "The curve output ceiling must not be below the non-zero request floor."
+msgstr "曲线输出上限不能低于非零请求下限。"

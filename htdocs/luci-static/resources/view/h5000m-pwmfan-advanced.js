@@ -59,17 +59,24 @@ return view.extend({
 		}, this)).catch(function() { this.sensors = []; });
 	},
 
-	percentOption: function(section, key, title, fallback) {
+	/* Percentages are stored as 0-255 PWM steps, so every field that uses them
+	   shares one rounding rule and one set of bounds, checked on the way in and
+	   on the way out. */
+	percentOption: function(section, key, title, fallback, minimum, maximum) {
+		var min = minimum === undefined ? 0 : minimum;
+		var max = maximum === undefined ? 100 : maximum;
+		var clamp = function(value) { return Math.min(max, Math.max(min, value)); };
 		var option = section.option(form.Value, key, title);
-		option.datatype = 'range(0,100)';
+		option.datatype = 'range(' + min + ',' + max + ')';
 		option.default = '' + fallback;
 		option.rmempty = false;
 		option.cfgvalue = function(sectionId) {
 			var value = parseInt(uci.get(CONFIG, sectionId, key), 10);
-			return isNaN(value) ? '' + fallback : '' + Math.round(value * 100 / 255);
+			return '' + (isNaN(value) ? fallback : clamp(Math.round(value * 100 / 255)));
 		};
 		option.write = function(sectionId, value) {
-			uci.set(CONFIG, sectionId, key, '' + Math.round(parseInt(value, 10) * 255 / 100));
+			var percent = clamp(parseInt(value, 10) || 0);
+			uci.set(CONFIG, sectionId, key, '' + Math.round(percent * 255 / 100));
 		};
 		return option;
 	},
@@ -204,8 +211,17 @@ return view.extend({
 		};
 		var floor = this.percentOption(section, 'min_pwm', _('Non-zero request floor (%)'), 20);
 		floor.description = _('Except for an explicit 0% stop request, no request drives the fan below this value. A higher floor keeps an aging or dusty fan turning at low duty.');
-		var ceiling = this.percentOption(section, 'max_pwm', _('Curve output ceiling (%)'), 100);
+		var ceiling = this.percentOption(section, 'max_pwm', _('Curve output ceiling (%)'), 100, 40, 100);
 		ceiling.description = _('No request, protection ramp or startup boost drives the fan above this value. Lowering it caps high-speed noise, including the whine a small fan makes near full duty, at the cost of the highest speed protection can still reach; a fault still asks for a full 100%.');
+		// The two bounds overlap, so each field checks the other one as well.
+		floor.validate = function(sectionId, value) {
+			return Number(value) <= Number(ceiling.formvalue(sectionId) || 100)
+				|| _('The non-zero request floor must not exceed the curve output ceiling.');
+		};
+		ceiling.validate = function(sectionId, value) {
+			return Number(value) >= Number(floor.formvalue(sectionId) || 20)
+				|| _('The curve output ceiling must not be below the non-zero request floor.');
+		};
 		this.group(section, 'temperature', _('Temperature protection'), _('Protection ramps up before the threshold, locks at 100%, and releases below the threshold by the configured hysteresis.'));
 		var safety = section.option(form.Value, 'protection_temp', _('Full-speed temperature threshold (°C)'));
 		safety.datatype = 'range(80,100)'; safety.default = '90'; safety.rmempty = false;
@@ -218,16 +234,16 @@ return view.extend({
 			return Number(value) <= Number(safety.formvalue(sectionId) || 90) + 40 || _('The early ramp window can reach at most 40 °C below the threshold.');
 		};
 		var release = section.option(form.Value, 'protection_release', _('Release hysteresis (°C)'));
-		release.datatype = 'range(2,100)'; release.default = '5'; release.rmempty = false;
+		release.datatype = 'range(2,100)'; release.default = '3'; release.rmempty = false;
 		this.group(section, 'downshift', _('Downshift hysteresis'), _('Avoid rapid fan-speed drops when temperature fluctuates near a curve point.'));
 		var hysteresis = section.option(form.Value, 'hysteresis', _('Temperature hysteresis (°C)'));
-		hysteresis.datatype = 'range(0,30)'; hysteresis.default = '3'; hysteresis.rmempty = false;
+		hysteresis.datatype = 'range(0,30)'; hysteresis.default = '2'; hysteresis.rmempty = false;
 		var delay = section.option(form.Value, 'down_delay', _('Downshift delay (seconds)'));
-		delay.datatype = 'range(0,600)'; delay.default = '10'; delay.rmempty = false;
+		delay.datatype = 'range(0,600)'; delay.default = '5'; delay.rmempty = false;
 		this.group(section, 'boost', _('Startup boost'), _('Briefly raise output when the fan starts, then return to the selected curve.'));
-		this.percentOption(section, 'kick_pwm', _('Startup boost output (%)'), 100);
+		this.percentOption(section, 'kick_pwm', _('Startup boost output (%)'), 80);
 		var kick = section.option(form.Value, 'kick_ms', _('Startup boost duration (milliseconds)'));
-		kick.datatype = 'range(0,5000)'; kick.default = '750'; kick.rmempty = false;
+		kick.datatype = 'range(0,5000)'; kick.default = '800'; kick.rmempty = false;
 		this.group(section, 'fault', _('Fault response'),
 			_('When a sensor reading is unusable or a PWM write fails, the controller asks for 100% output instead of guessing. This behaviour is fixed and has no switch; CPU throttling and the critical shutdown still belong to the kernel.'));
 		this.group(section, 'curveview', _('Fan curve settings'),
@@ -245,7 +261,7 @@ return view.extend({
 		this.group(section, 'histview', _('Temperature monitor settings'),
 			_('How the temperature monitor chart is drawn.'));
 		var window = section.option(form.Value, 'history_range', _('Monitor window (minutes)'));
-		window.datatype = 'range(5,360)'; window.default = '15'; window.rmempty = false;
+		window.datatype = 'range(5,360)'; window.default = '5'; window.rmempty = false;
 		window.description = _('How far back the temperature monitor chart reaches.');
 		var read = section.option(form.Value, 'history_interval', _('Monitor interval (seconds)'));
 		read.datatype = 'range(1,60)'; read.default = '2'; read.rmempty = false;

@@ -1013,7 +1013,7 @@ return view.extend({
 	render: function(data) {
 		var self = this;
 		this.history = [];
-		var storedRange = Number(setting('history_range', 15));
+		var storedRange = Number(setting('history_range', 5));
 		var storedInterval = Number(setting('history_interval', 2));
 		this.range = Number.isInteger(storedRange) && storedRange >= 5 && storedRange <= 360 ? storedRange : 15;
 		this.interval = Number.isInteger(storedInterval) && storedInterval >= 1 && storedInterval <= 60 ? storedInterval : 2;
