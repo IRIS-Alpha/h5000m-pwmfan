@@ -130,8 +130,8 @@ return view.extend({
 			/* The theme enlarges the dropdown list on narrow screens; keep it at body size. */
 			'.pwmfan-advanced .cbi-dropdown{font-size:13px}'
 				+ '.pwmfan-advanced .cbi-dropdown > ul{font-size:13px}',
-			'.pwmfan-advanced .cbi-dropdown > ul > li{font-size:13px;line-height:1.4;padding:6px 10px}'
-				+ '.pwmfan-advanced .cbi-dropdown > ul > li[placeholder]{display:none}',
+			'.pwmfan-advanced .cbi-dropdown > ul > li{display:flex;align-items:center;height:32px;min-height:32px;box-sizing:border-box;font-size:13px;line-height:18px;padding:0 10px;margin:0}'
+				+ '.pwmfan-advanced .cbi-dropdown > ul > li[placeholder],.pwmfan-advanced .cbi-dropdown > ul > li[unselectable]{display:none!important}',
 			'.pwmfan-advanced{--sw-on:var(--accent,#8db20f);--sw-off:color-mix(in srgb,var(--text-2,#4a515a) 24%,var(--s3,#eef0f3));--sw-thumb:var(--s2,#ffffff)}',
 			/* Flag rows put the checkbox in a 16px gutter; the description must sit under the label, not under the box. */
 			'.pwmfan-advanced .cbi-value:has(> .cbi-value-field > .cbi-checkbox) > .cbi-value-field > .cbi-value-description{grid-column:2 / -1}',
@@ -235,7 +235,7 @@ return view.extend({
 		source.width = '100%';
 		source.value('auto', _('All sensors (highest valid reading)'));
 		(this.sensors || []).forEach(function(sensor) {
-			source.value(sensor.label, sensor.title + (sensor.state === 'ok' ? ' · ' + sensor.celsius + ' °C' : ' · ' + _('no reading')));
+			source.value(sensor.label, sensor.title + (sensor.celsius !== null ? ' · ' + sensor.celsius + ' °C' : ' · ' + _('no reading')));
 		});
 		source.default = 'auto'; source.rmempty = false; source.optional = false;
 		this.group(section, 'histview', _('Temperature monitor settings'),
@@ -247,6 +247,16 @@ return view.extend({
 		read.datatype = 'range(1,60)'; read.default = '2'; read.rmempty = false;
 		read.description = _('How often the temperature monitor chart takes a new sample.');
 		return map;
+	},
+
+	refreshSensorOptions: function() {
+		return this.fetchSensors().then(L.bind(function() {
+			var nodes = document.querySelectorAll('.pwmfan-advanced .cbi-dropdown > ul > li[data-value]');
+			(this.sensors || []).forEach(function(sensor) {
+				var text = sensor.title + (sensor.celsius !== null ? ' · ' + sensor.celsius + ' °C' : ' · ' + _('no reading'));
+				nodes.forEach(function(li) { if (li.dataset.value === sensor.label) li.textContent = text; });
+			});
+		}, this)).catch(function() {});
 	},
 
 	handleSave: function() {
@@ -373,6 +383,9 @@ return view.extend({
 	},
 
 	render: function() {
+		window.addEventListener('pagehide', function() {
+			if (this._sensorTimer) window.clearInterval(this._sensorTimer);
+		}.bind(this));
 		this.map = this.form();
 		return this.map.render().then(L.bind(function(formNode) {
 			this.groupCards(formNode);
@@ -381,6 +394,7 @@ return view.extend({
 			this.decorateUnits(formNode);
 			this.watchForm(formNode);
 			shared.applyTheme(shared.themeMode());
+			this._sensorTimer = window.setInterval(L.bind(this.refreshSensorOptions, this), 5000);
 			return E('div', { 'class': 'pwmfan-advanced' }, [
 					this.style(), this.headerRow(), formNode]);
 		}, this));
