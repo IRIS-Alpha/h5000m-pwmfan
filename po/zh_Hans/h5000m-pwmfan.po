@@ -727,3 +727,5 @@ msgstr "故障时全速运行，内核温控仍然生效。"
 msgid "A reading counts as valid when the sensor file is readable and the value is within −40…150 °C; sensors without a valid reading are skipped. The curve follows the chosen sensor, or the highest valid one when “all sensors” is selected. Sensors outside the choice still count toward the safety maximum."
 msgstr "传感器文件可读且数值在 −40…150 °C 内才算有效，无有效读数的传感器会被跳过。曲线跟随所选传感器；选“全部传感器”时取其中最高有效值。未选中的传感器仍参与安全最高温仲裁。"
 
+msgid "thermal zone"
+msgstr "温区"

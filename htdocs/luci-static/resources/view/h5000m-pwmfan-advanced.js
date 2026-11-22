@@ -7,6 +7,14 @@
 
 var CONFIG = 'h5000m_pwmfan';
 var SECTION = 'main';
+var SENSOR_TAGS = function(label) {
+	if (/^tz_/.test(label)) return _('thermal zone');
+	if (/^hwmon/.test(label)) return 'hwmon';
+	var phy = label.match(/phy0[._](\d)/i);
+	if (phy) return 'PHY' + phy[1];
+	if (/^mdio/.test(label)) return 'mdio';
+	return label;
+};
 var SENSOR_NAMES = [
 	[ _('CPU'), /^cpu[-_]thermal$|^cpu_thermal(?:_temp1)?$/i ],
 	[ _('Radio'), /^mt7996[-_]phy0[._][01](?:_temp1)?$/i ],
@@ -38,11 +46,12 @@ return view.extend({
 					celsius: isFinite(value) && parts[2] !== '--' ? (Math.round(value / 100) / 10).toFixed(1) : null
 				};
 			});
-			// Several probes can carry the same friendly name; keep them distinguishable.
+			// Several probes can carry the same friendly name; keep them distinguishable
+			// without letting the dropdown grow past the control width.
 			var counts = {};
 			sensors.forEach(function(sensor) { counts[sensor.title] = (counts[sensor.title] || 0) + 1; });
 			sensors.forEach(function(sensor) {
-				if (counts[sensor.title] > 1) sensor.title += ' · ' + sensor.label;
+				if (counts[sensor.title] > 1) sensor.title += '（' + SENSOR_TAGS(sensor.label) + '）';
 			});
 			this.sensors = sensors;
 		}, this)).catch(function() { this.sensors = []; });
@@ -91,7 +100,17 @@ return view.extend({
 			'.pwmfan-advanced .cbi-map > .cbi-section{padding:0;background:none;border:0;box-shadow:none}',
 			'.pwmfan-advanced .cbi-section-node{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:start;padding:0}',
 			'.pwmfan-advanced .pf-group{background:var(--v-surface,var(--s1,light-dark(#ffffff,#1c2129)));border-radius:8px;padding:12px 14px 14px}',
-			'@media (min-width: 992px){.pwmfan-advanced .cbi-section-node{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}}',
+			/* Below the two-card layout keep the label above its control: the theme's fixed 180px
+			   label column wraps and leaves a dead gap inside a single wide card. */
+			'@media (max-width: 991px){.pwmfan-advanced .pf-group > .cbi-value{grid-template-columns:minmax(0,1fr);row-gap:8px}'
+				+ '.pwmfan-advanced .pf-group > .cbi-value > .cbi-value-field{grid-column:1}}',
+			'@media (min-width: 992px){.pwmfan-advanced .cbi-section-node{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}'
+				+ '.pwmfan-advanced .pf-group > .cbi-value{grid-template-columns:minmax(0,0.46fr) minmax(0,1fr)}}',
+			/* The theme enlarges the dropdown list on narrow screens; keep it at body size. */
+			'.pwmfan-advanced .cbi-dropdown{font-size:13px}'
+				+ '.pwmfan-advanced .cbi-dropdown > ul{font-size:13px}',
+			'.pwmfan-advanced .cbi-dropdown > ul > li{font-size:13px;line-height:1.4;padding:6px 10px}',
+			+ '.pwmfan-advanced .cbi-dropdown > ul > li[placeholder]{display:none}',
 			'.pwmfan-advanced{--sw-on:var(--accent,#8db20f);--sw-off:color-mix(in srgb,var(--text-2,#4a515a) 24%,var(--s3,#eef0f3));--sw-thumb:var(--s2,#ffffff)}',
 			/* Flag rows put the checkbox in a 16px gutter; the description must sit under the label, not under the box. */
 			'.pwmfan-advanced .cbi-value:has(> .cbi-value-field > .cbi-checkbox) > .cbi-value-field > .cbi-value-description{grid-column:2 / -1}',
@@ -170,7 +189,7 @@ return view.extend({
 		(this.sensors || []).forEach(function(sensor) {
 			source.value(sensor.label, sensor.title + (sensor.state === 'ok' ? ' · ' + sensor.celsius + ' °C' : ' · ' + _('no reading')));
 		});
-		source.default = 'auto'; source.rmempty = false;
+		source.default = 'auto'; source.rmempty = false; source.optional = false;
 		return map;
 	},
 
