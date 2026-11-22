@@ -350,7 +350,9 @@ load_settings() {
 # the floor and ceiling were applied, so the caller can report a floored request.
 requested_pwm() {
 	case "$MODE:$DRIVE" in
-	fixed:duty) value=$(((FIXED_DUTY * 255 + 50) / 100)) ;;
+	# Fixed mode has no curve, so it always uses the fixed duty even when a
+	# stale drive=curve was left in the config by hand.
+	fixed:*) value=$(((FIXED_DUTY * 255 + 50) / 100)) ;;
 	quiet:duty | balanced:duty | performance:duty) value=$(((DUTY * 255 + 50) / 100)) ;;
 	*) value=$(curve_value "$CURVE" "$CONTROL_TEMP_C") || return 1 ;;
 	esac
