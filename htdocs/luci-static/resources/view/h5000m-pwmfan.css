@@ -124,7 +124,7 @@
 	box-shadow: 0 0 0 3px var(--pf-surface), 0 0 0 5px var(--pf-blue); }
 .pf-page .pf-track input[type=range]:is(:focus, :focus-visible) { outline: none; box-shadow: none; border-color: transparent; }
 .pf-warnings { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin: 0 0 0 auto; }
-.pf-warn { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border: 1px solid; border-radius: 7px;
+.pf-warn { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border: 1px solid; border-radius: 7px;
 	font-size: 11.5px; font-weight: 650;
 	text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
 	box-shadow: 0 0 7px -1px rgba(var(--pf-glow), .18), inset 0 0 6px -2px rgba(var(--pf-glow), .14); }
@@ -135,33 +135,28 @@
 html[data-darkmode=true] .pf-warn-low { --pf-glow: 255, 194, 109; }
 html[data-darkmode=true] .pf-warn-stop { --pf-glow: 255, 138, 155; }
 
-/* The static border stays as the soft boundary; a bright band sweeps it left to right twice, like a loading bar. */
-.pf-warn::after {
-	content: ''; position: absolute; inset: -1.5px; padding: 2px; border-radius: inherit; pointer-events: none; opacity: 0;
-	background: linear-gradient(90deg, transparent 38%, rgba(var(--pf-glow), 1) 46%,
-		rgba(255, 255, 255, .92) 50%, rgba(var(--pf-glow), 1) 54%, transparent 62%);
-	background-size: 300% 100%;
-	filter: drop-shadow(0 0 3px rgba(var(--pf-glow), .75));
-	-webkit-mask-image: linear-gradient(#000, #000), linear-gradient(#000, #000);
-	-webkit-mask-clip: content-box, border-box;
-	-webkit-mask-composite: xor;
-	mask-image: linear-gradient(#000, #000), linear-gradient(#000, #000);
-	mask-clip: content-box, border-box;
-	mask-composite: exclude;
-}
-@keyframes pf-warn-sweep {
-	0% { background-position: 100% 50%; opacity: 1; }
-	17.5% { background-position: -200% 50%; opacity: 1; }
-	17.6% { opacity: 0; }
-	18% { background-position: 100% 50%; opacity: 0; }
-	18.1% { opacity: 1; }
-	35.5% { background-position: -200% 50%; opacity: 1; }
-	35.6%, 100% { opacity: 0; }
+/* Two soft pulses when a chip appears, then silence: the halo fades in and out instead of cutting. */
+@keyframes pf-warn-pulse {
+	/* First beat: dim 560ms, brighten 240ms. Second beat peaks 500ms later, then a long quiet tail. */
+	0%, 17% {
+		text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
+		box-shadow: 0 0 7px -1px rgba(var(--pf-glow), .18), inset 0 0 6px -2px rgba(var(--pf-glow), .14); }
+	24.2% {
+		text-shadow: 0 0 10px rgba(var(--pf-glow), .7);
+		box-shadow: 0 0 16px 1px rgba(var(--pf-glow), .55), inset 0 0 10px -2px rgba(var(--pf-glow), .5); }
+	31.5%, 32.1% {
+		text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
+		box-shadow: 0 0 7px -1px rgba(var(--pf-glow), .18), inset 0 0 6px -2px rgba(var(--pf-glow), .14); }
+	39.4% {
+		text-shadow: 0 0 10px rgba(var(--pf-glow), .7);
+		box-shadow: 0 0 16px 1px rgba(var(--pf-glow), .55), inset 0 0 10px -2px rgba(var(--pf-glow), .5); }
+	46.7%, 100% {
+		text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
+		box-shadow: 0 0 7px -1px rgba(var(--pf-glow), .18), inset 0 0 6px -2px rgba(var(--pf-glow), .14); }
 }
 @keyframes pf-warn-in { from { opacity: 0; transform: translateY(-4px) scale(.97); } to { opacity: 1; transform: none; } }
 /* Text and border carry the warning on their own; the motion only draws the eye. */
-.pf-warn.is-pulse { animation: pf-warn-in .22s ease-out 1; }
-.pf-warn.is-pulse::after { animation: pf-warn-sweep 3.3s linear infinite; }
+.pf-warn.is-pulse { animation: pf-warn-in .22s ease-out 1, pf-warn-pulse 3.3s linear infinite; }
 .pf-page .pf-warn-note { margin: 14px 0 0; padding-top: 9px; border-top: 1px solid var(--pf-line); color: var(--pf-muted); font-size: 11px; text-align: center; }
 .pf-history-settings { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; }
 .pf-number-setting { display: flex; align-items: center; gap: 6px; color: var(--pf-muted); white-space: nowrap; }
@@ -234,8 +229,7 @@ html[data-darkmode=true] .pf-page {
 
 @media (prefers-reduced-motion: reduce) {
 	.pf-switch, .pf-step, .pf-bubble, .pf-thumb, .pf-method-title, .pf-odo-col, .pf-odo-strip { transition: none; }
-	.pf-warn.is-pulse, .pf-warn.is-pulse::after, .pf-method[data-selected=true]::before { animation: none; }
-	.pf-warn::after { opacity: 0; }
+	.pf-warn.is-pulse, .pf-method[data-selected=true]::before { animation: none; }
 	.pf-track.is-live .pf-thumb, .pf-track:has(input:active) .pf-thumb { transform: translateY(-50%); }
 	.pf-bubble { transform: translate(-50%, -100%); }
 	.pf-switch:active, .pf-step:active { transform: none; }
