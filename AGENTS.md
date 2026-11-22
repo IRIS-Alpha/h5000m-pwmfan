@@ -8,6 +8,10 @@
 - Once a requirement is confirmed, close its discussion and implement it. Reopen it only when new evidence, a conflict, or a material safety concern appears.
 - Keep the current development goal focused on the confirmed target-drive behavior and its offline control tests.
 
+## Preview Handoff
+
+- In normal development and improvement rounds, end the round by starting the page preview and giving its address. Requirement-discussion and proposal-confirmation rounds are exempt.
+
 ## Decisions and Coordination
 
 - Add decisions to formal requirements only after they are confirmed. Keep unresolved proposals in a clearly labeled discussion section.
