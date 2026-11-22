@@ -56,9 +56,26 @@ return view.extend({
 			'.pwmfan-advanced .cbi-section-node{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:start;padding:0}',
 			'.pwmfan-advanced .pf-group{background:var(--v-surface,var(--s1,light-dark(#ffffff,#1c2129)));border-radius:8px;padding:12px 14px 14px}',
 			'@media (min-width: 992px){.pwmfan-advanced .cbi-section-node{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}}',
+			'.pwmfan-advanced{--sw-on:var(--accent,#8db20f);--sw-off:color-mix(in srgb,var(--text-2,#4a515a) 24%,var(--s3,#eef0f3));--sw-thumb:var(--s2,#ffffff)}',
 			/* Flag rows put the checkbox in a 16px gutter; the description must sit under the label, not under the box. */
 			'.pwmfan-advanced .cbi-value:has(> .cbi-value-field > .cbi-checkbox) > .cbi-value-field > .cbi-value-description{grid-column:2 / -1}',
 			'.pwmfan-advanced .cbi-value{padding:8px 0;row-gap:8px}',
+			/* Boolean rows: label and help on the left, one switch pinned to the right edge. */
+			'.pwmfan-advanced .pf-flag-row{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:8px 0}',
+			'.pwmfan-advanced .pf-flag-main{flex:1 1 auto;min-width:0}',
+			'.pwmfan-advanced .pf-flag-main .cbi-value-title{display:block}',
+			'.pwmfan-advanced .pf-flag-main .cbi-value-description{margin-top:5px;max-width:60ch}',
+			'.pwmfan-advanced .pf-switch{position:relative;display:inline-flex;flex:none;margin-top:1px;cursor:pointer;-webkit-tap-highlight-color:transparent}',
+			'.pwmfan-advanced .pf-switch input{position:absolute;width:0;height:0;opacity:0}',
+			'.pwmfan-advanced .pf-switch .pf-track{position:relative;display:block;width:46px;height:26px;border-radius:7px;background:var(--sw-off);transition:background .28s ease}',
+			'.pwmfan-advanced .pf-switch .pf-thumb{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:5px;background:var(--sw-thumb);box-shadow:0 1px 2px rgba(0,0,0,.28);transition:transform .28s cubic-bezier(.22,1,.36,1)}',
+			'.pwmfan-advanced .pf-switch input:checked + .pf-track{background:var(--sw-on)}',
+			'.pwmfan-advanced .pf-switch input:checked + .pf-track .pf-thumb{transform:translateX(20px)}',
+			'.pwmfan-advanced .pf-switch input:focus-visible + .pf-track{outline:2px solid var(--accent-line,var(--accent));outline-offset:2px}',
+			'.pwmfan-advanced .pf-switch input:disabled + .pf-track{opacity:.45}',
+			'.pwmfan-advanced .pf-switch:has(input:disabled){cursor:not-allowed}',
+			'.pwmfan-advanced .pf-handover{color:' + muted + ';font-size:12px}',
+			'@media (prefers-reduced-motion: reduce){.pwmfan-advanced .pf-switch .pf-track,.pwmfan-advanced .pf-switch .pf-thumb{transition:none}}',
 			'.pwmfan-group-heading{margin:0 0 10px}',
 			'.pwmfan-group-heading h3{font-size:15.5px;font-weight:650;margin:0}',
 			'.pwmfan-group-heading p{font-size:12px;color:' + muted + ';margin:5px 0 0}'
@@ -70,13 +87,18 @@ return view.extend({
 		var section = map.section(form.NamedSection, SECTION, 'settings');
 		section.anonymous = true;
 		this.group(section, 'kernel', _('Kernel protection'), '');
-		var takeover = section.option(form.Flag, 'kernel_takeover', _('Take over fan control'));
+		var takeover = section.option(form.Flag, 'enabled', _('Take over fan control'));
 		takeover.default = '0'; takeover.rmempty = false;
-		takeover.readonly = true;
-		takeover.description = _('When enabled, the plugin drives the fan at every temperature; CPU throttling and the critical shutdown stay with the kernel. Takeover begins only after the handover has been verified.');
-		var enabled = section.option(form.Flag, 'enabled', _('Enable fan control'));
-		enabled.default = '0'; enabled.rmempty = false;
-		enabled.description = _('When disabled, the controller releases PWM ownership and keeps status visible.');
+		takeover.description = _('Drives the fan from the plugin; the kernel keeps throttling and the critical shutdown.');
+		takeover.cfgvalue = function(sectionId) {
+			return (uci.get(CONFIG, sectionId, 'enabled') === '1' && uci.get(CONFIG, sectionId, 'kernel_takeover') === '1') ? '1' : null;
+		};
+		takeover.readonly = uci.get(CONFIG, SECTION, 'takeover_verified') !== '1';
+		var handover = section.option(form.DummyValue, '_handover', _('Handover verification'));
+		handover.renderWidget = function() {
+			var ok = uci.get(CONFIG, SECTION, 'takeover_verified') === '1';
+			return E('span', { 'class': 'pf-handover' }, ok ? _('Verified') : _('Not verified yet'));
+		};
 		this.percentOption(section, 'min_pwm', _('Minimum fan output'), 20);
 		this.percentOption(section, 'max_pwm', _('Maximum curve output'), 100);
 		this.group(section, 'temperature', _('Temperature protection'), _('Protection ramps up before the threshold, locks at 100%, and releases below the threshold by the configured hysteresis.'));
@@ -115,6 +137,13 @@ return view.extend({
 	},
 
 	handleSave: function() {
+		// One switch owns both uci keys: the daemon needs them to agree.
+		var input = document.querySelector('.pf-switch input');
+		if (input) {
+			var on = input.checked ? '1' : '0';
+			uci.set(CONFIG, SECTION, 'enabled', on);
+			uci.set(CONFIG, SECTION, 'kernel_takeover', on);
+		}
 		return this.map.save();
 	},
 
@@ -126,6 +155,23 @@ return view.extend({
 
 	handleReset: function() {
 		return this.map.reset();
+	},
+
+	decorateFlags: function(formNode) {
+		Array.prototype.forEach.call(formNode.querySelectorAll('.cbi-value'), function(row) {
+			var box = row.querySelector('.cbi-checkbox');
+			var input = box ? box.querySelector('input[type="checkbox"]') : null;
+			if (!input) return;
+			var title = row.querySelector('.cbi-value-title');
+			var desc = row.querySelector('.cbi-value-description');
+			var main = E('div', { 'class': 'pf-flag-main' }, desc ? [title, desc] : [title]);
+			var sw = E('label', { 'class': 'pf-switch' }, [
+				input,
+				E('span', { 'class': 'pf-track' }, [E('span', { 'class': 'pf-thumb' })])
+			]);
+			row.classList.add('pf-flag-row');
+			row.replaceChildren(main, sw);
+		});
 	},
 
 	groupCards: function(formNode) {
@@ -148,6 +194,7 @@ return view.extend({
 		this.map = this.form();
 		return this.map.render().then(L.bind(function(formNode) {
 			this.groupCards(formNode);
+			this.decorateFlags(formNode);
 			return E('div', { 'class': 'pwmfan-advanced' }, [this.style(), formNode]);
 		}, this));
 	}
