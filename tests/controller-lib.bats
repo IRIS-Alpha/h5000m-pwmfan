@@ -434,7 +434,10 @@ config_get() {
 	mode) setting=$TEST_MODE ;;
 	drive) setting=duty ;;
 	fixed_duty) setting=$TEST_DUTY ;;
-	kick_ms | down_delay | hysteresis) setting=0 ;;
+	kick_ms) setting=0 ;;
+	hysteresis) setting=${TEST_HYST:-0} ;;
+	down_delay) setting=${TEST_DOWN_DELAY:-0} ;;
+	duty_quiet | duty_balanced | duty_performance) setting=${TEST_DUTY:-70} ;;
 	*) setting=$4 ;;
 	esac
 	eval "$1=\$setting"
@@ -482,6 +485,24 @@ apply_cycle
 grep -Fxq 'requested_pwm=51' "$STATUS_FILE"
 TEST_DUTY=101
 if load_settings; then exit 1; fi
+# A duty the user sets applies at once; temperature-driven requests keep the guards.
+MODE=fixed DRIVE=duty
+if hold_down_allowed; then exit 1; fi
+MODE=quiet DRIVE=duty
+if hold_down_allowed; then exit 1; fi
+MODE=quiet DRIVE=curve
+hold_down_allowed || exit 1
+MODE=target DRIVE=duty
+hold_down_allowed || exit 1
+MODE=custom DRIVE=duty
+hold_down_allowed || exit 1
+TEST_MODE=quiet TEST_DRIVE=duty TEST_DUTY=70 TEST_TEMP=61000 TEST_HYST=3 TEST_DOWN_DELAY=60
+apply_cycle
+[ "$(cat "$fixture/pwm")" = 179 ]
+TEST_DUTY=40
+apply_cycle
+[ "$(cat "$fixture/pwm")" = 102 ]
+grep -Fxq 'requested_pwm=102' "$STATUS_FILE"
 EOF_CYCLE
 	run sh "$fixture/check-cycle" "$fixture"
 	[ "$status" -eq 0 ]

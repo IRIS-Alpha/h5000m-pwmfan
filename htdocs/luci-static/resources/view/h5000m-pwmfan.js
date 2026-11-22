@@ -112,18 +112,40 @@ return view.extend({
 		return Object.prototype.hasOwnProperty.call(MODES, configured) || configured === 'fixed' ? configured : 'balanced';
 	},
 
+	applyOnce: function() {
+		var transient = function(error) {
+			var message = String((error && error.message) || error);
+			return /uci\/apply/.test(message) || (error && error.code === 5);
+		};
+		return uci.apply().catch(function(error) {
+			if (!transient(error)) throw error;
+			return new Promise(function(resolve) { window.setTimeout(resolve, 500); }).then(function() { return uci.apply(); });
+		});
+	},
+
 	commit: function(changes, kind) {
 		if (this.saving) { this.queued = { changes: changes, kind: kind }; return Promise.resolve(); }
-		this.saving = true;
-		this.lockButtons(true);
 		var previous = {};
+		var diff = {};
+		var dirty = false;
 		Object.keys(changes).forEach(function(key) {
 			previous[key] = uci.get(CONFIG, SECTION, key);
-			uci.set(CONFIG, SECTION, key, String(changes[key]));
+			if (String(previous[key] == null ? '' : previous[key]) !== String(changes[key])) {
+				diff[key] = changes[key];
+				dirty = true;
+			}
 		});
-		return uci.save().then(function() { return uci.apply(); }).then(L.bind(function() {
+		if (!dirty) {
+			this.pendingCurve = null;
+			this.curveTargetDirty = false;
+			this.refreshPolicy();
+			this.drainQueued();
+			return this.fetchStatus().then(L.bind(this.update, this));
+		}
+		this.saving = true;
+		Object.keys(diff).forEach(function(key) { uci.set(CONFIG, SECTION, key, String(diff[key])); });
+		return uci.save().then(L.bind(this.applyOnce, this)).then(L.bind(function() {
 			this.saving = false;
-			this.lockButtons(false);
 			this.pendingCurve = null;
 			this.curveTargetDirty = false;
 			this.refreshPolicy();
@@ -131,23 +153,19 @@ return view.extend({
 			return this.fetchStatus().then(L.bind(this.update, this));
 		}, this)).catch(L.bind(function(error) {
 			this.saving = false;
-			this.lockButtons(false);
 			Object.keys(previous).forEach(function(key) {
 				if (previous[key] == null) uci.unset(CONFIG, SECTION, key);
 				else uci.set(CONFIG, SECTION, key, previous[key]);
 			});
+			uci.save();
 			ui.addNotification(null, E('p', {}, _('Could not apply policy: %s').format((error.message || String(error)))), 'danger');
 			this.refreshPolicy();
 			this.drainQueued();
 		}, this));
 	},
 
-	lockButtons: function(locked) {
-		(this.methodButtons || []).concat(this.methodControls || []).forEach(function(button) { button.disabled = locked; });
-	},
-
 	scheduleCommit: function(changes, kind) {
-		if (this.saving) return;
+		if (this.saving) { this.queued = { changes: changes, kind: kind }; return; }
 		this.clearPending();
 		if (Number(changes.fixed_duty) === 0) {
 			this.commit(changes, kind);

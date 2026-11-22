@@ -99,6 +99,8 @@
 
 ## Work queue
 
+- [x] 占空比类模式立即生效：把回差保持与降速等待限定在温度驱动请求上（`hold_down_allowed()`），固定请求与 `drive=duty` 的预设改多少立刻下发。
+- [x] 连续点击的误报：同值提交连带跳过 `save`/`apply`，`uci.apply` 遇 ubus code 5 自动重试一次，提交期间控件不再禁用而是进队列。
 - [x] Select Apache-2.0 for the package and include the canonical license text and package metadata.
 - [x] Confirm the current delivery path: compile the package into firmware and validate locally produced APKs; defer a router-facing package feed and its signing setup until the plugin is stable.
 
@@ -229,6 +231,7 @@
 
 ## Brief log
 
+- 2026-11-22：占空比类模式改为立即生效，实测设备上 52% → 40% 在一个轮询周期内落到 `pwm1=102`，`reason=mode`，不再出现 `hysteresis_hold`；温度驱动的曲线/目标驱动仍保留回差与降速等待。同轮修掉连续点击的误报与丢点击：提交前比对同值跳过下发、`uci.apply` 遇到 ubus code 5 重试一次、保存期间控件不再禁用（改动进队列）。设备上 4 连点 + / 4 连点 − 结果精确回原位，无报错弹窗。
 - 2026-11-22：停顿排查收尾。写入频率从每分钟 30 次降到约 2 次，用户连续监听未再听到停顿，`/var/run/h5000m-pwmfan/slow-cycles` 无记录；此前观察到的 17 秒循环卡顿未再出现，复发时由该文件定位。遗留观察：占空比类模式下调时仍会被 10 秒降档延迟与 3 °C 回差挡一下（`reason=hysteresis_hold`）。读写两侧都无异常：无第二个写入者、内核 thermal 未降档、`pwm1` 采样恒定、系统负载 0.12、PWM 波形 20 kHz/70.2 % 正常。给守护进程加写入追踪后发现停顿时刻正好有同值重写，于是改为「仅在数值变化时写 PWM，30 秒保活纠偏」，并加慢周期日志（单周期 >5 秒记 `slow-cycles`）。
 
 - 2026-11-22：真机交棒实测通过并落地。基线 51/255、48.7 °C；接管后 `state=running owner=userspace`、`pwm1=179`（安静 70%），64 秒采样恒定、温度回落到 40–41 °C；回滚路径验证：停插件写 255 全速、启旧服务回到 51。旧 `h5000m-fancontrol` 已停用并 `disable`，开机顺序冲突消除。看门狗脚本未在 SSH 断链后存活，改为宿主侧每 2–3 秒采样监控。

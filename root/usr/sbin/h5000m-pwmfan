@@ -377,6 +377,15 @@ kernel_takeover_ready() {
 	kernel_takeover_ready_dir "${THERMAL_DIR:-/sys/class/thermal}" "$pwm" "$TAKEOVER" "$TAKEOVER_VERIFIED"
 }
 
+# A duty the user sets applies at once; only temperature-driven requests are
+# damped, so a curve cannot oscillate on sensor noise.
+hold_down_allowed() {
+	case "$MODE" in
+	target | custom) return 0 ;;
+	esac
+	[ "$DRIVE" = curve ]
+}
+
 apply_cycle() {
 	PROTECTION_PWM=-- MODE_PWM=--
 	if ! load_settings; then
@@ -442,8 +451,9 @@ apply_cycle() {
 		desired=$MODEM_MIN_PWM
 		reason=modem_throttle_floor
 	fi
-	if [ "$desired" -gt 0 ] && [ "$active" = 0 ] && [ -n "$LAST_PWM" ] && [ "$desired" -lt "$LAST_PWM" ]; then
-		if [ "$MODE" != manual ] && [ -n "$LAST_TEMP" ] && [ "$CONTROL_TEMP_C" -gt $((LAST_TEMP - HYSTERESIS)) ]; then
+	if [ "$desired" -gt 0 ] && [ "$active" = 0 ] && [ -n "$LAST_PWM" ] && [ "$desired" -lt "$LAST_PWM" ] &&
+		[ "$MODE" != manual ] && hold_down_allowed; then
+		if [ -n "$LAST_TEMP" ] && [ "$CONTROL_TEMP_C" -gt $((LAST_TEMP - HYSTERESIS)) ]; then
 			desired=$LAST_PWM
 			reason=hysteresis_hold
 		elif [ $((now - LAST_CHANGE)) -lt "$DOWN_DELAY" ]; then
