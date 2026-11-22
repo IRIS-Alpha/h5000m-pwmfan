@@ -618,7 +618,8 @@ return view.extend({
 		setValue(this.curveChart, 'request', format(output[0], '%'));
 		setValue(this.curveChart, 'temperature', usable.length ? Math.max.apply(null, usable).toFixed(1) + ' °C' : '—');
 		setValue(this.curveChart, 'actual', format(output[1], '%'));
-		setValue(this.curveChart, 'protection', format(output[2], '%'));
+		/* The protection key shows the threshold the dashed line marks, not a duty. */
+		setValue(this.curveChart, 'protection', Number(setting('protection_temp', 90)).toString() + ' °C');
 		temps.forEach(function(value, index) {
 			setValue(self.tempChart, 'sensor' + index, value === null || value === undefined ? _('Unavailable') : value.toFixed(1) + ' °C');
 		});
@@ -654,9 +655,6 @@ return view.extend({
 			this.history = this.history.filter(function(sample) { return sample.time >= now - HISTORY_LIMIT; });
 		}
 		this.updateWarnings();
-		/* The protection band is only painted while it is active; dim its key otherwise. */
-		if (this.curveChart && this.curveChart.legendProtection)
-			this.curveChart.legendProtection.classList.toggle('is-off', values.output[2] === null);
 		this.drawCharts();
 	},
 
@@ -671,14 +669,14 @@ return view.extend({
 		var plot = E('div', { 'class': 'pf-plot' }, [ canvas, tip, chart.empty ].concat(chart.handles));
 		chart.legendValue = {};
 		var legendNode = E('div', { 'class': 'pf-legend' }, legend.map(function(series) {
-			var parts = [ E('i', { style: 'background:var(' + series[1] + ')' }), series[0] ];
+			var parts = [ E('i', { style: 'background:var(' + series[1] + ')' }),
+				E('span', { 'class': 'pf-legend-label' }, series[0]) ];
 			if (series[2]) {
 				chart.legendValue[series[2]] = E('b', { 'class': 'pf-legend-value' });
 				parts.push(chart.legendValue[series[2]]);
 			}
 			return E('span', series[2] ? { 'data-key': series[2] } : {}, parts);
 		}));
-		if (!history) chart.legendProtection = legendNode.querySelector('[data-key="protection"]');
 		chart.element = E('div', { 'class': 'pf-chart' }, [ legendNode, plot ]);
 		plot.addEventListener('pointerdown', function(event) {
 			var rect = canvas.getBoundingClientRect(), points = self.curvePoints();
@@ -906,8 +904,8 @@ return view.extend({
 		this.saveCurve = E('button', { type: 'button', 'class': 'btn', click: function() {
 			self.commit({ curve_manual: self.pendingCurve.map(function(point) { return point.t + ':' + point.pwm; }).join(',') });
 		} }, _('Apply curve'));
-		this.curveChart = this.makeChart(_('Fan curve'), [ [ _('Curve request'), '--pf-blue', 'request' ], [ _('Current temperature'), '--pf-green', 'temperature' ],
-			[ _('Actual output'), '--pf-amber', 'actual' ], [ _('Protection output'), '--pf-red', 'protection' ] ], false);
+		this.curveChart = this.makeChart(_('Fan curve'), [ [ _('Curve request'), '--pf-blue', 'request' ], [ _('Actual output'), '--pf-amber', 'actual' ],
+			[ _('Current temperature'), '--pf-green', 'temperature' ], [ _('Temperature protection'), '--pf-red', 'protection' ] ], false);
 		this.tempChart = this.makeChart(_('Temperature history'), SENSORS.map(function(sensor, index) { return [ sensor[0], sensor[2], 'sensor' + index ]; }), true);
 		this.historyState = E('span', { 'class': 'pf-chart-state' }, _('Waiting for temperature readings'));
 		// Window and interval are controller-side view settings now (advanced → View).
