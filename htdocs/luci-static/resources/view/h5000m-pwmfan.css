@@ -20,7 +20,7 @@
 }
 .pf-page :is(h2, h3, p) { margin: 0; }
 .pf-heading, .pf-dispatch-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
-.pf-dispatch-head .pf-warnings { margin-left: auto; }
+.pf-dispatch-head .pf-head-right { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-left: auto; min-width: 0; }
 .pf-heading { min-width: 0; padding-top: 6px; }
 .pf-heading h2 { font-size: clamp(17px, 4.6vw, 21px); white-space: nowrap; }
 .pf-heading .pf-live { flex: 0 1 auto; min-width: 0; }
@@ -137,7 +137,6 @@
 		inset 0 0 5px -0.5px rgba(var(--pf-glow), .16),
 		inset 0 0 9px -1px rgba(var(--pf-glow), .09); }
 html[data-darkmode=true] .pf-status { --pf-glow: 255, 194, 109; }
-.pf-status { margin-left: auto; }
 .pf-status.is-pulse { animation: pf-warn-in .22s ease-out 1, pf-warn-pulse 3.3s linear infinite; }
 .pf-legend span.is-off { opacity: .42; }
 .pf-warnings { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin: 0 0 0 auto; }
@@ -208,7 +207,9 @@ html[data-darkmode=true] .pf-warn-stop { --pf-glow: 255, 138, 155; }
 @keyframes pf-warn-in { from { opacity: 0; transform: translateY(-4px) scale(.97); } to { opacity: 1; transform: none; } }
 /* Text and border carry the warning on their own; the motion only draws the eye. */
 .pf-warn.is-pulse { animation: pf-warn-in .22s ease-out 1, pf-warn-pulse 3.3s linear infinite; }
-.pf-page .pf-warn-note { margin: 8px 0 0; padding-top: 0; border-top: 0; color: var(--pf-muted); font-size: 11px; text-align: center; }
+.pf-page .pf-warn-note { margin: 8px 0 0; padding: 8px 0;
+	border-top: 1px solid var(--pf-line); border-bottom: 1px solid var(--pf-line);
+	color: var(--pf-muted); font-size: 11px; text-align: center; }
 .pf-history-settings { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; }
 .pf-number-setting { display: flex; align-items: center; gap: 6px; color: var(--pf-muted); white-space: nowrap; }
 .pf-number-setting input { width: 4.4em; margin-inline: 4px; text-align: center; font-variant-numeric: tabular-nums; }
