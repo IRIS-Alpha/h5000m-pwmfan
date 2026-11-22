@@ -217,7 +217,7 @@ html[data-darkmode=true] .pf-warn-stop { --pf-glow: 255, 138, 155; }
 .pf-field { display: flex; flex-direction: column; gap: 3px; margin: 0; min-width: 0; }
 .pf-field input { width: 100%; box-sizing: border-box; }
 .pf-chart { margin-top: 6px; }
-.pf-legend { display: grid; grid-template-columns: repeat(2, 10.2em); gap: 0.6em 2em; justify-content: start; margin-bottom: 8px; color: var(--pf-muted); font-size: 11px; }
+.pf-legend { display: grid; grid-template-columns: repeat(2, 10.2em); gap: 0.6em 3em; justify-content: start; margin-bottom: 8px; color: var(--pf-muted); font-size: 11px; }
 @media (min-width: 860px) { .pf-legend { grid-template-columns: repeat(4, 12.5em); gap: 0.6em 4em; } }
 .pf-legend > span { display: flex; align-items: center; gap: 0; min-width: 0; }
 .pf-legend i { flex: none; width: 1em; height: 1em; border-radius: 3px; }
