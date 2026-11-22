@@ -33,7 +33,8 @@ def demo_status(mode):
     requested = {'quiet': 60, 'performance': 192, 'off': 0, 'target': 51}.get(mode, 128)
     rows = ';'.join(f'{key}|{label}|{temp}|ok' for key, label, temp in values)
     return (f'state=running\nowner=userspace\nreason={mode}\nupdated_at={now}\n'
-            f'temperature_mc={values[0][2]}\nrequested_pwm={requested}\neffective_pwm={requested}\n'
+            f'temperature_mc={values[0][2]}\nmode_pwm={requested}\n'
+            f'requested_pwm={requested}\neffective_pwm={requested}\n'
             f'protection_pwm=0\nlanguage_zh_available=1\nsensors={rows}\n'
             f'protection_count_24h=1\nprotection_count_total=2\nprotection_last_trigger={now - 900}\nprotection_last_cycle_peak_c=91\n')
 
