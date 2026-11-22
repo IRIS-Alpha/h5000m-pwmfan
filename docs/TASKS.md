@@ -191,12 +191,13 @@
 - Acceptance: 0% is reachable without the stop button and reports 0 requested PWM on the fixture; non-zero values still respect the minimum; one badge shows state and source; no statistics line; the language control is unchanged.
 - Status: started 2026-11-22; the apply model is settled, so the remaining work is implementation.
 
-- [ ] `mode=off` 退场：先按方案 A 把 `off` 降级为重载别名（映射 `fixed` + `fixed_duty=0`，删掉 `requested_pwm` 的 `off:*` 分支），再只读核对路由器 `uci show h5000m_pwmfan`；设备上没有 `mode=off` 且条件允许时升级到方案 B（白名单删除 + 一次性迁移）。
+- [x] `mode=off` 退场：先落了方案 A（别名映射 `fixed` + `fixed_duty=0`，删掉 `requested_pwm` 的 `off:*` 分支），只读核对路由器 `uci show h5000m_pwmfan` 确认只有 `mode='quiet'`、无 `off` 配置，随后升级到方案 B：白名单与别名一并删除，看板不再识别 `off`（2026-11-22）。
 - [ ] 固定请求滑块与模式切换共用 3 秒尾随合并器：拖动只更新读数、松手才提交、0% 绕过合并立即提交、标题行显示“应用中-Ns”；不做后端步进限幅（已定案，见 `REQUIREMENTS_V3.md` §16）。
 
 - 2026-11-22: Read-only probe of the V4 proposals (header row, breadcrumb naming, theme switcher source, warning row, fold parameters); findings and three header options recorded in `docs/UIUX_RECHECK_2026-11-22.md` §八.
 - 2026-11-22: Relocated the warning chips to the “模式选择” header row and the slogan to its own line, and added the explicit-commit model for target parameters and curve points; verified 320/360/390/500/651px with no horizontal overflow, states `已选` → `待应用` → `已选`.
 - 2026-11-22: Rebuilt the six-point curve editor as a single-column table with one shared header row, table-style row separators and a 460px cap; inputs widened to 104px at 320px, rows 45px tall, no horizontal overflow at 320/390/1360px.
+- 2026-11-22: Retired `mode=off`: the allowlist no longer accepts it, the legacy alias and the redundant `off` checks in the control path and the dashboard are gone, and the dispatch fixture drives the takeover/protection case through `fixed_duty=0`. 33 Bats tests pass.
 - 2026-11-22: Widened the gap between the warning chips and the slogan divider to 14px (the `.pf-page :is(h2, h3, p)` reset had nulled the note margin) and made the slider bubble reliable on touch: `pointerdown` focuses the slider and an `is-live` class keeps the bubble visible for 900ms after release.
 - 2026-11-22: Restyled the fixed-request slider: a 4px pill track whose fill is computed from the thumb centre, an 18px thumb that lifts with a soft halo while dragging, and a floating chip readout with rolling digits whose width grows a column at a time; the theme focus glow is suppressed in favour of a thumb ring, and the bubble lingers 700ms after release.
 - 2026-11-22: The local preview shell now renders the view alone; the simulated-data tag and its theme select are gone, and the page's own switcher (persisted under `pwmfan-theme`) drives light/dark.

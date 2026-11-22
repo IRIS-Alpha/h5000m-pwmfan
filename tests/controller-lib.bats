@@ -178,7 +178,7 @@ setup() {
 	[ "$(protection_dispatch_step 0 76 90 15 5 0 0 0 1 0)" = "17|protection_ramp|0|1|0|0" ]
 }
 
-@test "offline dispatch overrides off, counts once per lock, and releases at the boundary" {
+@test "offline dispatch overrides a zero request, counts once per lock, and releases at the boundary" {
 	lock=$(protection_dispatch_step 0 90 90 15 5 51 0 0 0 0)
 	[ "$lock" = "255|protection_lock|1|1|0|1" ]
 	IFS='|' read -r pwm _ locked active _ count <<EOF
@@ -421,7 +421,7 @@ config_get() {
 collect_sensors() { CONTROL_TEMP_MC=$TEST_TEMP; SAFETY_TEMP_MC=$TEST_TEMP; MODEM_MIN_PWM=0; }
 find_fan() { printf '%s\n' "$fixture/pwm"; }
 read_effective_pwm() { cat "$fixture/pwm"; }
-TEST_MODE=off TEST_TEMP=50000
+TEST_MODE=fixed TEST_DUTY=0 TEST_TEMP=50000
 printf '51\n' >"$fixture/pwm"
 apply_cycle
 [ "$(cat "$fixture/pwm")" = 51 ]

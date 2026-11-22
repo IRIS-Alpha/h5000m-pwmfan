@@ -227,14 +227,7 @@ load_settings() {
 	config_get TAKEOVER "$SECTION" kernel_takeover 0
 	[ "$TAKEOVER" = 0 ] || [ "$TAKEOVER" = 1 ] || return 1
 	config_get MODE "$SECTION" mode balanced
-	case "$MODE" in quiet | balanced | performance | custom | manual | kernel | target | fixed | off) ;; *) return 1 ;; esac
-	# Legacy alias: `off` predates the 0 % fixed request. A stored config keeps
-	# working as a zero fixed request instead of failing into the full-speed failsafe.
-	OFF_ALIAS=0
-	if [ "$MODE" = off ]; then
-		MODE=fixed
-		OFF_ALIAS=1
-	fi
+	case "$MODE" in quiet | balanced | performance | custom | manual | kernel | target | fixed) ;; *) return 1 ;; esac
 	config_get SENSOR_SELECTION "$SECTION" sensor_sources auto
 	[ -n "$SENSOR_SELECTION" ] || SENSOR_SELECTION=auto
 	raw=
@@ -263,12 +256,8 @@ load_settings() {
 	PROTECTION_RELEASE=$(cfg_number "$raw" 2 100) || return 1
 	case "$MODE" in
 	fixed)
-		if [ "$OFF_ALIAS" = 1 ]; then
-			FIXED_DUTY=0
-		else
-			config_get raw "$SECTION" fixed_duty 0
-			FIXED_DUTY=$(cfg_number "$raw" 0 100) || return 1
-		fi
+		config_get raw "$SECTION" fixed_duty 0
+		FIXED_DUTY=$(cfg_number "$raw" 0 100) || return 1
 		;;
 	target)
 		config_get raw "$SECTION" target_temp 85
@@ -431,7 +420,7 @@ apply_cycle() {
 		desired=$MODEM_MIN_PWM
 		reason=modem_throttle_floor
 	fi
-	if [ "$MODE" != off ] && [ "$desired" -gt 0 ] && [ "$active" = 0 ] && [ -n "$LAST_PWM" ] && [ "$desired" -lt "$LAST_PWM" ]; then
+	if [ "$desired" -gt 0 ] && [ "$active" = 0 ] && [ -n "$LAST_PWM" ] && [ "$desired" -lt "$LAST_PWM" ]; then
 		if [ "$MODE" != manual ] && [ -n "$LAST_TEMP" ] && [ "$CONTROL_TEMP_C" -gt $((LAST_TEMP - HYSTERESIS)) ]; then
 			desired=$LAST_PWM
 			reason=hysteresis_hold

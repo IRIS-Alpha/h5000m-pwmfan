@@ -109,7 +109,7 @@ return view.extend({
 
 	controlMode: function() {
 		var configured = setting('mode', 'balanced');
-		return Object.prototype.hasOwnProperty.call(MODES, configured) || configured === 'fixed' || configured === 'off' ? configured : 'balanced';
+		return Object.prototype.hasOwnProperty.call(MODES, configured) || configured === 'fixed' ? configured : 'balanced';
 	},
 
 	commit: function(changes, kind) {
@@ -295,7 +295,7 @@ return view.extend({
 	},
 
 	refreshPolicy: function() {
-		var mode = this.controlMode(), fixed = mode === 'fixed' || mode === 'off';
+		var mode = this.controlMode(), fixed = mode === 'fixed';
 		var self = this;
 		var curveMode = fixed ? setting('curve_mode', 'balanced') : mode;
 		if ([ 'quiet', 'balanced', 'performance', 'target', 'manual' ].indexOf(curveMode) < 0) curveMode = 'balanced';
@@ -472,7 +472,7 @@ return view.extend({
 
 	curveTooLow: function() {
 		var mode = this.controlMode();
-		if (mode === 'fixed' || mode === 'off') return Number(setting('fixed_duty', 50)) < 50;
+		if (mode === 'fixed') return Number(setting('fixed_duty', 50)) < 50;
 		if (mode === 'target') return false;
 		var points = mode === 'manual' ? parseCurve(setting('curve_manual', CURVES.manual)) : parseCurve(CURVES[mode] || CURVES.balanced);
 		return points.some(function(point) { return point.t != null && point.t >= 60 && point.pwm != null && percent(point.pwm) < 50; });
@@ -527,7 +527,6 @@ return view.extend({
 		var mode = this.controlMode();
 		var low = Number(setting('min_pwm', 51)), max = Number(setting('max_pwm', 255));
 		var limit = function(pwm) { return pwm ? clamp(pwm, Math.min(low, max), max) : 0; };
-		if (mode === 'off') return [ { t: 0, pwm: 0 }, { t: 100, pwm: 0 } ];
 		if (mode === 'fixed') {
 			var fixedPwm = limit(Math.round(Number(setting('fixed_duty', 50)) * 255 / 100));
 			return [ { t: 0, pwm: fixedPwm }, { t: 100, pwm: fixedPwm } ];
