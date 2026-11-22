@@ -127,11 +127,17 @@
 .pf-warn { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border: 1px solid; border-radius: 7px;
 	font-size: 11.5px; font-weight: 650;
 	text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
-	box-shadow: 0 0 9px -1px rgba(var(--pf-glow), .2), inset 0 0 4px -1px rgba(var(--pf-glow), .2); }
+	box-shadow: 0 0 2px 0 rgba(var(--pf-glow), .30),
+		0 0 5px -0.5px rgba(var(--pf-glow), .18),
+		0 0 9px -1px rgba(var(--pf-glow), .10),
+		inset 0 0 2px 0 rgba(var(--pf-glow), .26),
+		inset 0 0 5px -0.5px rgba(var(--pf-glow), .16),
+		inset 0 0 9px -1px rgba(var(--pf-glow), .09);
+	border-color: rgba(var(--pf-glow), .58); }
 .pf-warn::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor;
 	box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 20%, transparent); }
-.pf-warn-low { --pf-glow: 169, 92, 0; color: var(--pf-amber); border-color: color-mix(in srgb, var(--pf-amber) 62%, transparent); background: color-mix(in srgb, var(--pf-amber) 16%, var(--pf-surface)); }
-.pf-warn-stop { --pf-glow: 182, 43, 66; color: var(--pf-red); border-color: color-mix(in srgb, var(--pf-red) 62%, transparent); background: color-mix(in srgb, var(--pf-red) 16%, var(--pf-surface)); }
+.pf-warn-low { --pf-glow: 169, 92, 0; color: var(--pf-amber); background: color-mix(in srgb, var(--pf-amber) 16%, var(--pf-surface)); }
+.pf-warn-stop { --pf-glow: 182, 43, 66; color: var(--pf-red); background: color-mix(in srgb, var(--pf-red) 16%, var(--pf-surface)); }
 html[data-darkmode=true] .pf-warn-low { --pf-glow: 255, 194, 109; }
 html[data-darkmode=true] .pf-warn-stop { --pf-glow: 255, 138, 155; }
 
@@ -140,19 +146,49 @@ html[data-darkmode=true] .pf-warn-stop { --pf-glow: 255, 138, 155; }
 	/* First beat: dim 560ms, brighten 240ms. Second beat peaks 500ms later, then a long quiet tail. */
 	0%, 17% {
 		text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
-		box-shadow: 0 0 9px -1px rgba(var(--pf-glow), .2), inset 0 0 4px -1px rgba(var(--pf-glow), .2); }
+		box-shadow: 0 0 2px 0 rgba(var(--pf-glow), .30),
+		0 0 5px -0.5px rgba(var(--pf-glow), .18),
+		0 0 9px -1px rgba(var(--pf-glow), .10),
+		inset 0 0 2px 0 rgba(var(--pf-glow), .26),
+		inset 0 0 5px -0.5px rgba(var(--pf-glow), .16),
+		inset 0 0 9px -1px rgba(var(--pf-glow), .09);
+		border-color: rgba(var(--pf-glow), .58); }
 	24.2% {
 		text-shadow: 0 0 10px rgba(var(--pf-glow), .7);
-		box-shadow: 0 0 18px 0.5px rgba(var(--pf-glow), .55), inset 0 0 8px -2px rgba(var(--pf-glow), .55); }
+		box-shadow: 0 0 2px 0 rgba(var(--pf-glow), .85),
+		0 0 5px -0.5px rgba(var(--pf-glow), .52),
+		0 0 9px -1px rgba(var(--pf-glow), .26),
+		inset 0 0 2px 0 rgba(var(--pf-glow), .72),
+		inset 0 0 5px -0.5px rgba(var(--pf-glow), .44),
+		inset 0 0 9px -1px rgba(var(--pf-glow), .22);
+		border-color: rgba(var(--pf-glow), .95); }
 	31.5%, 32.1% {
 		text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
-		box-shadow: 0 0 9px -1px rgba(var(--pf-glow), .2), inset 0 0 4px -1px rgba(var(--pf-glow), .2); }
+		box-shadow: 0 0 2px 0 rgba(var(--pf-glow), .30),
+		0 0 5px -0.5px rgba(var(--pf-glow), .18),
+		0 0 9px -1px rgba(var(--pf-glow), .10),
+		inset 0 0 2px 0 rgba(var(--pf-glow), .26),
+		inset 0 0 5px -0.5px rgba(var(--pf-glow), .16),
+		inset 0 0 9px -1px rgba(var(--pf-glow), .09);
+		border-color: rgba(var(--pf-glow), .58); }
 	39.4% {
 		text-shadow: 0 0 10px rgba(var(--pf-glow), .7);
-		box-shadow: 0 0 18px 0.5px rgba(var(--pf-glow), .55), inset 0 0 8px -2px rgba(var(--pf-glow), .55); }
+		box-shadow: 0 0 2px 0 rgba(var(--pf-glow), .85),
+		0 0 5px -0.5px rgba(var(--pf-glow), .52),
+		0 0 9px -1px rgba(var(--pf-glow), .26),
+		inset 0 0 2px 0 rgba(var(--pf-glow), .72),
+		inset 0 0 5px -0.5px rgba(var(--pf-glow), .44),
+		inset 0 0 9px -1px rgba(var(--pf-glow), .22);
+		border-color: rgba(var(--pf-glow), .95); }
 	46.7%, 100% {
 		text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
-		box-shadow: 0 0 9px -1px rgba(var(--pf-glow), .2), inset 0 0 4px -1px rgba(var(--pf-glow), .2); }
+		box-shadow: 0 0 2px 0 rgba(var(--pf-glow), .30),
+		0 0 5px -0.5px rgba(var(--pf-glow), .18),
+		0 0 9px -1px rgba(var(--pf-glow), .10),
+		inset 0 0 2px 0 rgba(var(--pf-glow), .26),
+		inset 0 0 5px -0.5px rgba(var(--pf-glow), .16),
+		inset 0 0 9px -1px rgba(var(--pf-glow), .09);
+		border-color: rgba(var(--pf-glow), .58); }
 }
 @keyframes pf-warn-in { from { opacity: 0; transform: translateY(-4px) scale(.97); } to { opacity: 1; transform: none; } }
 /* Text and border carry the warning on their own; the motion only draws the eye. */
