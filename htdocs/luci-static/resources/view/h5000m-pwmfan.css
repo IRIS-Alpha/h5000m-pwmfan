@@ -223,6 +223,7 @@ html[data-darkmode=true] .pf-warn-stop { --pf-glow: 255, 138, 155; }
 .pf-page .pf-danger[aria-pressed=true] { border-color: var(--pf-red); color: var(--pf-red); background: color-mix(in srgb, var(--pf-red) 10%, var(--pf-surface)); }
 .pf-policy:not(:empty) { margin-top: 10px; }
 .pf-segment, .pf-editor-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+.pf-editor-actions { justify-content: flex-end; }
 .pf-target { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: end; margin: 0; }
 .pf-target .pf-note { grid-column: 1 / -1; }
 .pf-target-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }

@@ -280,6 +280,11 @@ PWM cooling levels 为 `[0,128,192,255]`：40°C `active-low` 通过名为 `cpu-
 - 仪表盘读数区是报表卡片，不再用方块瓦片：每行是“名称 + 数值”一行、下方一条 6px 圆角进度条（`.pf-report-row`），行距 11px；≥720px 两列、≥1100px 三列。名称允许换行（`overflow-wrap:anywhere`），不再用 `text-overflow:ellipsis` 截断，英文窄屏也能读全。
 - 卡片右上角是“自定义”按钮，展开后逐项勾选要显示的读数（温度四路 + 请求/实际/保护三路占空比），选择存 `localStorage` 的 `pwmfan-report` 键，刷新后保持；不可用的读数直接不列出，风扇转速行已移除。
 - 字体：页面正文用 MiSans（`--pf-font`），取自 npm `misans@5.0.0`（Apache-2.0），按 UI 文案用到的 316 个非 ASCII 字符做逐分片子集，34 个 woff2 共 148 KB，`fonts/NOTICE.txt` 记录来源；两个曲线图的数字与符号保持主题字体（`--pf-chart-font`），不受 MiSans 影响。
+- 温度保护在曲线图上只在实际驱动风扇（`reason=protection_ramp|protection_lock`，即 `protection_pwm>0`）时绘制半透明色块与红色虚线；为让它始终可读，图例该项渲染为“保护输出 · N%”，读取 `protection_pwm`，因此 0% 时也能看到当前值，且不会在 0% 基线上画一条容易被误认成坐标轴的线。
+- 主题为长说明加的折叠（`.cbi-value[data-v-help="fold"] > .cbi-value-field > .vt-help-text{max-height:1lh;overflow:hidden}`、`.vt-help-text[data-v-end="fade"]{mask-image:…}`）在本插件内被解除：`.pwmfan-advanced` 作用域下 `max-height:none;overflow:visible`、`mask-image:none !important`，并把主题追加的 `.vt-help` 折叠按钮隐藏，说明完整显示（设备实测 `clientHeight` 18→72px）。
+- 选中“自定义曲线”或“目标驱动”时，对应参数面板每次都自动展开（`modeChanged` 触发），手动折叠后再次选中仍会展开，避免“应用曲线”按钮藏在折叠面板里。
+- 曲线编辑区的“恢复/应用”按钮右对齐（`.pf-editor-actions{justify-content:flex-end}`）。
+- 高级设置页头部按钮与接管开关的样式互不干扰：头部 32×32 无阴影的按钮规则限定在 `.pf-adv-head` 作用域内，接管开关保持 44×24 轨道 + 20px 滑块。
 - “曲线输出上限”（`max_pwm`）不是防超 100% 的冗余项：它同时钳制固定/预设/曲线请求、目标驱动闭环上界、保护斜坡上界与启动助推，所以调低它可以压低高转速风噪（含小风扇接近满速时的啸叫）；代价是保护能给出的最高转速也随之降低。故障全速路径写死 255，不受该值约束。
 - “保护输出”的色块与图例只表示温度保护（`reason=protection_ramp|protection_lock` 时 `PROTECTION_PWM=$desired`，`root/usr/sbin/h5000m-pwmfan:478-479`），与非零请求下限（`floor_pwm`/`floor_limited`）无关；保护未生效时画布不画色块，图例降到 42%。
 - 状态芯片不带前置圆点（圆点是告警的语义，状态芯片是静态说明）。

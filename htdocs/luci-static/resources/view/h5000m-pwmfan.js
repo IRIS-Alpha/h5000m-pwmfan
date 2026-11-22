@@ -350,13 +350,17 @@ return view.extend({
 			if (fixed) self.scheduleCommit({ mode: curveMode, curve_mode: curveMode, drive: 'curve', enabled: '1' }, 'curve');
 		});
 		this.methodButtons = [ fixedTitle, curveTitle ];
+		// Selecting a curve mode should reveal its parameters: a collapsed panel hides the
+		// editor, and with it the only Apply button for a hand-tuned curve.
+		var modeChanged = this.lastCurveMode !== curveMode;
+		this.lastCurveMode = curveMode;
 		var curveChildren = [ curveTitle,
 			E('div', { 'class': 'pf-modes', role: 'group', 'aria-label': _('Curve preset') }, this.presetButtons),
 			E('div', { 'class': 'pf-modes pf-drives' }, this.driveButtons) ];
 		if (!fixed && curveMode === 'target') curveChildren.push(E('details', { 'class': 'pf-parameters', 'data-detail': 'target',
-			open: this.detailState('target', false) ? true : null }, [ E('summary', {}, _('Target drive parameters')), this.targetFields() ]));
+			open: modeChanged || this.detailState('target', false) ? true : null }, [ E('summary', {}, _('Target drive parameters')), this.targetFields() ]));
 		if (!fixed && curveMode === 'manual') curveChildren.push(E('details', { 'class': 'pf-parameters', 'data-detail': 'manual',
-			open: this.detailState('manual', false) ? true : null }, [ E('summary', {}, _('Curve parameters')), this.editor ]));
+			open: modeChanged || this.detailState('manual', false) ? true : null }, [ E('summary', {}, _('Curve parameters')), this.editor ]));
 		this.policy.replaceChildren(
 			E('section', { 'class': 'pf-method', 'data-selected': String(fixed) }, [ fixedTitle, this.fixedControls() ]),
 			E('section', { 'class': 'pf-method', 'data-selected': String(!fixed) }, curveChildren));
@@ -711,8 +715,16 @@ return view.extend({
 		}
 		this.updateWarnings();
 		/* The protection band is only painted while it is active; dim its key otherwise. */
-		if (this.curveChart && this.curveChart.legendProtection)
-			this.curveChart.legendProtection.classList.toggle('is-off', !(values.output[2] > 0));
+		if (this.curveChart && this.curveChart.legendProtection) {
+			var guardValue = values.output[2];
+			var legendNode = this.curveChart.legendProtection;
+			var legendText = legendNode.childNodes[1];
+			legendNode.classList.toggle('is-off', guardValue === null);
+			// Keep the protection level readable even when it sits at 0% and the line
+			// disappears under the axis.
+			if (legendText && legendText.nodeType === 3)
+				legendText.nodeValue = ' ' + this.curveChart.protectionLabel + (guardValue === null ? '' : ' · ' + guardValue + '%');
+		}
 		this.drawCharts();
 	},
 
@@ -728,7 +740,11 @@ return view.extend({
 		var legendNode = E('div', { 'class': 'pf-legend' }, legend.map(function(series) {
 			return E('span', series[2] ? { 'data-key': series[2] } : {}, [ E('i', { style: 'background:var(' + series[1] + ')' }), series[0] ]);
 		}));
-		if (!history) chart.legendProtection = legendNode.querySelector('[data-key="protection"]');
+		if (!history) {
+			chart.legendProtection = legendNode.querySelector('[data-key="protection"]');
+			var guardEntry = legend.filter(function(entry) { return entry[2] === 'protection'; })[0];
+			chart.protectionLabel = guardEntry ? guardEntry[0] : '';
+		}
 		chart.element = E('div', { 'class': 'pf-chart' }, [ legendNode, plot ]);
 		plot.addEventListener('pointerdown', function(event) {
 			var rect = canvas.getBoundingClientRect(), points = self.curvePoints();
@@ -879,9 +895,18 @@ return view.extend({
 				handle.style.left = x(point.t) + 'px';
 				handle.style.top = y(percent(point.pwm)) + 'px';
 			});
+			// The protection level is always readable: a dashed line at its value, with the
+			// tinted band only while protection is actually driving the fan.
+			// Protection only paints while it drives the fan; at 0% the level lives in the
+			// legend instead of a line that would sit on the axis.
 			if (readings && readings.output[2] > 0) {
+				var guard = y(readings.output[2]);
 				ctx.fillStyle = color('--pf-red'); ctx.globalAlpha = 0.16;
-				ctx.fillRect(left, y(readings.output[2]), right - left, bottom - y(readings.output[2])); ctx.globalAlpha = 1;
+				ctx.fillRect(left, guard, right - left, bottom - guard); ctx.globalAlpha = 1;
+				ctx.strokeStyle = color('--pf-red'); ctx.globalAlpha = 0.9;
+				ctx.lineWidth = 1.4; ctx.setLineDash([ 5, 4 ]);
+				ctx.beginPath(); ctx.moveTo(left, guard); ctx.lineTo(right, guard); ctx.stroke();
+				ctx.setLineDash([]); ctx.globalAlpha = 1;
 			}
 			if (points.length) {
 				var series = points.map(function(point) { return [ point.t, point.pwm * 100 / 255 ]; });
