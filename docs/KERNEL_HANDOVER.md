@@ -75,6 +75,33 @@ question, not an implementation detail.
    and stopping the daemon restores the legacy service.
 5. Rollback: stop the new daemon, `/etc/init.d/h5000m-fancontrol start`, confirm `pwm1` and logread.
 
+## Executed live test (2026-11-22, approved)
+
+Baseline before the switch: `pwm1=51`, `pwm1_enable=1`, `cooling_device0/cur_state=0`, `thermal_zone0` 48.7 °C;
+the legacy `h5000m-fancontrol` was the writer (and logging `sh: missing ]` every 5 s); the plugin reported
+`state=disabled reason=takeover_pending`.
+
+Steps: `uci set h5000m_pwmfan.main.kernel_takeover=1`, `takeover_verified=1`, stop the legacy service, restart the
+plugin daemon. Sampling every 2 s for 64 s plus 4 host-side checks afterwards.
+
+Results:
+
+- `state=running reason=mode mode=quiet owner=userspace`, `requested_pwm=179 effective_pwm=179`, hardware `pwm1=179`.
+- 32 samples: `pwm1` constant 179 while `cooling_device0/cur_state` sat at 1 — the governor's 128/255 step is
+  indeed overridden by the plugin, as predicted above.
+- `thermal_zone0` fell from 44.0 °C to 40.2 °C during the window and settled at 40–41 °C.
+- Dashboard badge reads `运行中 · 插件控制`; the header still fits at 320 px (title 68 + badge 134 + two 30 px
+  switchers inside 286 px, no truncation).
+- Rollback path verified: plugin stop → `pwm1=255` (`FAILSAFE_PWM`, full speed on release, by design), then
+  `/etc/init.d/h5000m-fancontrol start` → `pwm1=51`, legacy `running`.
+- Final state adopted: legacy service stopped and `disable`d (`/etc/rc.d` now only `S95h5000m-pwmfan`), plugin owns
+  the fan with `kernel_takeover=1` and `takeover_verified=1`.
+
+Caveats recorded: the device had both services enabled at boot with `S95h5000m-pwmfan` starting before
+`S98h5000m-fancontrol`, so takeover only survives a reboot with the legacy service disabled. The bundled watchdog
+script did not survive the SSH teardown (the backgrounded shell died with the session), so the run was monitored
+from the host every 2–3 s instead; no automatic rollback fired and none was needed.
+
 ## Rollback procedure
 
 ```sh
