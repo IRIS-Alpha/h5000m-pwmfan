@@ -50,9 +50,6 @@ return view.extend({
 			'.pwmfan-advanced .cbi-value{scroll-margin-bottom:24px}',
 			/* Dock the LuCI command bar: while it floats it covers the field row beneath it. */
 			'.cbi-page-actions{position:static;bottom:auto;margin:18px 0 0 auto}',
-			'.pwmfan-header{display:flex;justify-content:flex-end;margin:0 0 10px}',
-			'.pwmfan-header .btn{display:inline-flex;align-items:center;height:30px;padding:0 11px;border:1px solid ' + line + ';border-radius:8px;background:transparent;color:' + muted + ';font-size:12.5px;font-weight:500;text-decoration:none}',
-			'.pwmfan-header .btn:hover{border-color:' + muted + ';color:' + text + '}',
 			'.pwmfan-group-heading{margin:18px 0 10px}',
 			'.pwmfan-group-heading h3{font-size:15px;font-weight:650;margin:0}',
 			'.pwmfan-group-heading p{font-size:12px;color:' + muted + ';margin:5px 0 0}',
@@ -126,13 +123,7 @@ return view.extend({
 	render: function() {
 		this.map = this.form();
 		return this.map.render().then(L.bind(function(formNode) {
-			return E('div', { 'class': 'pwmfan-advanced' }, [
-				this.style(),
-				E('div', { 'class': 'pwmfan-header' }, [
-					E('a', { 'class': 'btn', 'href': L.url('admin/system/h5000m_pwmfan/dashboard') }, _('Back to dashboard'))
-				]),
-				formNode
-			]);
+			return E('div', { 'class': 'pwmfan-advanced' }, [this.style(), formNode]);
 		}, this));
 	}
 });

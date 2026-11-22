@@ -18,7 +18,7 @@
 }
 .pf-page :is(h2, h3, p) { margin: 0; }
 .pf-heading, .pf-dispatch-head { display: flex; align-items: center; gap: 6px; }
-.pf-heading { min-width: 0; }
+.pf-heading { min-width: 0; padding-top: 6px; }
 .pf-heading h2 { font-size: clamp(17px, 4.6vw, 21px); white-space: nowrap; }
 .pf-heading .pf-live { flex: 0 1 auto; min-width: 0; }
 .pf-heading-gap { flex: 1 1 auto; }
