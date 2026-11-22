@@ -209,8 +209,8 @@ return view.extend({
 		kick.datatype = 'range(0,5000)'; kick.default = '750'; kick.rmempty = false;
 		this.group(section, 'fault', _('Fault response'),
 			_('When a sensor reading is unusable or a PWM write fails, the controller asks for 100% output instead of guessing. This behaviour is fixed and has no switch; CPU throttling and the critical shutdown still belong to the kernel.'));
-		this.group(section, 'sampling', _('Controller sampling and curve source'),
-			_('The controller takes one sensor snapshot per cycle, independent of the sampling interval used by the history chart.'));
+		this.group(section, 'view', _('View'),
+			_('How often the controller samples, which sensor feeds the curve, and how the temperature chart is drawn.'));
 		var interval = section.option(form.Value, 'poll_interval', _('Control interval (seconds)'));
 		interval.datatype = 'range(1,30)'; interval.default = '2'; interval.rmempty = false;
 		var source = section.option(form.Value, 'sensor_sources', _('Curve sensor source'));
@@ -221,6 +221,12 @@ return view.extend({
 			source.value(sensor.label, sensor.title + (sensor.state === 'ok' ? ' · ' + sensor.celsius + ' °C' : ' · ' + _('no reading')));
 		});
 		source.default = 'auto'; source.rmempty = false; source.optional = false;
+		var window = section.option(form.Value, 'history_range', _('History window (minutes)'));
+		window.datatype = 'range(5,360)'; window.default = '15'; window.rmempty = false;
+		window.description = _('How far back the temperature history chart reaches.');
+		var read = section.option(form.Value, 'history_interval', _('History interval (seconds)'));
+		read.datatype = 'range(1,60)'; read.default = '2'; read.rmempty = false;
+		read.description = _('How often the history chart asks for a new temperature sample.');
 		return map;
 	},
 

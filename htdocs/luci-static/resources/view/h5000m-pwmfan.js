@@ -570,13 +570,13 @@ return view.extend({
 			makeInput(_('Response interval (°C)'), 'response_range', response, 15, 100),
 			makeInput(_('Transition width (°C)'), 'transition_width', width, 2, 10),
 			E('div', { 'class': 'pf-target-actions' }, [
-				E('button', { type: 'submit', 'class': 'btn' }, _('Apply target')),
 				E('button', { type: 'button', 'class': 'btn', click: function() {
 					form.elements.target_temp.value = target;
 					form.elements.response_range.value = response;
 					form.elements.transition_width.value = width;
 					annotate();
-				} }, _('Undo')) ]), message ]);
+				} }, _('Undo')),
+				E('button', { type: 'submit', 'class': 'btn' }, _('Apply target')) ]), message ]);
 		var annotate = function() {
 			var onset = Number(form.elements.target_temp.value) - Number(form.elements.response_range.value);
 			var effective = Math.max(0, Math.min(onset, Number(form.elements.transition_width.value)));
@@ -945,13 +945,10 @@ return view.extend({
 	render: function(data) {
 		var self = this;
 		this.history = [];
-		this.range = 15;
-		this.interval = 2;
-		try {
-			var settings = JSON.parse(localStorage.getItem('h5000m-pwmfan-v3-history') || '{}');
-			if (Number.isInteger(settings.range) && settings.range >= 5 && settings.range <= 360 && settings.range % 5 === 0) this.range = settings.range;
-			if (Number.isInteger(settings.interval) && settings.interval >= 1 && settings.interval <= 60) this.interval = settings.interval;
-		} catch (error) { /* History preferences are optional. */ }
+		var storedRange = Number(setting('history_range', 15));
+		var storedInterval = Number(setting('history_interval', 2));
+		this.range = Number.isInteger(storedRange) && storedRange >= 5 && storedRange <= 360 ? storedRange : 15;
+		this.interval = Number.isInteger(storedInterval) && storedInterval >= 1 && storedInterval <= 60 ? storedInterval : 2;
 		this.badgeText = E('span', {}, _('Status unavailable'));
 		this.badge = E('span', { 'class': 'pf-live', role: 'status', 'data-state': 'idle' }, [ E('i', { 'aria-hidden': 'true' }), this.badgeText ]);
 		var modeButton = function(mode) {
@@ -971,28 +968,11 @@ return view.extend({
 		this.curveChart = this.makeChart(_('Fan curve'), [ [ _('Curve request'), '--pf-blue' ], [ _('Current temperature'), '--pf-green' ],
 			[ _('Actual output'), '--pf-amber' ], [ _('Protection output'), '--pf-red', 'protection' ] ], false);
 		this.tempChart = this.makeChart(_('Temperature history'), SENSORS.map(function(sensor) { return [ sensor[0], sensor[2] ]; }), true);
-		var setPreference = function(key, event) {
-			self[key] = Number(event.currentTarget.value);
-			try { localStorage.setItem('h5000m-pwmfan-v3-history', JSON.stringify({ range: self.range, interval: self.interval })); }
-			catch (error) { /* Chart works without stored preferences. */ }
-			if (key === 'interval') self.loadTemperatureHistory();
-			self.drawCharts();
-		};
 		this.historyState = E('span', { 'class': 'pf-chart-state' }, _('Waiting for temperature readings'));
-		var rangeInput = E('input', { type: 'number', min: 5, max: 360, step: 5, value: this.range, 'aria-label': _('Window') });
-		var intervalInput = E('input', { type: 'number', min: 1, max: 60, step: 1, value: this.interval, 'aria-label': _('Read every') });
-		var updatePreference = function(key, input, min, max, step) {
-			var value = Number(input.value);
-			if (!Number.isInteger(value) || value < min || value > max || value % step) { input.value = self[key]; return; }
-			setPreference(key, { currentTarget: { value: value } });
-		};
-		rangeInput.addEventListener('change', function() { updatePreference('range', rangeInput, 5, 360, 5); });
-		intervalInput.addEventListener('change', function() { updatePreference('interval', intervalInput, 1, 60, 1); });
+		// Window and interval are controller-side view settings now (advanced → View).
 		var temps = E('details', { 'class': 'pf-card pf-history', 'data-detail': 'history',
 			open: this.detailState('history', true) ? true : null }, [ E('summary', {}, [ _('Temperature history'), this.historyState ]),
-			this.tempChart.element, E('div', { 'class': 'pf-history-settings' }, [
-				E('label', { 'class': 'pf-number-setting' }, [ _('Window'), rangeInput, _('min') ]),
-				E('label', { 'class': 'pf-number-setting' }, [ _('Read every'), intervalInput, _('s') ]) ]) ]);
+			this.tempChart.element ]);
 		this.root = E('div', { 'class': 'pf-page' }, [
 			E('link', { rel: 'stylesheet', href: L.resource('view/h5000m-pwmfan-font.css') }),
 			E('link', { rel: 'stylesheet', href: L.resource('view/h5000m-pwmfan.css') }),

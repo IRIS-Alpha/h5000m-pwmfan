@@ -750,3 +750,21 @@ msgstr "传感器文件可读且数值在 −40…150 °C 内才算有效，无�
 
 msgid "No request, protection ramp or startup boost drives the fan above this value. Lowering it caps high-speed noise, including the whine a small fan makes near full duty, at the cost of the highest speed protection can still reach; a fault still asks for a full 100%."
 msgstr "任何请求、保护斜坡或启动助推都不会把风扇推到这个值以上。调低它可以压低高转速风噪，包括小风扇在接近满速时的啸叫；代价是保护能给出的最高转速也随之降低，故障时仍然按 100% 处理。"
+
+msgid "View"
+msgstr "视图"
+
+msgid "How often the controller samples, which sensor feeds the curve, and how the temperature chart is drawn."
+msgstr "控制器多久采样一次、曲线跟随哪个传感器，以及温度历史图怎么绘制。"
+
+msgid "History window (minutes)"
+msgstr "历史窗口（分钟）"
+
+msgid "How far back the temperature history chart reaches."
+msgstr "温度历史图向前覆盖的时间范围。"
+
+msgid "History interval (seconds)"
+msgstr "历史间隔（秒）"
+
+msgid "How often the history chart asks for a new temperature sample."
+msgstr "温度历史图多久取一次新的温度采样。"
