@@ -489,7 +489,7 @@ return view.extend({
 			apply();
 		};
 		var minus = E('button', { type: 'button', 'class': 'pf-step', 'aria-label': _('Decrease duty'), click: function() { step(-1); } }, '\u2212');
-		var plus = E('button', { type: 'button', 'class': 'pf-step', 'aria-label': _('Increase duty'), click: function() { step(1); } }, '+');
+		var plus = E('button', { type: 'button', 'class': 'pf-step pf-step-plus', 'aria-label': _('Increase duty'), click: function() { step(1); } }, '+');
 		slider.addEventListener('input', function() { paint(); showBubble(); });
 		slider.addEventListener('change', function() { showBubble(); hideBubbleSoon(); apply(); });
 		slider.addEventListener('pointerdown', function() {

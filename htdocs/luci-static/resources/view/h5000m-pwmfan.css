@@ -80,7 +80,13 @@
 .pf-fixed-value { display: flex; align-items: baseline; justify-content: space-between; color: var(--pf-muted); }
 .pf-fixed-value strong { color: var(--pf-text); font-size: 13px; font-variant-numeric: tabular-nums; }
 .pf-fixed-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) 34px; align-items: center; gap: 8px; }
-.pf-step { width: 34px; height: 34px; padding: 0; font-size: 17px; line-height: 1; border-radius: 8px; color: var(--pf-muted); touch-action: manipulation; }
+.pf-step { position: relative; width: 34px; height: 34px; padding: 0; font-size: 17px; line-height: 1; border-radius: 8px;
+	color: var(--pf-muted); overflow: hidden; text-indent: -9999px; touch-action: manipulation; }
+/* Draw the glyph as bars: font ink sits above the optical centre for both U+2212 and +. */
+.pf-step::before { content: ''; position: absolute; left: 50%; top: 50%; width: 13px; height: 1.7px;
+	border-radius: 2px; background: currentColor; transform: translate(-50%, -50%); }
+.pf-step-plus::after { content: ''; position: absolute; left: 50%; top: 50%; width: 1.7px; height: 13px;
+	border-radius: 2px; background: currentColor; transform: translate(-50%, -50%); }
 .pf-step:hover { color: var(--pf-text); border-color: var(--pf-muted); background: var(--pf-subtle); }
 .pf-step:active { color: var(--pf-text); background: var(--pf-subtle); transform: translateY(1px); }
 .pf-track { position: relative; display: flex; align-items: center; height: 32px; }

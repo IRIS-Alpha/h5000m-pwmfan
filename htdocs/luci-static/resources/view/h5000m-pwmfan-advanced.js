@@ -45,16 +45,23 @@ return view.extend({
 			'.pwmfan-advanced{font-family:var(--v-font,var(--font,system-ui,-apple-system,"Segoe UI",Roboto,Inter,"Helvetica Neue",Arial,sans-serif))}',
 			'.pwmfan-advanced .cbi-value-field{min-width:0;max-width:460px}',
 			'.pwmfan-advanced .cbi-value-field select,.pwmfan-advanced .cbi-dropdown{width:100%;max-width:100%;box-sizing:border-box}',
-			'.pwmfan-advanced .cbi-value-description{max-width:70ch}',
+			'.pwmfan-advanced .cbi-value-description{display:block;max-width:70ch}',
 			'.pwmfan-advanced .cbi-map > h2{font-size:21px;margin:0 0 4px}',
 			'.pwmfan-advanced .cbi-map-descr{margin:0 0 14px;font-size:13px}',
 			'.pwmfan-advanced .cbi-value{scroll-margin-bottom:24px}',
 			/* Dock the LuCI command bar: while it floats it covers the field row beneath it. */
 			'.cbi-page-actions{position:static;bottom:auto;margin:18px 0 0 auto}',
-			'.pwmfan-group-heading{margin:18px 0 10px}',
-			'.pwmfan-group-heading h3{font-size:15px;font-weight:650;margin:0}',
-			'.pwmfan-group-heading p{font-size:12px;color:' + muted + ';margin:5px 0 0}',
-			'.pwmfan-advanced .cbi-value:first-child .pwmfan-group-heading{margin-top:0}'
+			/* Each behavior group becomes its own card so the six blocks read as sections. */
+			'.pwmfan-advanced .cbi-map > .cbi-section{padding:0;background:none;border:0;box-shadow:none}',
+			'.pwmfan-advanced .cbi-section-node{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:start;padding:0}',
+			'.pwmfan-advanced .pf-group{background:var(--v-surface,var(--s1,light-dark(#ffffff,#1c2129)));border-radius:8px;padding:12px 14px 14px}',
+			'@media (min-width: 992px){.pwmfan-advanced .cbi-section-node{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}}',
+			/* Flag rows put the checkbox in a 16px gutter; the description must sit under the label, not under the box. */
+			'.pwmfan-advanced .cbi-value:has(> .cbi-value-field > .cbi-checkbox) > .cbi-value-field > .cbi-value-description{grid-column:2 / -1}',
+			'.pwmfan-advanced .cbi-value{padding:8px 0;row-gap:8px}',
+			'.pwmfan-group-heading{margin:0 0 10px}',
+			'.pwmfan-group-heading h3{font-size:15.5px;font-weight:650;margin:0}',
+			'.pwmfan-group-heading p{font-size:12px;color:' + muted + ';margin:5px 0 0}'
 		].join(''));
 	},
 
@@ -121,9 +128,26 @@ return view.extend({
 		return this.map.reset();
 	},
 
+	groupCards: function(formNode) {
+		var host = formNode.querySelector('.cbi-section-node');
+		if (!host) return;
+		var rows = [];
+		var node = host.firstElementChild;
+		while (node) { if (node.classList.contains('cbi-value')) rows.push(node); node = node.nextElementSibling; }
+		var current = null;
+		rows.forEach(function(row) {
+			if (row.querySelector('.pwmfan-group-heading')) {
+				current = E('section', { 'class': 'pf-group' });
+				host.insertBefore(current, row);
+			}
+			if (current) current.appendChild(row);
+		});
+	},
+
 	render: function() {
 		this.map = this.form();
 		return this.map.render().then(L.bind(function(formNode) {
+			this.groupCards(formNode);
 			return E('div', { 'class': 'pwmfan-advanced' }, [this.style(), formNode]);
 		}, this));
 	}

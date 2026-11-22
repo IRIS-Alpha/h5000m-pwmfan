@@ -235,6 +235,8 @@
 
 ## Brief log
 
+- 2026-11-22: 高级设置排版审查后重做（A+B）。六个参数组由 `groupCards()` 在渲染后按 `.pwmfan-group-heading` 切分并包进 `section.pf-group`，`.cbi-section-node` 改为网格（窄屏单列 12px 间距，≥992px 两列 16px 间距），`.cbi-section` 去掉主题卡片底色；页面高度 1360px 视口下由 1210px 降到 844px。复选框行的说明改为 `grid-column: 2 / -1`，与标签同列（此前说明左缘 27px、标签 55px）。行内边距 6→8px，标签到控件 6→8px。仪表盘加减按钮改用 CSS 条状符号（`text-indent` 隐藏字形，`::before` 横条 + `.pf-step-plus::after` 竖条），因为 `−` 与 `+` 的墨迹都不在按钮视觉中心。`STRICT=1 sh tools/check.sh` 36/36。
+
 - 2026-11-22: 图表温度单位改为 `°C`（纵轴与横轴刻度都补全单位，量宽按 `100°C` 重新计算，320px 下自动稀疏为 0/40/100°C 三点）；全局字体改为 Vantage 字体栈 `--v-font → --font → 系统栈`，canvas 文本同步换用该栈（原为等宽），并保留 `tabular-nums` 对齐数字。
 
 - 2026-11-22: 光晕改为 9px 内 9px 外，并给出平滑过渡：`box-shadow` 用三层（2px / 5px / 9px）同色不同 alpha 叠成连续衰减，最内层 alpha 与边框一致（暗 0.30 / 亮 0.85），边框本身也参与动画（58% → 95%），因此边框到光晕没有台阶。实测越界量：右 −2px、上 −2px、下 −6px（负值即在卡片边框内），651px 宽时 −6px。
