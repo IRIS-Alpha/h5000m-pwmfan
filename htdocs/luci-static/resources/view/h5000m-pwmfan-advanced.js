@@ -106,8 +106,8 @@ return view.extend({
 			'.pwmfan-advanced .pf-adv-head .pf-switch svg path.pf-fill{fill:currentColor;stroke:none}',
 			'.pwmfan-advanced .pf-lang-glyph{font-size:11px;font-weight:650;letter-spacing:-.01em;line-height:1;white-space:nowrap}',
 			'.pwmfan-advanced .cbi-value-field{min-width:0;max-width:460px}',
-			'.pwmfan-advanced .cbi-value-field input.cbi-input-text,.pwmfan-advanced .cbi-value-field select,.pwmfan-advanced .cbi-value-field .cbi-dropdown{height:36px;min-height:36px;font-size:13px;padding-top:5px;padding-bottom:5px;box-sizing:border-box}',
-			'.pwmfan-advanced .cbi-value-field select,.pwmfan-advanced .cbi-dropdown{width:100%;max-width:100%;box-sizing:border-box}',
+			'.pwmfan-advanced .cbi-value-field input.cbi-input-text,.pwmfan-advanced .cbi-value-field select{height:36px;min-height:36px;font-size:13px;padding-top:5px;padding-bottom:5px;box-sizing:border-box}',
+			'.pwmfan-advanced .cbi-value-field select{width:100%;max-width:100%;box-sizing:border-box}',
 			'.pwmfan-advanced .cbi-value-description{display:block;max-width:78ch;font-size:12px;line-height:18px;margin:6px 0 0;color:' + muted + ';-webkit-line-clamp:unset;line-clamp:unset;max-height:none;overflow:visible}',
 			'.pwmfan-advanced .cbi-value-description[data-v-end]{clip-path:none !important}',
 			'.pwmfan-advanced .cbi-value > .vt-help{display:none}',
@@ -127,11 +127,6 @@ return view.extend({
 			'@media (max-width: 991px){.pwmfan-advanced .pf-group > .cbi-value{grid-template-columns:minmax(0,1fr);row-gap:8px}'
 				+ '.pwmfan-advanced .pf-group > .cbi-value > .cbi-value-field{grid-column:1}}',
 			'@media (min-width: 992px){.pwmfan-advanced .pf-group > .cbi-value{grid-template-columns:minmax(0,0.46fr) minmax(0,1fr)}}',
-			/* The theme enlarges the dropdown list on narrow screens; keep it at body size. */
-			'.pwmfan-advanced .cbi-dropdown{font-size:13px}'
-				+ '.pwmfan-advanced .cbi-dropdown > ul{font-size:13px}',
-			'.pwmfan-advanced .cbi-dropdown > ul > li{display:flex;align-items:center;height:32px;min-height:32px;box-sizing:border-box;font-size:13px;line-height:18px;padding:0 10px;margin:0}'
-				+ '.pwmfan-advanced .cbi-dropdown > ul > li[placeholder],.pwmfan-advanced .cbi-dropdown > ul > li[unselectable]{display:none!important}',
 			'.pwmfan-advanced{--sw-on:var(--accent,#8db20f);--sw-off:color-mix(in srgb,var(--text-2,#4a515a) 24%,var(--s3,#eef0f3));--sw-thumb:var(--s2,#ffffff)}',
 			/* Flag rows put the checkbox in a 16px gutter; the description must sit under the label, not under the box. */
 			'.pwmfan-advanced .cbi-value:has(> .cbi-value-field > .cbi-checkbox) > .cbi-value-field > .cbi-value-description{grid-column:2 / -1}',
@@ -234,7 +229,7 @@ return view.extend({
 			_('How often the controller samples and which sensor feeds the fan curve.'));
 		var interval = section.option(form.Value, 'poll_interval', _('Control interval (seconds)'));
 		interval.datatype = 'range(1,30)'; interval.default = '2'; interval.rmempty = false;
-		var source = section.option(form.Value, 'sensor_sources', _('Curve sensor source'));
+		var source = section.option(form.ListValue, 'sensor_sources', _('Curve sensor source'));
 		source.description = _('A reading counts as valid when the sensor file is readable and the value is within −40…150 °C; sensors without a valid reading are skipped. The fan curve above — the temperature-to-output curve, not the history chart — follows this sensor, or the highest valid one when “All sensors” is selected. Sensors outside the choice still count toward the safety maximum.');
 		source.width = '100%';
 		source.value('auto', _('All sensors (highest valid reading)'));
@@ -254,14 +249,16 @@ return view.extend({
 	},
 
 	refreshSensorOptions: function() {
-		/* Rewriting the open list would fight the user's tap, so only refresh it while closed. */
-		var open = document.querySelector('.pwmfan-advanced .cbi-dropdown.open');
-		if (open) return Promise.resolve();
+		/* A native select keeps its own selection state, so refreshing a label can never
+		   steal a tap. Skip it while the list is open or focused. */
+		var row = document.querySelector('.pwmfan-advanced .cbi-value[data-name="sensor_sources"]');
+		var select = row ? row.querySelector('select') : null;
+		if (!select || document.activeElement === select) return Promise.resolve();
 		return this.fetchSensors().then(L.bind(function() {
-			var nodes = document.querySelectorAll('.pwmfan-advanced .cbi-dropdown > ul > li[data-value]');
 			(this.sensors || []).forEach(function(sensor) {
 				var text = sensor.title + (sensor.celsius !== null ? ' · ' + sensor.celsius + ' °C' : ' · ' + _('no reading'));
-				nodes.forEach(function(li) { if (li.dataset.value === sensor.label && li.textContent !== text) li.textContent = text; });
+				var option = Array.prototype.find.call(select.options, function(node) { return node.value === sensor.label; });
+				if (option && option.textContent !== text) option.textContent = text;
 			});
 		}, this)).catch(function() {});
 	},

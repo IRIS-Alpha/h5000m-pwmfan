@@ -36,6 +36,8 @@ LAST_TEMP=
 LAST_CHANGE=0
 LAST_SAMPLE=
 LAST_MODE=
+LAST_POLICY=
+POLICY_FRESH=0
 PWM_WRITES=0
 PI_INTEGRAL=0
 PROTECTION_LOCKED=0
@@ -467,6 +469,11 @@ apply_cycle() {
 	fi
 	if [ "$LAST_MODE" != "$MODE" ]; then PI_INTEGRAL=0; fi
 	LAST_MODE=$MODE
+	# A changed policy is the user asking for a different output right now; the
+	# temperature-driven holds below must not keep the previous level alive.
+	policy="$MODE|$DRIVE|${CURVE:-}|${FIXED_DUTY:-}|${TARGET_TEMP:-}|${TARGET_IDLE:-}|$MIN_PWM|$MAX_PWM"
+	if [ "$policy" != "$LAST_POLICY" ]; then POLICY_FRESH=1; else POLICY_FRESH=0; fi
+	LAST_POLICY=$policy
 	if ! calculate_request; then
 		failsafe invalid_control
 		return
@@ -484,7 +491,7 @@ apply_cycle() {
 		reason=modem_throttle_floor
 	fi
 	if [ "$desired" -gt 0 ] && [ "$active" = 0 ] && [ -n "$LAST_PWM" ] && [ "$desired" -lt "$LAST_PWM" ] &&
-		[ "$MODE" != manual ] && hold_down_allowed; then
+		[ "$POLICY_FRESH" = 0 ] && [ "$MODE" != manual ] && hold_down_allowed; then
 		if [ -n "$LAST_TEMP" ] && [ "$CONTROL_TEMP_C" -gt $((LAST_TEMP - HYSTERESIS)) ]; then
 			desired=$LAST_PWM
 			reason=hysteresis_hold

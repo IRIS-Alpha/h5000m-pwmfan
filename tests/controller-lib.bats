@@ -432,7 +432,7 @@ config_get() {
 	case "$3" in
 	enabled | kernel_takeover) setting=1 ;;
 	mode) setting=$TEST_MODE ;;
-	drive) setting=duty ;;
+	drive) setting=${TEST_DRIVE:-duty} ;;
 	fixed_duty) setting=$TEST_DUTY ;;
 	kick_ms) setting=0 ;;
 	hysteresis) setting=${TEST_HYST:-0} ;;
@@ -516,6 +516,16 @@ TEST_DUTY=40
 apply_cycle
 [ "$(cat "$fixture/pwm")" = 102 ]
 grep -Fxq 'requested_pwm=102' "$STATUS_FILE"
+# A preset change is a deliberate request: the old, higher output must not be held.
+TEST_MODE=performance TEST_DRIVE=curve TEST_TEMP=61000 TEST_HYST=3 TEST_DOWN_DELAY=600
+apply_cycle
+slow=$(cat "$fixture/pwm")
+[ "$slow" -gt 102 ]
+TEST_MODE=quiet
+apply_cycle
+fast=$(cat "$fixture/pwm")
+[ "$fast" -lt "$slow" ]
+grep -Fxq 'reason=mode' "$STATUS_FILE"
 EOF_CYCLE
 	run sh "$fixture/check-cycle" "$fixture"
 	[ "$status" -eq 0 ]

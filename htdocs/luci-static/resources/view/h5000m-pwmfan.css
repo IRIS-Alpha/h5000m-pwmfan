@@ -226,7 +226,7 @@ html[data-darkmode=true] .pf-warn-stop { --pf-glow: 255, 138, 155; }
 .pf-field input { width: 100%; box-sizing: border-box; }
 .pf-chart { margin-top: 6px; }
 .pf-legend { display: grid; grid-template-columns: repeat(2, minmax(10.2em, 1fr)); gap: 0.6em 3em; justify-content: end;
-	width: max-content; max-width: 100%; margin-bottom: 8px; color: var(--pf-muted); font-size: 11px; }
+	width: max-content; max-width: 100%; margin-left: auto; margin-bottom: 8px; color: var(--pf-muted); font-size: 11px; }
 @media (min-width: 860px) { .pf-legend { grid-template-columns: repeat(2, minmax(12.5em, 1fr)); gap: 0.6em 4em; } }
 /* Long English labels cannot share two columns on a phone; stack them instead. */
 @media (max-width: 560px) { :root:lang(en) .pf-legend { grid-template-columns: minmax(0, 1fr); gap: 0.6em; justify-content: stretch; width: auto; } }
