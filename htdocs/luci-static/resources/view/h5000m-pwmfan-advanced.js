@@ -133,6 +133,7 @@ return view.extend({
 			'.pwmfan-advanced .pf-unit-host > input{flex:1 1 auto;min-width:0;max-width:none;text-align:right;padding-right:10px}',
 			'.pwmfan-advanced .pf-unit-host > select,.pwmfan-advanced .pf-unit-host > .cbi-dropdown{flex:1 1 0;min-width:0;width:auto;max-width:100%}',
 			'.pwmfan-advanced .pf-unit{flex:0 0 30px;width:30px;text-align:left;font-size:12px;line-height:1;color:' + muted + ';background:transparent;font-variant-numeric:tabular-nums}',
+			'.pwmfan-advanced .cbi-value > .pf-wide-note{grid-column:1 / -1;margin:8px 0 0;max-width:78ch;line-height:1.55}',
 			'.pwmfan-advanced .cbi-value.pf-note-row{padding:8px 0;row-gap:4px}',
 			'.pwmfan-advanced .cbi-value.pf-note-row > .cbi-value-field{min-height:0;padding:0;line-height:1.5}',
 			'.pwmfan-advanced .cbi-value.pf-note-row > .cbi-value-title{font-weight:500;color:' + muted + '}',
@@ -224,6 +225,14 @@ return view.extend({
 	decorateNotes: function(formNode) {
 		Array.prototype.forEach.call(formNode.querySelectorAll('.cbi-value[data-name="_failsafe"]'), function(row) {
 			row.classList.add('pf-note-row');
+		});
+		/* Long explanations read as a caption under the row, not squeezed into the field column. */
+		Array.prototype.forEach.call(formNode.querySelectorAll('.cbi-value[data-name="sensor_sources"]'), function(row) {
+			var field = row.querySelector('.cbi-value-field');
+			var note = field ? field.querySelector('.cbi-value-description') : null;
+			if (!note) return;
+			note.classList.add('pf-wide-note');
+			row.appendChild(note);
 		});
 	},
 
