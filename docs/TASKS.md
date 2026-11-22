@@ -198,6 +198,7 @@
 - 2026-11-22: Relocated the warning chips to the “模式选择” header row and the slogan to its own line, and added the explicit-commit model for target parameters and curve points; verified 320/360/390/500/651px with no horizontal overflow, states `已选` → `待应用` → `已选`.
 - 2026-11-22: Widened the gap between the warning chips and the slogan divider to 14px (the `.pf-page :is(h2, h3, p)` reset had nulled the note margin) and made the slider bubble reliable on touch: `pointerdown` focuses the slider and an `is-live` class keeps the bubble visible for 900ms after release.
 - 2026-11-22: Restyled the fixed-request slider: a 4px pill track whose fill is computed from the thumb centre, an 18px thumb that lifts with a soft halo while dragging, and a floating chip readout with rolling digits whose width grows a column at a time; the theme focus glow is suppressed in favour of a thumb ring, and the bubble lingers 700ms after release.
+- 2026-11-22: The local preview shell now renders the view alone; the simulated-data tag and its theme select are gone, and the page's own switcher (persisted under `pwmfan-theme`) drives light/dark.
 
 - 2026-11-22: Block B backend half landed: `fixed_duty` 0–100 in 1% steps, `off` mapped to a zero fixed request as a legacy alias, dead `off:*` branch removed, fixture updated; 33/33 checks pass.
 

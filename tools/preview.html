@@ -7,10 +7,7 @@
 <link rel="stylesheet" href="/luci-static/vantage/vantage.css">
 <style>
 body { min-height: 100vh; background: var(--v-surface-2); color: var(--v-text); }
-.preview { width: min(100% - 24px, 1140px); margin: 0 auto 24px; }
-.preview nav { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px 0; margin-bottom:8px; border-bottom:1px solid var(--v-line); }
-.preview nav strong { font-size:12px; color:var(--v-text-2); }
-.preview nav select { width:auto; }
+.preview { width: min(100% - 24px, 1140px); margin: 16px auto 24px; }
 #view { min-width:0; }
 </style>
 <script src="/luci-static/resources/cbi.js"></script>
@@ -19,30 +16,18 @@ body { min-height: 100vh; background: var(--v-surface-2); color: var(--v-text); 
 </head>
 <body>
 <main id="maincontent" class="preview">
-<nav><strong>Vantage · H5000M V3 · <span id="demo-label"></span></strong>
-<select id="theme" aria-label="Preview theme"></select></nav>
 <div id="view"></div>
 </main>
 <script>
 window.PWMFAN_PREVIEW = true;
-const media = matchMedia('(prefers-color-scheme: dark)');
-const theme = document.getElementById('theme');
-for (const [value, label] of [['auto', 'Automatic'], ['light', 'Light'], ['dark', 'Dark']]) {
-	const option = document.createElement('option');
-	option.value = value;
-	option.textContent = _(label);
-	theme.append(option);
-}
-document.getElementById('demo-label').textContent = _('Simulated data');
+/* Match the stored appearance before the view loads so the page does not flash light. */
+try {
+	var storedMode = localStorage.getItem('pwmfan-theme') || 'auto';
+	var storedDark = storedMode === 'dark' || (storedMode === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+	document.documentElement.dataset.darkmode = String(storedDark);
+	document.documentElement.style.colorScheme = storedDark ? 'dark' : 'light';
+} catch (error) { /* Storage is optional. */ }
 document.documentElement.lang = _('Temperature array') === 'Temperature array' ? 'en' : 'zh-CN';
-theme.value = localStorage.getItem('pwmfan-preview-theme') || 'auto';
-function applyTheme() {
-	document.documentElement.dataset.darkmode = String(theme.value === 'dark' || (theme.value === 'auto' && media.matches));
-	window.dispatchEvent(new Event('resize'));
-}
-theme.addEventListener('change', () => { localStorage.setItem('pwmfan-preview-theme', theme.value); applyTheme(); });
-media.addEventListener('change', applyTheme);
-applyTheme();
 window.cbi_init ||= () => {};
 window.L = new LuCI({
 	base_url: '/luci-static/resources', scriptname: '/cgi-bin/luci', resource: '/luci-static/resources',
