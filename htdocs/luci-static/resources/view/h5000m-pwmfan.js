@@ -125,6 +125,7 @@ return view.extend({
 			this.saving = false;
 			this.lockButtons(false);
 			this.pendingCurve = null;
+			this.curveTargetDirty = false;
 			this.refreshPolicy();
 			this.drainQueued();
 			return this.fetchStatus().then(L.bind(this.update, this));
@@ -316,7 +317,7 @@ return view.extend({
 		if (!fixed && curveMode === 'target') curveChildren.push(E('details', { 'class': 'pf-parameters' }, [ E('summary', {}, _('Target drive parameters')), this.targetFields() ]));
 		if (!fixed && curveMode === 'manual') curveChildren.push(E('details', { 'class': 'pf-parameters' }, [ E('summary', {}, _('Curve parameters')), this.editor ]));
 		this.policy.replaceChildren(
-			E('section', { 'class': 'pf-method', 'data-selected': String(fixed) }, [ fixedTitle, this.fixedControls(), this.warningRow() ]),
+			E('section', { 'class': 'pf-method', 'data-selected': String(fixed) }, [ fixedTitle, this.fixedControls() ]),
 			E('section', { 'class': 'pf-method', 'data-selected': String(!fixed) }, curveChildren));
 		this.renderEditor();
 		this.drawCharts();
@@ -335,9 +336,12 @@ return view.extend({
 	setMethodState: function(state, kind, selected) {
 		if (!state) return;
 		var pending = this.pending && this.pending.kind === kind ? this.pending : null;
+		var draft = kind === 'curve' && selected && (this.curveTargetDirty || !!this.pendingCurve);
 		state.dataset.pending = pending ? 'true' : 'false';
+		state.dataset.draft = draft ? 'true' : 'false';
 		state.textContent = pending
 			? _('Applying in %s s').format(Math.max(1, Math.ceil((pending.until - Date.now()) / 1000)))
+			: draft ? _('Pending')
 			: selected ? _('Selected') : _('Not selected');
 	},
 
@@ -375,8 +379,8 @@ return view.extend({
 	warningRow: function() {
 		this.warnCurve = E('span', { 'class': 'pf-warn pf-warn-low', hidden: true }, _('Curve too low in the hot zone'));
 		this.warnStop = E('span', { 'class': 'pf-warn pf-warn-stop', hidden: true }, _('Fan stopped'));
+		this.warnRow = E('div', { 'class': 'pf-warnings', hidden: true, 'aria-live': 'polite' }, [ this.warnCurve, this.warnStop ]);
 		this.warnNote = E('p', { 'class': 'pf-warn-note', hidden: true }, _('High temperatures may shorten fan life'));
-		this.warnRow = E('div', { 'class': 'pf-warnings', hidden: true, 'aria-live': 'polite' }, [ E('div', { 'class': 'pf-warn-chips' }, [ this.warnCurve, this.warnStop ]), this.warnNote ]);
 		return this.warnRow;
 	},
 
@@ -423,11 +427,22 @@ return view.extend({
 		} }, [ makeInput(_('Target temperature (°C)'), 'target_temp', target, 80, 100),
 			makeInput(_('Response interval (°C)'), 'response_range', response, 15, 100),
 			makeInput(_('Transition width (°C)'), 'transition_width', width, 2, 10),
-			E('button', { type: 'submit', 'class': 'btn' }, _('Apply target')), message ]);
+			E('div', { 'class': 'pf-target-actions' }, [
+				E('button', { type: 'submit', 'class': 'btn' }, _('Apply target')),
+				E('button', { type: 'button', 'class': 'btn', click: function() {
+					form.elements.target_temp.value = target;
+					form.elements.response_range.value = response;
+					form.elements.transition_width.value = width;
+					annotate();
+				} }, _('Undo')) ]), message ]);
 		var annotate = function() {
 			var onset = Number(form.elements.target_temp.value) - Number(form.elements.response_range.value);
 			var effective = Math.max(0, Math.min(onset, Number(form.elements.transition_width.value)));
 			message.textContent = _('Response starts at %s °C · Effective transition %s °C').format(onset, effective);
+			self.curveTargetDirty = Number(form.elements.target_temp.value) !== target
+				|| Number(form.elements.response_range.value) !== response
+				|| Number(form.elements.transition_width.value) !== width;
+			self.paintPending();
 		};
 		form.addEventListener('input', annotate);
 		annotate();
@@ -504,6 +519,7 @@ return view.extend({
 	setCurve: function(points) {
 		if (this.controlMode() !== 'manual' || !validCurve(points, Number(setting('min_pwm', 51)), Number(setting('max_pwm', 255)))) return false;
 		this.pendingCurve = points;
+		this.paintPending();
 		this.drawCharts();
 		return true;
 	},
@@ -776,6 +792,7 @@ return view.extend({
 		this.modeButtons = this.presetButtons.concat(this.driveButtons);
 		this.policy = E('div', { 'class': 'pf-policy' });
 		this.editor = E('div', { 'class': 'pf-editor' });
+		this.warningRow();
 		this.saveCurve = E('button', { type: 'button', 'class': 'btn', click: function() {
 			self.commit({ curve_manual: self.pendingCurve.map(function(point) { return point.t + ':' + point.pwm; }).join(',') });
 		} }, _('Apply curve'));
@@ -808,8 +825,8 @@ return view.extend({
 			E('div', { 'class': 'pf-heading' }, [ E('h2', {}, _('Fan control')), this.badge,
 				E('span', { 'class': 'pf-heading-gap' }), this.themeSwitcher(), this.languageSwitcher() ]),
 			E('div', { 'class': 'pf-boards' }, [ this.makeBoard(_('Temperature array'), this.tempMetrics), this.makeBoard(_('Fan output'), this.outputMetrics) ]),
-			E('section', { 'class': 'pf-card' }, [ E('div', { 'class': 'pf-dispatch-head' }, [ E('h3', {}, _('Mode selection')) ]),
-				this.policy ]),
+			E('section', { 'class': 'pf-card' }, [ E('div', { 'class': 'pf-dispatch-head' }, [ E('h3', {}, _('Mode selection')), this.warnRow ]),
+				this.warnNote, this.policy ]),
 			E('details', { 'class': 'pf-card pf-curve-chart' }, [ E('summary', {}, _('Fan curve')),
 				this.curveChart.element ]), temps
 		]);

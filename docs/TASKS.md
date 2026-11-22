@@ -135,7 +135,8 @@
 - [x] Confirm zero-duty semantics, control-source placement, statistics removal, and defer the language control (2026-11-22).
 - [x] Implement Block B control semantics: 1% fixed-request step without a stop button, control source in the badge, statistics line removed.
 - [x] Implement the confirmed top-area, mode-selection, fixed-request, and warning redesign from the expanded V4 proposal set.
-- [ ] Finish the remaining proposal items: the advanced-settings “mode minimum apply interval” control, a dashboard LuCI action bar, and the curve-panel refinements.
+- [x] Settle the two open proposal items: no advanced-settings “mode minimum apply interval” control (the merge window stays a dashboard constant) and no dashboard LuCI action bar (the dashboard commits directly, curve parameters commit explicitly) (2026-11-22).
+- [ ] Curve-panel refinements: keep the six-point editor aligned and readable at 320px.
 - [ ] Hardware validation and rollback procedure.
 
 ## Deferred until the plugin is stable
@@ -184,8 +185,9 @@
   - [x] `htdocs/luci-static/resources/view/h5000m-pwmfan.js`: single header row “风扇控制” + badge + single-block theme and language switchers; “快速调度” renamed to “模式选择”; the theme switcher owns `data-darkmode`/`color-scheme` and mirrors `vantage_theme.appearance` only when that config exists. Done 2026-11-22.
   - [x] `htdocs/luci-static/resources/view/h5000m-pwmfan.css`: three-row fixed request, stepper, slider track and bubble, warning chips with the divider and smaller slogan, switch buttons, hover/focus states, and a reduced-motion guard. Done 2026-11-22.
   - [x] Translations (`po/zh_Hans`) and `menu.d` titles renamed to 风扇控制 / 高级设置. Done 2026-11-22.
+  - [x] `htdocs/luci-static/resources/view/h5000m-pwmfan.js`/`.css`: warning chips moved into the “模式选择” header row, the slogan on its own divider-separated line, target parameters and curve points switched to explicit commit with a `待应用` state slot and an `撤销` action. Done 2026-11-22.
 - Verification: `STRICT=1 sh tools/check.sh` 33/33; local preview at 320/390/500/651/1360px in light and dark with no horizontal overflow; merged states observed as `应用中 3 秒` → `应用中 2 秒` → `已选`; the 0% request committed without waiting; a click made during a save was queued and applied afterwards.
-- Status: dashboard work complete. The advanced-settings minimum-interval control, the dashboard LuCI action bar, and the curve-panel refinements stay open.
+- Status: dashboard work complete, including the warning relocation and the explicit-commit model for target parameters and curve points; the curve-panel refinement remains open.
 - Acceptance: 0% is reachable without the stop button and reports 0 requested PWM on the fixture; non-zero values still respect the minimum; one badge shows state and source; no statistics line; the language control is unchanged.
 - Status: started 2026-11-22; the apply model is settled, so the remaining work is implementation.
 
@@ -193,6 +195,7 @@
 - [ ] 固定请求滑块与模式切换共用 3 秒尾随合并器：拖动只更新读数、松手才提交、0% 绕过合并立即提交、标题行显示“应用中-Ns”；不做后端步进限幅（已定案，见 `REQUIREMENTS_V3.md` §16）。
 
 - 2026-11-22: Read-only probe of the V4 proposals (header row, breadcrumb naming, theme switcher source, warning row, fold parameters); findings and three header options recorded in `docs/UIUX_RECHECK_2026-11-22.md` §八.
+- 2026-11-22: Relocated the warning chips to the “模式选择” header row and the slogan to its own line, and added the explicit-commit model for target parameters and curve points; verified 320/360/390/500/651px with no horizontal overflow, states `已选` → `待应用` → `已选`.
 
 - 2026-11-22: Block B backend half landed: `fixed_duty` 0–100 in 1% steps, `off` mapped to a zero fixed request as a legacy alias, dead `off:*` branch removed, fixture updated; 33/33 checks pass.
 

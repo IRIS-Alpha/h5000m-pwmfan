@@ -653,6 +653,12 @@ msgstr "降低占空比"
 msgid "Increase duty"
 msgstr "提高占空比"
 
+msgid "Pending"
+msgstr "待应用"
+
+msgid "Undo"
+msgstr "撤销"
+
 msgid "Applying in %s s"
 msgstr "应用中 %s 秒"
 
