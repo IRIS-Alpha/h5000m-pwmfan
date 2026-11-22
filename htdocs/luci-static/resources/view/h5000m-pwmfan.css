@@ -140,7 +140,6 @@
 .pf-status { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border: 1px solid color-mix(in srgb, var(--pf-amber) 52%, transparent);
 	border-radius: 7px; background: color-mix(in srgb, var(--pf-amber) 14%, var(--pf-surface)); color: var(--pf-amber);
 	font-size: 11.5px; font-weight: 650; white-space: nowrap; }
-.pf-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .8; }
 .pf-legend span.is-off { opacity: .42; }
 .pf-warnings { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin: 0 0 0 auto; }
 .pf-warn { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border: 1px solid; border-radius: 7px;

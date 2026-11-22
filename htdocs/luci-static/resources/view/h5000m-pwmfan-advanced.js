@@ -4,6 +4,7 @@
 'require uci';
 'require ui';
 'require fs';
+'require view.h5000m-pwmfan-shared as shared';
 
 var CONFIG = 'h5000m_pwmfan';
 var SECTION = 'main';
@@ -54,6 +55,7 @@ return view.extend({
 				if (counts[sensor.title] > 1) sensor.title += '（' + SENSOR_TAGS(sensor.label) + '）';
 			});
 			this.sensors = sensors;
+			this.status = fields;
 		}, this)).catch(function() { this.sensors = []; });
 	},
 
@@ -88,6 +90,21 @@ return view.extend({
 		var muted = 'var(--v-text-2,var(--text-2,var(--text-color-medium,#737a80)))';
 		return E('style', {}, [
 			'.pwmfan-advanced{font-family:MiSans,"MiSans VF",var(--v-font,var(--font,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans CJK SC","Microsoft YaHei",sans-serif))}',
+			'.pwmfan-advanced{--pf-surface:var(--v-surface,light-dark(#fff,#1c2129));--pf-subtle:var(--v-surface-2,light-dark(#f5f7fa,#222832));--pf-line:var(--v-line,light-dark(#dbe2eb,#364150));--pf-text:var(--v-text,light-dark(#171d27,#ebeff6));--pf-muted:var(--v-text-2,light-dark(#505e70,#b5c1d1));--pf-green:var(--v-ok,#169974);--pf-amber:light-dark(#a95c00,#ffc26d);--pf-red:var(--v-err,light-dark(#b62b42,#ff8a9b))}',
+			'.pwmfan-advanced .pf-adv-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 12px}',
+			'.pwmfan-advanced .pf-heading-gap{flex:1 1 auto}',
+			'.pwmfan-advanced .pf-live{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 10px;color:var(--pf-muted);background:var(--pf-surface);border:1px solid var(--pf-line);border-radius:9px;white-space:nowrap}',
+			'.pwmfan-advanced .pf-live span{min-width:0;text-overflow:ellipsis;overflow:hidden}',
+			'.pwmfan-advanced .pf-live i{width:8px;height:8px;flex:none;border-radius:50%;background:currentColor}',
+			'.pwmfan-advanced .pf-live[data-state=ok] i{color:var(--pf-green)}',
+			'.pwmfan-advanced .pf-live[data-state=warn] i{color:var(--pf-amber)}',
+			'.pwmfan-advanced .pf-live[data-state=fault] i{color:var(--pf-red)}',
+			'.pwmfan-advanced .pf-switch{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;flex:none;border-radius:9px;color:var(--pf-muted)}',
+			'.pwmfan-advanced .pf-switch:hover{color:var(--pf-text);border-color:var(--pf-muted);background:var(--pf-subtle)}',
+			'.pwmfan-advanced .pf-switch-icon,.pwmfan-advanced .pf-switch-icon svg{display:block;width:16px;height:16px}',
+			'.pwmfan-advanced .pf-switch svg path{fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}',
+			'.pwmfan-advanced .pf-switch svg path.pf-fill{fill:currentColor;stroke:none}',
+			'.pwmfan-advanced .pf-lang-glyph{font-size:11px;font-weight:650;letter-spacing:-.01em;line-height:1;white-space:nowrap}',
 			'.pwmfan-advanced .cbi-value-field{min-width:0;max-width:460px}',
 			'.pwmfan-advanced .cbi-value-field select,.pwmfan-advanced .cbi-dropdown{width:100%;max-width:100%;box-sizing:border-box}',
 			'.pwmfan-advanced .cbi-value-description{display:block;max-width:70ch}',
@@ -146,7 +163,7 @@ return view.extend({
 	},
 
 	form: function() {
-		var map = new form.Map(CONFIG, _('Advanced fan settings'), _('Fan policy grouped by behavior'));
+		var map = new form.Map(CONFIG);
 		var section = map.section(form.NamedSection, SECTION, 'settings');
 		section.anonymous = true;
 		this.group(section, 'kernel', _('Kernel protection'), '');
@@ -162,7 +179,8 @@ return view.extend({
 		takeover.readonly = !verified;
 		var floor = this.percentOption(section, 'min_pwm', _('Non-zero request floor (%)'), 20);
 		floor.description = _('Except for an explicit 0% stop request, no request drives the fan below this value. A higher floor keeps an aging or dusty fan turning at low duty.');
-		this.percentOption(section, 'max_pwm', _('Maximum curve output (%)'), 100);
+		var ceiling = this.percentOption(section, 'max_pwm', _('Curve output ceiling (%)'), 100);
+		ceiling.description = _('No request, protection ramp or startup boost drives the fan above this value. Lowering it caps high-speed noise, including the whine a small fan makes near full duty, at the cost of the highest speed protection can still reach; a fault still asks for a full 100%.');
 		this.group(section, 'temperature', _('Temperature protection'), _('Protection ramps up before the threshold, locks at 100%, and releases below the threshold by the configured hysteresis.'));
 		var safety = section.option(form.Value, 'protection_temp', _('Full-speed temperature threshold (°C)'));
 		safety.datatype = 'range(80,100)'; safety.default = '90'; safety.rmempty = false;
@@ -297,6 +315,20 @@ return view.extend({
 		});
 	},
 
+	statusBadge: function() {
+		var state = shared.statusLabel(this.status);
+		this.badgeText = E('span', {}, state.label);
+		this.badge = E('span', { 'class': 'pf-live', role: 'status', 'data-state': state.state,
+			title: state.reason === 'takeover_pending' ? _('Hardware verification is pending.') : state.label },
+			[ E('i', { 'aria-hidden': 'true' }), this.badgeText ]);
+		return this.badge;
+	},
+
+	headerRow: function() {
+		return E('div', { 'class': 'pf-adv-head' }, [ this.statusBadge(),
+			E('span', { 'class': 'pf-heading-gap' }), shared.themeSwitcher(), shared.languageSwitcher() ]);
+	},
+
 	render: function() {
 		this.map = this.form();
 		return this.map.render().then(L.bind(function(formNode) {
@@ -304,9 +336,10 @@ return view.extend({
 			this.decorateFlags(formNode);
 			this.decorateNotes(formNode);
 			this.decorateUnits(formNode);
+			shared.applyTheme(shared.themeMode());
 			return E('div', { 'class': 'pwmfan-advanced' }, [
 				E('link', { rel: 'stylesheet', href: L.resource('view/h5000m-pwmfan-font.css') }),
-				this.style(), formNode]);
+				this.style(), this.headerRow(), formNode]);
 		}, this));
 	}
 });

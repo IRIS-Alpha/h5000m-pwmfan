@@ -5,6 +5,7 @@
 'require rpc';
 'require ui';
 'require uci';
+'require view.h5000m-pwmfan-shared as shared';
 
 var CONFIG = 'h5000m_pwmfan', SECTION = 'main';
 var callRevert = rpc.declare({ object: 'uci', method: 'revert', params: [ 'config' ], reject: true });
@@ -24,10 +25,7 @@ var CURVES = {
 };
 var HISTORY_LIMIT = 360 * 60 * 1000;
 var MERGE_DELAY = 3000;
-var THEME_KEY = 'pwmfan-theme';
 var DETAILS_KEY = 'h5000m-pwmfan-details';
-var THEME_ORDER = [ 'auto', 'light', 'dark' ];
-var LANGUAGE_ORDER = [ 'auto', 'en', 'zh_cn' ];
 var REPORT_KEY = 'pwmfan-report';
 
 function setting(key, fallback) {
@@ -223,33 +221,7 @@ return view.extend({
 		this.setMethodState(this.curveState, 'curve', this.curveSelected);
 	},
 
-	switcher: function(options) {
-		return E('button', { type: 'button', 'class': 'pf-switch ' + (options.className || ''),
-			'aria-label': options.label, title: options.label }, options.content);
-	},
-
-	themeGlyph: function(mode) {
-		var make = function(shapes) {
-			var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-			svg.setAttribute('viewBox', '0 0 24 24');
-			svg.setAttribute('focusable', 'false');
-			shapes.forEach(function(shape) {
-				var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-				path.setAttribute('d', shape[0]);
-				if (shape[1]) path.setAttribute('class', 'pf-fill');
-				svg.appendChild(path);
-			});
-			return svg;
-		};
-		var glyphs = {
-			auto: make([ [ 'M12 4.5a7.5 7.5 0 1 0 0 15 7.5 7.5 0 0 0 0-15' ], [ 'M12 4.5a7.5 7.5 0 0 1 0 15z', true ] ]),
-			light: make([ [ 'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7' ], [ 'M12 2.6v2' ], [ 'M12 19.4v2' ],
-				[ 'M2.6 12h2' ], [ 'M19.4 12h2' ], [ 'M5.4 5.4l1.4 1.4' ], [ 'M17.2 17.2l1.4 1.4' ],
-				[ 'M18.6 5.4l-1.4 1.4' ], [ 'M6.8 17.2l-1.4 1.4' ] ]),
-			dark: make([ [ 'M20 14.6A8.6 8.6 0 0 1 9.4 4a8.6 8.6 0 1 0 10.6 10.6z' ] ])
-		};
-		return glyphs[mode] || glyphs.auto;
-	},
+	switcher: function(options) { return shared.switcher(options); },
 
 	detailState: function(name, fallback) {
 		try {
@@ -267,74 +239,15 @@ return view.extend({
 		} catch (error) { /* Panel state is optional. */ }
 	},
 
-	themeMode: function() {
-		var stored = null;
-		try { stored = localStorage.getItem(THEME_KEY); } catch (error) { /* Storage is optional. */ }
-		if (THEME_ORDER.indexOf(stored) >= 0) return stored;
-		var shared = null;
-		try { shared = uci.get('vantage_theme', 'main', 'appearance'); } catch (error) { shared = null; }
-		return shared === 'light' || shared === 'dark' ? shared : 'auto';
-	},
+	themeMode: function() { return shared.themeMode(); },
 
-	themeLabel: function(mode) {
-		return mode === 'light' ? _('Light theme') : mode === 'dark' ? _('Dark theme') : _('Automatic theme');
-	},
+	applyTheme: function(mode) { shared.applyTheme(mode); },
 
-	applyTheme: function(mode) {
-		var dark = mode === 'dark' || (mode === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-		document.documentElement.setAttribute('data-darkmode', dark ? 'true' : 'false');
-		document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
-	},
+	setTheme: function(mode) { return shared.setTheme(mode); },
 
-	setTheme: function(mode) {
-		try { localStorage.setItem(THEME_KEY, mode); } catch (error) { /* Storage is optional. */ }
-		this.applyTheme(mode);
-		var shared = null;
-		try { shared = uci.get('vantage_theme', 'main', 'appearance'); } catch (error) { shared = null; }
-		if (shared === null) return;
-		try {
-			uci.set('vantage_theme', 'main', 'appearance', mode);
-			uci.commit('vantage_theme');
-		} catch (error) { /* The theme keeps its own preference. */ }
-	},
+	themeSwitcher: function() { return shared.themeSwitcher(); },
 
-	themeSwitcher: function() {
-		var self = this, mode = this.themeMode();
-		var host = E('span', { 'class': 'pf-switch-icon' }, [ this.themeGlyph(mode) ]);
-		var button = this.switcher({ className: 'pf-theme', label: this.themeLabel(mode), content: [ host ] });
-		button.addEventListener('click', function() {
-			var next = THEME_ORDER[(THEME_ORDER.indexOf(self.themeMode()) + 1) % THEME_ORDER.length];
-			self.setTheme(next);
-			host.replaceChildren(self.themeGlyph(next));
-			button.setAttribute('aria-label', self.themeLabel(next));
-			button.title = button.getAttribute('aria-label');
-		});
-		return button;
-	},
-
-	languageMode: function() {
-		var lang = uci.get('luci', 'main', 'lang') || 'auto';
-		if (lang === 'zh_cn' || lang === 'en') return lang;
-		return /^zh/i.test(document.documentElement.lang || '') ? 'zh_cn' : 'en';
-	},
-
-	languageSwitcher: function() {
-		var self = this, mode = this.languageMode();
-		var glyph = E('span', { 'class': 'pf-lang-glyph' }, mode === 'zh_cn' ? 'CN' : 'EN');
-		var button = this.switcher({ className: 'pf-lang', label: mode === 'zh_cn' ? _('Switch to English') : _('Switch to Chinese'), content: [ glyph ] });
-		button.addEventListener('click', function() {
-			var next = self.languageMode() === 'zh_cn' ? 'en' : 'zh_cn';
-			button.disabled = true;
-			fs.exec('/usr/sbin/h5000m-pwmfan-language', [ next ]).then(function(result) {
-				if (result.code) throw new Error(result.stderr || _('Unavailable'));
-				window.location.reload();
-			}).catch(function(error) {
-				button.disabled = false;
-				ui.addNotification(null, E('p', {}, _('Could not change language: %s').format(error.message)), 'danger');
-			});
-		});
-		return button;
-	},
+	languageSwitcher: function() { return shared.languageSwitcher(); },
 
 	reportItems: function() {
 		var temps = SENSORS.map(function(sensor, index) {

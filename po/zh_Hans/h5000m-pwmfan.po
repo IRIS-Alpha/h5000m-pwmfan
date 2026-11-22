@@ -718,8 +718,8 @@ msgid ""
 msgstr ""
 "除 0% 停转请求外，任何请求的输出都不会低于这个值。抬高下限可以让老化、积灰的风扇在低占空比下更容易维持转动。"
 
-msgid "Maximum curve output (%)"
-msgstr "曲线最高输出（%）"
+msgid "Curve output ceiling (%)"
+msgstr "曲线输出上限（%）"
 
 msgid "Startup boost output (%)"
 msgstr "启动助推输出（%）"
@@ -747,3 +747,6 @@ msgstr "控制器每个控制周期读取一次传感器快照，与主页历史
 
 msgid "A reading counts as valid when the sensor file is readable and the value is within −40…150 °C; sensors without a valid reading are skipped. The fan curve above — the temperature-to-output curve, not the history chart — follows this sensor, or the highest valid one when “All sensors” is selected. Sensors outside the choice still count toward the safety maximum."
 msgstr "传感器文件可读且数值在 −40…150 °C 内才算有效，无有效读数的传感器会被跳过。上方风扇曲线（温度到输出的那条曲线，不是历史图表）跟随所选传感器；选“全部传感器”时取其中最高有效值。未选中的传感器仍参与安全最高温仲裁。"
+
+msgid "No request, protection ramp or startup boost drives the fan above this value. Lowering it caps high-speed noise, including the whine a small fan makes near full duty, at the cost of the highest speed protection can still reach; a fault still asks for a full 100%."
+msgstr "任何请求、保护斜坡或启动助推都不会把风扇推到这个值以上。调低它可以压低高转速风噪，包括小风扇在接近满速时的啸叫；代价是保护能给出的最高转速也随之降低，故障时仍然按 100% 处理。"
