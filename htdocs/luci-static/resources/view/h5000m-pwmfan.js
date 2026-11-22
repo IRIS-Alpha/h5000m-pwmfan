@@ -95,7 +95,13 @@ return view.extend({
 
 	loadTemperatureHistory: function() {
 		return fs.exec('/usr/sbin/h5000m-pwmfan-history').then(L.bind(function(result) {
-			if (result.code) return;
+			this.historyBytes = result && result.stdout ? result.stdout.length : 0;
+			if (result.code || !result.stdout) {
+				this.historyFailed = (result && String(result.stderr || '').trim()) || ('rpc code ' + (result && result.code));
+				this.drawChart(this.tempChart);
+				return;
+			}
+			this.historyFailed = '';
 			var last = -Infinity, interval = this.interval * 1000;
 			var rows = (result.stdout || '').split('\n').reduce(function(list, row) {
 				var fields = row.split('|'), stamp = number(fields[0], 1, 9999999999);
@@ -110,7 +116,11 @@ return view.extend({
 			var newer = this.history.filter(function(sample) { return sample.time > last; });
 			if (rows.length) this.history = rows.concat(newer);
 			this.drawChart(this.tempChart);
-		}, this)).catch(function() { /* Live samples remain available. */ });
+		}, this)).catch(L.bind(function(error) {
+			this.historyFailed = String((error && error.message) || error);
+			this.drawChart(this.tempChart);
+			/* Live samples remain available. */
+		}, this));
 	},
 
 	controlMode: function() {
@@ -805,10 +815,13 @@ return view.extend({
 			samples = this.history.filter(function(sample) { return sample.time >= start && sample.time <= end; });
 			canvas.dataset.samples = samples.length;
 			canvas.dataset.latestSample = samples.length ? samples[samples.length - 1].time : '';
+			canvas.dataset.historyRows = this.history.length;
+			canvas.dataset.historyBytes = this.historyBytes == null ? -1 : this.historyBytes;
+			canvas.dataset.historyError = this.historyFailed || '';
 			if (!samples.some(function(sample) { return sample.temps.some(function(value) { return value !== null; }); })) {
 				ctx.textAlign = 'center';
 				ctx.fillStyle = color('--pf-muted');
-				ctx.fillText(_('Waiting for sensor readings…'), width / 2, height / 2);
+				ctx.fillText(this.historyFailed ? _('Temperature history unavailable') : _('Waiting for sensor readings…'), width / 2, height / 2);
 			}
 			SENSORS.forEach(function(series, index) {
 				var segment = [];

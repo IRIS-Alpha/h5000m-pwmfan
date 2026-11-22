@@ -774,3 +774,6 @@ msgstr "温度监控设置"
 
 msgid "How the temperature monitor chart is drawn."
 msgstr "温度监控图表如何绘制。"
+
+msgid "Temperature history unavailable"
+msgstr "温度历史读取失败"

@@ -87,11 +87,14 @@ def make_handler(rootfs, messages):
                 return [0, {'entries': []}]
             if name == 'file' and method == 'exec':
                 if args.get('command') == '/usr/sbin/h5000m-pwmfan-status':
-                    if args.get('params') == ['temperatures']:
-                        now = int(time.time())
-                        rows = ''.join(f'{now + i}|{52400 + (i % 67) * 45}|{38200 + (i % 33) * 37}|{46200 + (i % 33) * 50}|{42300 + (i % 64) * 27}\n' for i in range(-900, 0, 2))
-                        return [0, {'code': 0, 'stdout': rows}]
                     return [0, {'code': 0, 'stdout': demo_status(config[CONFIG]['main']['mode'])}]
+                if args.get('command') == '/usr/sbin/h5000m-pwmfan-history':
+                    now = int(time.time())
+                    window = config[CONFIG]['main'].get('history_range', 15)
+                    window = int(window) if str(window).isdigit() else 15
+                    start = -(min(max(window, 5), 360) * 60)
+                    rows = ''.join(f'{now + i}|{52400 + (i % 67) * 45}|{38200 + (i % 33) * 37}|{46200 + (i % 33) * 50}|{42300 + (i % 64) * 27}\n' for i in range(start, 0, 2))
+                    return [0, {'code': 0, 'stdout': rows}]
                 if args.get('command') == '/usr/sbin/h5000m-pwmfan-language':
                     language, = args['params']
                     if language in ('en', 'zh_cn', 'auto'):
