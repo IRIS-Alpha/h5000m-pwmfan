@@ -679,7 +679,7 @@ return view.extend({
 		if (!history) {
 			for (var i = 0; i < 6; i++) chart.handles.push(E('span', { 'class': 'pf-touch-point', 'aria-hidden': 'true', hidden: '' }));
 		}
-		chart.empty = E('p', { 'class': 'pf-chart-empty', hidden: '' }, _('No data · refresh the page'));
+		chart.empty = E('p', { 'class': 'pf-chart-empty', hidden: '' }, _('Waiting for samples…'));
 		var plot = E('div', { 'class': 'pf-plot' }, [ canvas, tip, chart.empty ].concat(chart.handles));
 		chart.legendValue = {};
 		var legendNode = E('div', { 'class': 'pf-legend' }, legend.map(function(series) {
@@ -928,7 +928,7 @@ return view.extend({
 		this.historyState = E('span', { 'class': 'pf-chart-state' }, _('Waiting for temperature readings'));
 		// Window and interval are controller-side view settings now (advanced → View).
 		var temps = E('details', { 'class': 'pf-card pf-history', 'data-detail': 'history',
-			open: this.detailState('history', true) ? true : null }, [ E('summary', {}, [ _('Temperature monitor'), this.historyState ]),
+			open: this.detailState('history', true) ? true : null }, [ E('summary', {}, [ E('h3', {}, _('Temperature monitor')), this.historyState ]),
 			this.tempChart.element ]);
 		this.root = E('div', { 'class': 'pf-page' }, [
 			E('link', { rel: 'stylesheet', href: L.resource('view/h5000m-pwmfan.css') }),
@@ -938,7 +938,7 @@ return view.extend({
 				E('div', { 'class': 'pf-head-right' }, [ this.warnRow, this.floorChip() ]) ]),
 				this.warnNote, this.policy ]),
 			this.curveCard = E('details', { 'class': 'pf-card pf-curve-chart', 'data-detail': 'curve',
-				open: this.detailState('curve', false) ? true : null }, [ E('summary', {}, _('Fan curve')),
+				open: this.detailState('curve', false) ? true : null }, [ E('summary', {}, E('h3', {}, _('Fan curve'))),
 				this.curveChart.element, this.curveParams ]), temps
 		]);
 		this.applyTheme(this.themeMode());

@@ -704,8 +704,8 @@ msgstr "切换到英文"
 msgid "Switch to Chinese"
 msgstr "切换到中文"
 
-msgid "No data · refresh the page"
-msgstr "无数据 · 请刷新页面"
+msgid "Waiting for samples…"
+msgstr "等待采样…"
 msgid "Non-zero request floor"
 msgstr "非零请求下限"
 

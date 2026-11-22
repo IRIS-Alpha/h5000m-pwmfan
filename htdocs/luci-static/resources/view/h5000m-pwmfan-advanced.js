@@ -80,7 +80,7 @@ return view.extend({
 		option.title = '';
 		option.optional = true;
 		option.renderWidget = function() {
-			return E('div', { 'class': 'pwmfan-group-heading' }, [ E('h3', {}, title), E('p', {}, description) ]);
+			return E('div', { 'class': 'pwmfan-group-heading' }, [ E('h2', {}, title), E('p', {}, description) ]);
 		};
 	},
 
@@ -165,7 +165,7 @@ return view.extend({
 			'.pwmfan-advanced .cbi-value.pf-note-row > .cbi-value-field{color:' + muted + ';font-size:12px;line-height:18px}',
 			'@media (prefers-reduced-motion: reduce){.pwmfan-advanced .pf-toggle .pf-track,.pwmfan-advanced .pf-toggle .pf-thumb{transition:none}}',
 			'.pwmfan-group-heading{margin:0 0 10px}',
-			'.pwmfan-group-heading h3{font-size:15.5px;font-weight:650;margin:0}',
+			'.pwmfan-group-heading h2{font-size:15.5px;font-weight:650;margin:0}',
 			'.pwmfan-group-heading p{font-size:12px;line-height:18px;color:' + muted + ';margin:6px 0 0}'
 		].join(''));
 	},
@@ -250,11 +250,14 @@ return view.extend({
 	},
 
 	refreshSensorOptions: function() {
+		/* Rewriting the open list would fight the user's tap, so only refresh it while closed. */
+		var open = document.querySelector('.pwmfan-advanced .cbi-dropdown.open');
+		if (open) return Promise.resolve();
 		return this.fetchSensors().then(L.bind(function() {
 			var nodes = document.querySelectorAll('.pwmfan-advanced .cbi-dropdown > ul > li[data-value]');
 			(this.sensors || []).forEach(function(sensor) {
 				var text = sensor.title + (sensor.celsius !== null ? ' · ' + sensor.celsius + ' °C' : ' · ' + _('no reading'));
-				nodes.forEach(function(li) { if (li.dataset.value === sensor.label) li.textContent = text; });
+				nodes.forEach(function(li) { if (li.dataset.value === sensor.label && li.textContent !== text) li.textContent = text; });
 			});
 		}, this)).catch(function() {});
 	},
@@ -302,6 +305,10 @@ return view.extend({
 				|| row.querySelector('.cbi-dropdown')
 				|| row.querySelector('select');
 			if (!control) return;
+			if (control.tagName === 'INPUT') {
+				control.setAttribute('inputmode', 'numeric');
+				control.setAttribute('autocomplete', 'off');
+			}
 			var unit = '';
 			if (title) {
 				var m = units.exec(title.textContent || '');
