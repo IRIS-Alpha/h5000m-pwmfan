@@ -29,9 +29,11 @@
 .pf-switch-icon, .pf-switch-icon svg { display: block; width: 16px; height: 16px; }
 .pf-switch svg path { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .pf-switch svg path.pf-fill { fill: currentColor; stroke: none; }
-.pf-lang-glyph { font-size: 11px; font-weight: 650; letter-spacing: -.02em; line-height: 1; white-space: nowrap; }
+.pf-lang-glyph { font-size: 10px; font-weight: 650; letter-spacing: -.01em; line-height: 1; white-space: nowrap; }
 .pf-page :is(select, input:not([type=range]), button) { min-width: 0; color: var(--pf-text); background: var(--pf-surface); border: 1px solid var(--pf-line); border-radius: 7px; }
 .pf-page :is(input:not([type=range]), select, button) { height: 34px; padding: 0 9px; }
+/* The switchers hold an icon or two compact glyphs; the generic 9px padding would let the text touch the border. */
+.pf-page button.pf-switch { padding: 0 2px; }
 .pf-page :is(button, select, summary) { cursor: pointer; }
 .pf-page button:disabled { opacity: .5; cursor: default; }
 .pf-page :is(input, select, button, summary, canvas):focus-visible { outline: 2px solid var(--pf-blue); outline-offset: 2px; }
