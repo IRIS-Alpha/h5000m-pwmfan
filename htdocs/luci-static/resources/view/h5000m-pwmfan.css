@@ -10,8 +10,9 @@
 	--pf-violet: light-dark(#8052bc, #c29bff);
 	--pf-red: var(--v-err, light-dark(#b62b42, #ff8a9b));
 	--pf-mono: var(--v-mono, ui-monospace, monospace);
+	--pf-font: var(--v-font, var(--font, system-ui, -apple-system, "Segoe UI", Roboto, Inter, "Helvetica Neue", Arial, sans-serif));
 	color: var(--pf-text);
-	font: 13px/1.5 var(--v-font, system-ui, sans-serif);
+	font: 13px/1.5 var(--pf-font);
 	display: grid;
 	gap: 12px;
 	min-width: 0;

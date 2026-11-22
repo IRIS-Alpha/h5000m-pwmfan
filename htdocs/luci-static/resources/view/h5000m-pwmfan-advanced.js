@@ -42,6 +42,7 @@ return view.extend({
 		var text = 'var(--v-text,var(--text,var(--text-color-high,#171d27)))';
 		var muted = 'var(--v-text-2,var(--text-2,var(--text-color-medium,#737a80)))';
 		return E('style', {}, [
+			'.pwmfan-advanced{font-family:var(--v-font,var(--font,system-ui,-apple-system,"Segoe UI",Roboto,Inter,"Helvetica Neue",Arial,sans-serif))}',
 			'.pwmfan-advanced .cbi-value-field{min-width:0;max-width:460px}',
 			'.pwmfan-advanced .cbi-value-field select,.pwmfan-advanced .cbi-dropdown{width:100%;max-width:100%;box-sizing:border-box}',
 			'.pwmfan-advanced .cbi-value-description{max-width:70ch}',

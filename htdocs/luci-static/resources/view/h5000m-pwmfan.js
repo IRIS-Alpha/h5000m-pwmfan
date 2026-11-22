@@ -822,16 +822,16 @@ return view.extend({
 			ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.setLineDash([]);
 		};
 		var localeTime = function(time) { return new Date(time).toLocaleTimeString(document.documentElement.lang || undefined, { hour: '2-digit', minute: '2-digit', hour12: false }); };
-		ctx.font = '11px ' + (color('--pf-mono') || 'monospace');
+		ctx.font = '11px ' + (color('--pf-font') || 'sans-serif');
 		ctx.fillStyle = color('--pf-muted');
 		ctx.textAlign = 'right';
 		for (var tick = 0; tick <= 100; tick += 20) {
 			coords(left, y(tick), right, y(tick), color('--pf-line'), tick ? [ 3, 3 ] : []);
-			ctx.fillText(tick + (chart.history ? '°' : '%'), left - 6, y(tick) + 4);
+			ctx.fillText(tick + (chart.history ? '°C' : '%'), left - 6, y(tick) + 4);
 		}
 		ctx.textAlign = 'center';
 		var labelSpacing = (right - left) / 5;
-		var labelWidth = ctx.measureText(chart.history ? localeTime(start) : '100°').width;
+		var labelWidth = ctx.measureText(chart.history ? localeTime(start) : '100°C').width;
 		var labelStep = Math.max(1, Math.ceil((labelWidth * 1.5 + 4) / labelSpacing));
 		var labels = [ 0 ];
 		for (var labelIndex = labelStep; labelIndex < 5; labelIndex += labelStep) labels.push(labelIndex);
@@ -842,7 +842,7 @@ return view.extend({
 			coords(x(value), top, x(value), bottom, color('--pf-line'), [ 3, 3 ]);
 			if (labels.indexOf(i) < 0) continue;
 			ctx.textAlign = i === 0 ? 'left' : i === 5 ? 'right' : 'center';
-			ctx.fillText(chart.history ? localeTime(value) : value + '°', x(value), bottom + 17);
+			ctx.fillText(chart.history ? localeTime(value) : value + '°C', x(value), bottom + 17);
 		}
 		var trace = function(points, stroke, fill) {
 			if (!points.length) return;
