@@ -136,7 +136,7 @@
 - [x] Implement Block B control semantics: 1% fixed-request step without a stop button, control source in the badge, statistics line removed.
 - [x] Implement the confirmed top-area, mode-selection, fixed-request, and warning redesign from the expanded V4 proposal set.
 - [x] Settle the two open proposal items: no advanced-settings “mode minimum apply interval” control (the merge window stays a dashboard constant) and no dashboard LuCI action bar (the dashboard commits directly, curve parameters commit explicitly) (2026-11-22).
-- [ ] Curve-panel refinements: keep the six-point editor aligned and readable at 320px.
+- [x] Curve-panel refinements: the six-point editor is a single-column table (header row `#`/温度/输出, one shared label set instead of twelve), capped at 460px, verified at 320/390/1360px (2026-11-22).
 - [ ] Hardware validation and rollback procedure.
 
 ## Deferred until the plugin is stable
@@ -187,7 +187,7 @@
   - [x] Translations (`po/zh_Hans`) and `menu.d` titles renamed to 风扇控制 / 高级设置. Done 2026-11-22.
   - [x] `htdocs/luci-static/resources/view/h5000m-pwmfan.js`/`.css`: warning chips moved into the “模式选择” header row, the slogan on its own divider-separated line, target parameters and curve points switched to explicit commit with a `待应用` state slot and an `撤销` action. Done 2026-11-22.
 - Verification: `STRICT=1 sh tools/check.sh` 33/33; local preview at 320/390/500/651/1360px in light and dark with no horizontal overflow; merged states observed as `应用中 3 秒` → `应用中 2 秒` → `已选`; the 0% request committed without waiting; a click made during a save was queued and applied afterwards.
-- Status: dashboard work complete, including the warning relocation and the explicit-commit model for target parameters and curve points; the curve-panel refinement remains open.
+- Status: dashboard work complete, including the warning relocation, the explicit-commit model for target parameters and curve points, and the curve-panel table layout.
 - Acceptance: 0% is reachable without the stop button and reports 0 requested PWM on the fixture; non-zero values still respect the minimum; one badge shows state and source; no statistics line; the language control is unchanged.
 - Status: started 2026-11-22; the apply model is settled, so the remaining work is implementation.
 
@@ -196,6 +196,7 @@
 
 - 2026-11-22: Read-only probe of the V4 proposals (header row, breadcrumb naming, theme switcher source, warning row, fold parameters); findings and three header options recorded in `docs/UIUX_RECHECK_2026-11-22.md` §八.
 - 2026-11-22: Relocated the warning chips to the “模式选择” header row and the slogan to its own line, and added the explicit-commit model for target parameters and curve points; verified 320/360/390/500/651px with no horizontal overflow, states `已选` → `待应用` → `已选`.
+- 2026-11-22: Rebuilt the six-point curve editor as a single-column table with one shared header row, table-style row separators and a 460px cap; inputs widened to 104px at 320px, rows 45px tall, no horizontal overflow at 320/390/1360px.
 - 2026-11-22: Widened the gap between the warning chips and the slogan divider to 14px (the `.pf-page :is(h2, h3, p)` reset had nulled the note margin) and made the slider bubble reliable on touch: `pointerdown` focuses the slider and an `is-live` class keeps the bubble visible for 900ms after release.
 - 2026-11-22: Restyled the fixed-request slider: a 4px pill track whose fill is computed from the thumb centre, an 18px thumb that lifts with a soft halo while dragging, and a floating chip readout with rolling digits whose width grows a column at a time; the theme focus glow is suppressed in favour of a thumb ring, and the bubble lingers 700ms after release.
 - 2026-11-22: The local preview shell now renders the view alone; the simulated-data tag and its theme select are gone, and the page's own switcher (persisted under `pwmfan-theme`) drives light/dark.

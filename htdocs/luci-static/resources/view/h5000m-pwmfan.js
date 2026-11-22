@@ -558,26 +558,33 @@ return view.extend({
 		var editorPoints = manual ? points : parseCurve(setting('curve_manual', CURVES.manual));
 		var message = E('p', { 'class': 'pf-note', 'aria-live': 'polite' }, manual ?
 			(points.length ? (this.pendingCurve ? _('Curve has unapplied changes.') : '') : _('Saved curve is invalid. Restore six default points to edit.')) : _('Select Custom curve to edit the six curve points.'));
-		if (editorPoints.length === 6) editorPoints.forEach(function(point, i) {
-			var input = function(label, axis, value, min, max) {
-				return E('label', { 'class': 'pf-field' }, [ E('span', {}, label), E('input', {
-					type: 'number', value: value, min: min, max: max, disabled: !manual ? '' : null,
-					'aria-label': _('%s · Point %s').format(label, i + 1),
-					change: function(event) {
-						var next = self.curvePoints().map(function(p) { return { t: p.t, pwm: p.pwm }; });
-						var updated = number(event.currentTarget.value, 0, 100);
-						next[i][axis] = updated === null || axis === 't' ? updated : Math.round(updated * 255 / 100);
-						if (!self.setCurve(next)) {
-							message.textContent = _('Temperatures must increase and output must stay level or increase. Nonzero output must stay within the running limits.');
-							event.currentTarget.value = value;
-						} else self.renderEditor();
-					}
-				}) ]);
-			};
-			rows.push(E('div', { 'class': 'pf-point' }, [ E('span', {}, String(i + 1)),
-				input(_('Temperature (°C)'), 't', point.t, i ? editorPoints[i - 1].t + 1 : 0, i < 5 ? editorPoints[i + 1].t - 1 : 100),
-				input(_('Output (%)'), 'pwm', percent(point.pwm), 0, 100) ]));
-		});
+		if (editorPoints.length === 6) {
+			rows.push(E('div', { 'class': 'pf-points-head' }, [
+				E('span', {}, '#'),
+				E('span', {}, _('Temperature (°C)')),
+				E('span', {}, _('Output (%)'))
+			]));
+			editorPoints.forEach(function(point, i) {
+				var input = function(label, axis, value, min, max) {
+					return E('input', {
+						type: 'number', value: value, min: min, max: max, step: 1, disabled: !manual ? '' : null,
+						'aria-label': _('%s · Point %s').format(label, i + 1),
+						change: function(event) {
+							var next = self.curvePoints().map(function(p) { return { t: p.t, pwm: p.pwm }; });
+							var updated = number(event.currentTarget.value, 0, 100);
+							next[i][axis] = updated === null || axis === 't' ? updated : Math.round(updated * 255 / 100);
+							if (!self.setCurve(next)) {
+								message.textContent = _('Temperatures must increase and output must stay level or increase. Nonzero output must stay within the running limits.');
+								event.currentTarget.value = value;
+							} else self.renderEditor();
+						}
+					});
+				};
+				rows.push(E('div', { 'class': 'pf-point' }, [ E('span', {}, String(i + 1)),
+					input(_('Temperature (°C)'), 't', point.t, i ? editorPoints[i - 1].t + 1 : 0, i < 5 ? editorPoints[i + 1].t - 1 : 100),
+					input(_('Output (%)'), 'pwm', percent(point.pwm), 0, 100) ]));
+			});
+		}
 		this.editor.replaceChildren(message, E('div', { 'class': 'pf-points' }, rows), E('div', { 'class': 'pf-editor-actions' }, [
 			E('button', { type: 'button', 'class': 'btn', disabled: !manual ? '' : null, click: function() {
 				var low = Number(setting('min_pwm', 51)), max = Number(setting('max_pwm', 255));

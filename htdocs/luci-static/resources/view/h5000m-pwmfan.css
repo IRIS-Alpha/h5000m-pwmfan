@@ -144,9 +144,12 @@
 .pf-page details[open] > summary::after { transform: rotate(225deg); margin-bottom: -3px; }
 .pf-parameters { margin-top: 9px; border-top: 1px solid var(--pf-line); padding-top: 8px; }
 .pf-editor, .pf-history-settings { margin-top: 8px; }
-.pf-points { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-block: 7px; }
-.pf-point { display: grid; grid-template-columns: auto 1fr 1fr; align-items: end; gap: 6px; padding: 6px; border-radius: 7px; background: var(--pf-subtle); }
-.pf-point > span { color: var(--pf-muted); align-self: center; }
+.pf-points { display: grid; grid-template-columns: minmax(0, 1fr); max-width: 460px; margin-block: 7px; }
+.pf-points-head, .pf-point { display: grid; grid-template-columns: 18px minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 8px; }
+.pf-points-head { padding: 0 2px 4px; color: var(--pf-muted); font-size: 11px; }
+.pf-points-head span:not(:first-child) { padding-left: 9px; }
+.pf-point { padding: 5px 2px; border-top: 1px solid var(--pf-line); }
+.pf-point > span { color: var(--pf-muted); text-align: center; font-variant-numeric: tabular-nums; }
 @media (max-width: 900px) { .pf-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 620px) {
 	.pf-card { padding: 9px; }
@@ -155,14 +158,13 @@
 	.pf-metric { padding-inline: 4px; min-height: 51px; }
 	.pf-bar { margin-inline: -4px; }
 	.pf-fixed-row { grid-template-columns: 32px minmax(0, 1fr) 32px; gap: 6px; }
-	.pf-target, .pf-points { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	.pf-target { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 	.pf-plot canvas { height: 150px; }
 	.pf-history-settings { column-gap: 12px; row-gap: 8px; }
 }
 @media (max-width: 400px) {
 	.pf-boards { grid-template-columns: minmax(0, 1fr); }
 	.pf-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-	.pf-points { grid-template-columns: minmax(0, 1fr); }
 }
 /* Resolve plot colors before the canvas reads them. */
 .pf-page {
