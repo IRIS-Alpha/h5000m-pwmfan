@@ -74,7 +74,9 @@ return view.extend({
 			'.pwmfan-advanced .pf-switch input:focus-visible + .pf-track{outline:2px solid var(--accent-line,var(--accent));outline-offset:2px}',
 			'.pwmfan-advanced .pf-switch input:disabled + .pf-track{opacity:.45}',
 			'.pwmfan-advanced .pf-switch:has(input:disabled){cursor:not-allowed}',
-			'.pwmfan-advanced .pf-handover{color:' + muted + ';font-size:12px}',
+			'.pwmfan-advanced .cbi-value.pf-note-row{padding:4px 0}',
+			'.pwmfan-advanced .cbi-value.pf-note-row > .cbi-value-title{font-weight:500;color:' + muted + '}',
+			'.pwmfan-advanced .cbi-value.pf-note-row > .cbi-value-field{color:' + muted + ';font-size:12.5px}',
 			'@media (prefers-reduced-motion: reduce){.pwmfan-advanced .pf-switch .pf-track,.pwmfan-advanced .pf-switch .pf-thumb{transition:none}}',
 			'.pwmfan-group-heading{margin:0 0 10px}',
 			'.pwmfan-group-heading h3{font-size:15.5px;font-weight:650;margin:0}',
@@ -89,16 +91,14 @@ return view.extend({
 		this.group(section, 'kernel', _('Kernel protection'), '');
 		var takeover = section.option(form.Flag, 'enabled', _('Take over fan control'));
 		takeover.default = '0'; takeover.rmempty = false;
-		takeover.description = _('Drives the fan from the plugin; the kernel keeps throttling and the critical shutdown.');
+		var verified = uci.get(CONFIG, SECTION, 'takeover_verified') === '1';
+		takeover.description = verified
+			? _('Drives the fan from the plugin; the kernel keeps throttling and the critical shutdown.')
+			: _('Drives the fan from the plugin; not verified yet, so it stays off.');
 		takeover.cfgvalue = function(sectionId) {
 			return (uci.get(CONFIG, sectionId, 'enabled') === '1' && uci.get(CONFIG, sectionId, 'kernel_takeover') === '1') ? '1' : null;
 		};
-		takeover.readonly = uci.get(CONFIG, SECTION, 'takeover_verified') !== '1';
-		var handover = section.option(form.DummyValue, '_handover', _('Handover verification'));
-		handover.renderWidget = function() {
-			var ok = uci.get(CONFIG, SECTION, 'takeover_verified') === '1';
-			return E('span', { 'class': 'pf-handover' }, ok ? _('Verified') : _('Not verified yet'));
-		};
+		takeover.readonly = !verified;
 		this.percentOption(section, 'min_pwm', _('Minimum fan output'), 20);
 		this.percentOption(section, 'max_pwm', _('Maximum curve output'), 100);
 		this.group(section, 'temperature', _('Temperature protection'), _('Protection ramps up before the threshold, locks at 100%, and releases below the threshold by the configured hysteresis.'));
@@ -107,10 +107,10 @@ return view.extend({
 		safety.validate = function(sectionId, value) {
 			return uci.get(CONFIG, sectionId, 'mode') !== 'target' || Number(value) >= Number(uci.get(CONFIG, sectionId, 'target_temp') || 85) || _('The protection threshold must be at or above the target.');
 		};
-		var radius = section.option(form.Value, 'protection_radius', _('Acceleration radius (°C)'));
+		var radius = section.option(form.Value, 'protection_radius', _('Early ramp window (°C)'));
 		radius.datatype = 'range(15,140)'; radius.default = '15'; radius.rmempty = false;
 		radius.validate = function(sectionId, value) {
-			return Number(value) <= Number(safety.formvalue(sectionId) || 90) + 40 || _('The acceleration start must be at least −40 °C.');
+			return Number(value) <= Number(safety.formvalue(sectionId) || 90) + 40 || _('The early ramp window can reach at most 40 °C below the threshold.');
 		};
 		var release = section.option(form.Value, 'protection_release', _('Release hysteresis (°C)'));
 		release.datatype = 'range(2,100)'; release.default = '5'; release.rmempty = false;
@@ -157,6 +157,12 @@ return view.extend({
 		return this.map.reset();
 	},
 
+	decorateNotes: function(formNode) {
+		Array.prototype.forEach.call(formNode.querySelectorAll('.cbi-value[data-name="_failsafe"]'), function(row) {
+			row.classList.add('pf-note-row');
+		});
+	},
+
 	decorateFlags: function(formNode) {
 		Array.prototype.forEach.call(formNode.querySelectorAll('.cbi-value'), function(row) {
 			var box = row.querySelector('.cbi-checkbox');
@@ -195,6 +201,7 @@ return view.extend({
 		return this.map.render().then(L.bind(function(formNode) {
 			this.groupCards(formNode);
 			this.decorateFlags(formNode);
+			this.decorateNotes(formNode);
 			return E('div', { 'class': 'pwmfan-advanced' }, [this.style(), formNode]);
 		}, this));
 	}

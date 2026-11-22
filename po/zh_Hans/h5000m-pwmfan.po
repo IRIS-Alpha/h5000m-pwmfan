@@ -569,11 +569,11 @@ msgstr "温度保护在阈值前逐步提高输出，到阈值锁定 100%，降�
 msgid "The protection threshold must be at or above the target."
 msgstr "保护阈值不得低于目标温度。"
 
-msgid "The acceleration start must be at least −40 °C."
-msgstr "加速起点不得低于 −40 °C。"
+msgid "The early ramp window can reach at most 40 °C below the threshold."
+msgstr "提前区间最多可覆盖阈值以下 40 °C。"
 
-msgid "Acceleration radius (°C)"
-msgstr "加速半径（°C）"
+msgid "Early ramp window (°C)"
+msgstr "提前区间（°C）"
 
 msgid "Release hysteresis (°C)"
 msgstr "解除回差（°C）"
@@ -634,6 +634,9 @@ msgstr "控制采样与曲线来源"
 
 msgid "The controller reads one sensor snapshot per control cycle. This is separate from the dashboard history sampling interval. Sensors not selected for curve control still participate in the safety maximum."
 msgstr "控制器每个控制周期读取一次传感器快照，与主页历史图表的采样间隔相互独立。未选作曲线控制来源的传感器仍参与安全最高温仲裁。"
+
+msgid "Drives the fan from the plugin; not verified yet, so it stays off."
+msgstr "由插件驱动风扇；尚未核验，暂不可启用。"
 
 msgid "Drives the fan from the plugin; the kernel keeps throttling and the critical shutdown."
 msgstr "由插件驱动风扇；内核仍负责降频与临界关机。"
