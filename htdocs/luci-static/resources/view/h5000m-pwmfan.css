@@ -125,7 +125,9 @@
 .pf-page .pf-track input[type=range]:is(:focus, :focus-visible) { outline: none; box-shadow: none; border-color: transparent; }
 .pf-warnings { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin: 0 0 0 auto; }
 .pf-warn { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border: 1px solid; border-radius: 7px;
-	font-size: 11.5px; font-weight: 650; }
+	font-size: 11.5px; font-weight: 650;
+	text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
+	box-shadow: 0 0 7px -1px rgba(var(--pf-glow), .18), inset 0 0 6px -2px rgba(var(--pf-glow), .14); }
 .pf-warn::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor;
 	box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 20%, transparent); }
 .pf-warn-low { --pf-glow: 169, 92, 0; color: var(--pf-amber); border-color: color-mix(in srgb, var(--pf-amber) 62%, transparent); background: color-mix(in srgb, var(--pf-amber) 16%, var(--pf-surface)); }
@@ -135,17 +137,25 @@ html[data-darkmode=true] .pf-warn-stop { --pf-glow: 255, 138, 155; }
 
 /* Two soft pulses when a chip appears, then silence: the halo fades in and out instead of cutting. */
 @keyframes pf-warn-pulse {
-	0% { text-shadow: 0 0 0 rgba(var(--pf-glow), 0); box-shadow: 0 0 0 0 rgba(var(--pf-glow), 0), inset 0 0 0 0 rgba(var(--pf-glow), 0); }
-	12% { text-shadow: 0 0 6px rgba(var(--pf-glow), .55);
-		box-shadow: 0 0 11px 1px rgba(var(--pf-glow), .45), inset 0 0 7px -2px rgba(var(--pf-glow), .38); }
-	26% { text-shadow: 0 0 0 rgba(var(--pf-glow), 0); box-shadow: 0 0 0 0 rgba(var(--pf-glow), 0), inset 0 0 0 0 rgba(var(--pf-glow), 0); }
-	38% { text-shadow: 0 0 6px rgba(var(--pf-glow), .55);
-		box-shadow: 0 0 11px 1px rgba(var(--pf-glow), .45), inset 0 0 7px -2px rgba(var(--pf-glow), .38); }
-	52%, 100% { text-shadow: 0 0 0 rgba(var(--pf-glow), 0); box-shadow: 0 0 0 0 rgba(var(--pf-glow), 0), inset 0 0 0 0 rgba(var(--pf-glow), 0); }
+	/* Hold the soft halo for the first 60% of a beat, then snap bright and fall back. */
+	0% { text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
+		box-shadow: 0 0 7px -1px rgba(var(--pf-glow), .18), inset 0 0 6px -2px rgba(var(--pf-glow), .14); }
+	14% { text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
+		box-shadow: 0 0 7px -1px rgba(var(--pf-glow), .18), inset 0 0 6px -2px rgba(var(--pf-glow), .14); }
+	18% { text-shadow: 0 0 10px rgba(var(--pf-glow), .7);
+		box-shadow: 0 0 16px 1px rgba(var(--pf-glow), .55), inset 0 0 10px -2px rgba(var(--pf-glow), .5); }
+	24% { text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
+		box-shadow: 0 0 7px -1px rgba(var(--pf-glow), .18), inset 0 0 6px -2px rgba(var(--pf-glow), .14); }
+	38% { text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
+		box-shadow: 0 0 7px -1px rgba(var(--pf-glow), .18), inset 0 0 6px -2px rgba(var(--pf-glow), .14); }
+	42% { text-shadow: 0 0 10px rgba(var(--pf-glow), .7);
+		box-shadow: 0 0 16px 1px rgba(var(--pf-glow), .55), inset 0 0 10px -2px rgba(var(--pf-glow), .5); }
+	48%, 100% { text-shadow: 0 0 4px rgba(var(--pf-glow), .28);
+		box-shadow: 0 0 7px -1px rgba(var(--pf-glow), .18), inset 0 0 6px -2px rgba(var(--pf-glow), .14); }
 }
 @keyframes pf-warn-in { from { opacity: 0; transform: translateY(-4px) scale(.97); } to { opacity: 1; transform: none; } }
 /* Text and border carry the warning on their own; the motion only draws the eye. */
-.pf-warn.is-pulse { animation: pf-warn-in .22s ease-out 1, pf-warn-pulse 3s ease-in-out infinite; }
+.pf-warn.is-pulse { animation: pf-warn-in .22s ease-out 1, pf-warn-pulse 3s linear infinite; }
 .pf-page .pf-warn-note { margin: 14px 0 0; padding-top: 9px; border-top: 1px solid var(--pf-line); color: var(--pf-muted); font-size: 11px; text-align: center; }
 .pf-history-settings { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; }
 .pf-number-setting { display: flex; align-items: center; gap: 6px; color: var(--pf-muted); white-space: nowrap; }
