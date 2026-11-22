@@ -47,6 +47,9 @@ def make_handler(rootfs, messages):
             self.send_response(200)
             self.send_header('Content-Type', content_type)
             self.send_header('Content-Length', str(len(data)))
+            # The preview serves the working tree, so a cached asset would lie.
+            self.send_header('Cache-Control', 'no-store, must-revalidate')
+            self.send_header('Pragma', 'no-cache')
             self.end_headers()
             self.wfile.write(data)
 
