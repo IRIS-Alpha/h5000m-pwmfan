@@ -2,10 +2,12 @@
 'require view';
 'require fs';
 'require poll';
+'require rpc';
 'require ui';
 'require uci';
 
 var CONFIG = 'h5000m_pwmfan', SECTION = 'main';
+var callRevert = rpc.declare({ object: 'uci', method: 'revert', params: [ 'config' ], reject: true });
 var MODES = { quiet: _('Quiet mode'), balanced: _('Balanced mode'), performance: _('Performance mode'),
 	target: _('Target drive'), manual: _('Custom curve') };
 var SENSORS = [
@@ -117,9 +119,20 @@ return view.extend({
 			var message = String((error && error.message) || error);
 			return /uci\/apply/.test(message) || (error && error.code === 5);
 		};
-		return uci.apply().catch(function(error) {
-			if (!transient(error)) throw error;
-			return new Promise(function(resolve) { window.setTimeout(resolve, 500); }).then(function() { return uci.apply(); });
+		var attempt = function(left) {
+			return uci.apply().catch(function(error) {
+				if (!transient(error) || left === 0) throw error;
+				return new Promise(function(resolve) { window.setTimeout(resolve, 600); }).then(function() { return attempt(left - 1); });
+			});
+		};
+		return attempt(1).catch(function(error) {
+			// An empty apply queue reports the same error as a lost reply, so
+			// treat "nothing left to apply" as a success instead of rolling back.
+			return uci.changes().then(function(changes) {
+				var pending = changes && changes[CONFIG];
+				if (!pending || pending.length === 0) return null;
+				throw error;
+			}, function() { throw error; });
 		});
 	},
 
@@ -153,14 +166,18 @@ return view.extend({
 			return this.fetchStatus().then(L.bind(this.update, this));
 		}, this)).catch(L.bind(function(error) {
 			this.saving = false;
-			Object.keys(previous).forEach(function(key) {
-				if (previous[key] == null) uci.unset(CONFIG, SECTION, key);
-				else uci.set(CONFIG, SECTION, key, previous[key]);
+			var self = this;
+			// Drop the staged values instead of keeping them as an unsaved
+			// difference: the page then reloads the previous configuration.
+			return callRevert(CONFIG).catch(function() {}).then(function() {
+				return uci.unload(CONFIG);
+			}).catch(function() {}).then(function() {
+				return uci.load(CONFIG);
+			}).catch(function() {}).then(function() {
+				ui.addNotification(null, E('p', {}, _('Could not apply policy: %s').format((error.message || String(error)))), 'danger');
+				self.refreshPolicy();
+				self.drainQueued();
 			});
-			uci.save();
-			ui.addNotification(null, E('p', {}, _('Could not apply policy: %s').format((error.message || String(error)))), 'danger');
-			this.refreshPolicy();
-			this.drainQueued();
 		}, this));
 	},
 
@@ -423,7 +440,8 @@ return view.extend({
 		var odometer = this.odometer();
 		var bubble = E('output', { 'class': 'pf-bubble', 'aria-hidden': 'true' }, [ odometer.el, E('span', { 'class': 'pf-odo-unit' }, '%') ]);
 		var slider = E('input', { type: 'range', min: 0, max: 100, step: 1, value: duty, 'aria-label': _('Requested duty') });
-		var track = E('div', { 'class': 'pf-track' }, [ bubble, slider ]);
+		var thumb = E('span', { 'class': 'pf-thumb', 'aria-hidden': 'true' });
+		var track = E('div', { 'class': 'pf-track' }, [ bubble, thumb, slider ]);
 		var paint = function() {
 			var current = Number(slider.value);
 			value.textContent = current + '%';
@@ -482,10 +500,21 @@ return view.extend({
 		var forced = !!window.PWMFAN_PREVIEW;
 		var stop = forced || (output[0] === 0 && output[1] === 0);
 		var low = forced || this.curveTooLow();
-		this.warnStop.hidden = !stop;
-		this.warnCurve.hidden = !low;
+		this.pulseWarning(this.warnStop, !stop);
+		this.pulseWarning(this.warnCurve, !low);
 		this.warnNote.hidden = !(stop || low);
 		this.warnRow.hidden = !(stop || low);
+	},
+
+	pulseWarning: function(node, hide) {
+		if (!node) return;
+		var wasHidden = node.hidden;
+		node.hidden = hide;
+		if (hide) { node.classList.remove('is-pulse'); return; }
+		if (!wasHidden) return;
+		node.classList.remove('is-pulse');
+		void node.offsetWidth;
+		node.classList.add('is-pulse');
 	},
 
 	curveTooLow: function() {
@@ -932,7 +961,10 @@ return view.extend({
 		if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').addEventListener)
 			window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() { self.applyTheme(self.themeMode()); });
 		window.addEventListener('pagehide', function() { self.flushPending(); });
-		document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'hidden') self.flushPending(); });
+		document.addEventListener('visibilitychange', function() {
+			if (document.visibilityState === 'hidden') self.flushPending();
+			else window.setTimeout(function() { self.drawCharts(); }, 0);
+		});
 		this.refreshPolicy();
 		this.update(data);
 		this.loadTemperatureHistory();
@@ -942,7 +974,8 @@ return view.extend({
 		var media = window.matchMedia('(prefers-color-scheme: dark)');
 		media.addEventListener('change', this.drawCharts.bind(this));
 		poll.add(function() { return self.fetchStatus().then(self.update.bind(self)); }, 1);
-		requestAnimationFrame(function() { self.drawCharts(); });
+		self.drawCharts();
+		window.setTimeout(function() { self.drawCharts(); }, 0);
 		return this.root;
 	},
 

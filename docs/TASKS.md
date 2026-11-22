@@ -102,6 +102,7 @@
 - [x] 接管时的触点上调：接管启动把最冷两个 `pwm-fan` 触点改为 1000 与“下一触点 − 1000”，释放时恢复；顺带修复 `user_space` 的历史残留（2026-11-22）。
 - [x] 占空比类模式立即生效：把回差保持与降速等待限定在温度驱动请求上（`hold_down_allowed()`），固定请求与 `drive=duty` 的预设改多少立刻下发。
 - [x] 连续点击的误报：同值提交连带跳过 `save`/`apply`，`uci.apply` 遇 ubus code 5 自动重试一次，提交期间控件不再禁用而是进队列。
+- [x] 界面缺陷修复（2026-11-22）：滑块圆点改为自绘并按 `--pf-ratio` 定位；警示标签出现时快闪两次；图表不再依赖 `requestAnimationFrame` 并与标签页可见性联动；下发失败改为 `uci revert` 丢弃暂存，确认失败才提示（code 5 且 `uci changes` 已空时视为已生效）。
 - [x] Select Apache-2.0 for the package and include the canonical license text and package metadata.
 - [x] Confirm the current delivery path: compile the package into firmware and validate locally produced APKs; defer a router-facing package feed and its signing setup until the plugin is stable.
 
@@ -232,6 +233,8 @@
 验收：默认配置下真机行为不变；只有在 `takeover_verified=1`、PWM 可写且存在 `pwm-fan` 冷却设备时才真正接管；文档与界面不再表述“100 °C 以上由内核接管风扇”。
 
 ## Brief log
+
+- 2026-11-22: 修复用户报告的四个界面缺陷。滑块圆点改为页面自绘（原生输入透明、只留交互），实测 320/390/1360 与设备上圆点中线偏移均为 0；警示标签出现时快闪两次（1.1 秒，`prefers-reduced-motion` 下不闪）；曲线图与温度历史首次绘制不再走 `requestAnimationFrame`，标签页重新可见时重绘；提交失败路径改为 `uci revert` + 重新加载配置，设备实测失败后 `uci changes` 为空、界面回到已保存值并弹出一次提示，不再残留三条“未保存”标记。
 
 - 2026-11-22：触点上调已在真机生效并验证。接管启动后 `trip_point_5_temp=1000`、`trip_point_4_temp=114000`、`trip_point_3_temp=115000` 保持，`policy=step_wise`，日志记录 `pinned the low pwm-fan trips for the takeover`；连续 10 分钟 300 次采样（2 秒一次）`pwm1` 恒为 179、`cur_state` 恒为 1、`writes_total` 恒为 2，热区 36.3–40.4 °C，`logread` 不再出现 `pwm 0 ->` 修正；停服务后触点恢复 40000/85000 并删除记录文件，重启后重新上调。Bats 36/36。
 - 2026-11-22：定位到停顿的真因是内核 `step_wise` 与插件的往复：40 °C 触点回落时内核写 `pwm1=0`，插件 2 秒读回再写回，用户听到的就是那 1–2 秒停转。日志里 17:21:33、17:22:28 两次 `pwm 0 -> 191` 与用户报告的两次停顿逐秒吻合。排查确认热区三个 cdev 全部指向同一个 `pwm-fan`，没有 CPU 降频冷却设备，所以内核侧唯一独立的保护是 125 °C 临界关机。经用户确认的方案：接管启动时把最冷两个触点改为 1000 与“下一触点 − 1000”（即 40000→1000、85000→114000），115 °C 与 125 °C 保持不动；原值记录在 `$RUNDIR/thermal-takeover`，释放时恢复；启动时顺带把 `user_space` 的 policy 修回 `step_wise`。
