@@ -483,6 +483,19 @@ grep -Fxq 'requested_pwm=0' "$STATUS_FILE"
 TEST_DUTY=1
 apply_cycle
 grep -Fxq 'requested_pwm=51' "$STATUS_FILE"
+# A non-zero request below the floor is lifted and reported as floored.
+grep -Fxq 'floor_limited=1' "$STATUS_FILE"
+grep -Fxq 'floor_pwm=51' "$STATUS_FILE"
+# An explicit stop keeps 0 and is not a floored request.
+TEST_DUTY=0
+apply_cycle
+grep -Fxq 'requested_pwm=0' "$STATUS_FILE"
+grep -Fxq 'floor_limited=0' "$STATUS_FILE"
+# A request at or above the floor is not floored.
+TEST_DUTY=40
+apply_cycle
+grep -Fxq 'requested_pwm=102' "$STATUS_FILE"
+grep -Fxq 'floor_limited=0' "$STATUS_FILE"
 TEST_DUTY=101
 if load_settings; then exit 1; fi
 # A duty the user sets applies at once; temperature-driven requests keep the guards.

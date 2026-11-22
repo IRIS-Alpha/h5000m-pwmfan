@@ -706,6 +706,9 @@ msgstr "切换到中文"
 
 msgid "No data · refresh the page"
 msgstr "无数据 · 请刷新页面"
+msgid "Non-zero request floor"
+msgstr "非零请求下限"
+
 msgid "Non-zero request floor (%)"
 msgstr "非零请求下限（%）"
 

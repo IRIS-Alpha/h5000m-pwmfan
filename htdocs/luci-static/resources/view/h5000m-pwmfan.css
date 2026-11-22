@@ -19,7 +19,7 @@
 	min-width: 0;
 }
 .pf-page :is(h2, h3, p) { margin: 0; }
-.pf-heading, .pf-dispatch-head { display: flex; align-items: center; gap: 6px; }
+.pf-heading, .pf-dispatch-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .pf-heading { min-width: 0; padding-top: 6px; }
 .pf-heading h2 { font-size: clamp(17px, 4.6vw, 21px); white-space: nowrap; }
 .pf-heading .pf-live { flex: 0 1 auto; min-width: 0; }
@@ -137,6 +137,11 @@
 .pf-track:has(input:focus-visible) .pf-thumb {
 	box-shadow: 0 0 0 3px var(--pf-surface), 0 0 0 5px var(--pf-blue); }
 .pf-page .pf-track input[type=range]:is(:focus, :focus-visible) { outline: none; box-shadow: none; border-color: transparent; }
+.pf-status { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border: 1px solid color-mix(in srgb, var(--pf-amber) 52%, transparent);
+	border-radius: 7px; background: color-mix(in srgb, var(--pf-amber) 14%, var(--pf-surface)); color: var(--pf-amber);
+	font-size: 11.5px; font-weight: 650; white-space: nowrap; }
+.pf-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .8; }
+.pf-legend span.is-off { opacity: .42; }
 .pf-warnings { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin: 0 0 0 auto; }
 .pf-warn { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border: 1px solid; border-radius: 7px;
 	font-size: 11.5px; font-weight: 650;

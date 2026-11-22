@@ -579,6 +579,11 @@ return view.extend({
 			E('div', { 'class': 'pf-fixed-row' }, [ minus, track, plus ]) ]);
 	},
 
+	floorChip: function() {
+		this.floorStatus = E('span', { 'class': 'pf-status pf-floor', hidden: true }, _('Non-zero request floor'));
+		return this.floorStatus;
+	},
+
 	warningRow: function() {
 		this.warnCurve = E('span', { 'class': 'pf-warn pf-warn-low', hidden: true }, _('Curve too low in the hot zone'));
 		this.warnStop = E('span', { 'class': 'pf-warn pf-warn-stop', hidden: true }, _('Fan stopped'));
@@ -589,6 +594,7 @@ return view.extend({
 
 	updateWarnings: function() {
 		if (!this.warnRow) return;
+		if (this.floorStatus) this.floorStatus.hidden = !(this.readings && this.readings.floor);
 		var output = (this.readings && this.readings.output) || [];
 		var forced = !!window.PWMFAN_PREVIEW;
 		var stop = forced || (output[0] === 0 && output[1] === 0);
@@ -754,6 +760,7 @@ return view.extend({
 			return millidegrees === null ? null : Math.round(millidegrees / 100) / 10;
 		});
 		return { fresh: fresh, temps: temps, stamp: stamp,
+			floor: fresh && String(data.floor_limited) === '1',
 			output: [ 'requested_pwm', 'effective_pwm', 'protection_pwm' ].map(function(key) {
 				var value = fresh ? number(data[key], 0, 255) : null;
 				return value === null ? null : percent(value);
@@ -790,6 +797,9 @@ return view.extend({
 			this.history = this.history.filter(function(sample) { return sample.time >= now - HISTORY_LIMIT; });
 		}
 		this.updateWarnings();
+		/* The protection band is only painted while it is active; dim its key otherwise. */
+		if (this.curveChart && this.curveChart.legendProtection)
+			this.curveChart.legendProtection.classList.toggle('is-off', !(values.output[2] > 0));
 		this.drawCharts();
 	},
 
@@ -803,8 +813,9 @@ return view.extend({
 		chart.empty = E('p', { 'class': 'pf-chart-empty', hidden: '' }, _('No data · refresh the page'));
 		var plot = E('div', { 'class': 'pf-plot' }, [ canvas, tip, chart.empty ].concat(chart.handles));
 		var legendNode = E('div', { 'class': 'pf-legend' }, legend.map(function(series) {
-			return E('span', {}, [ E('i', { style: 'background:var(' + series[1] + ')' }), series[0] ]);
+			return E('span', series[2] ? { 'data-key': series[2] } : {}, [ E('i', { style: 'background:var(' + series[1] + ')' }), series[0] ]);
 		}));
+		if (!history) chart.legendProtection = legendNode.querySelector('[data-key="protection"]');
 		chart.element = E('div', { 'class': 'pf-chart' }, [ legendNode, plot ]);
 		plot.addEventListener('pointerdown', function(event) {
 			var rect = canvas.getBoundingClientRect(), points = self.curvePoints();
@@ -1029,7 +1040,7 @@ return view.extend({
 			self.commit({ curve_manual: self.pendingCurve.map(function(point) { return point.t + ':' + point.pwm; }).join(',') });
 		} }, _('Apply curve'));
 		this.curveChart = this.makeChart(_('Fan curve'), [ [ _('Curve request'), '--pf-blue' ], [ _('Current temperature'), '--pf-green' ],
-			[ _('Actual output'), '--pf-amber' ], [ _('Protection output'), '--pf-red' ] ], false);
+			[ _('Actual output'), '--pf-amber' ], [ _('Protection output'), '--pf-red', 'protection' ] ], false);
 		this.tempChart = this.makeChart(_('Temperature history'), SENSORS.map(function(sensor) { return [ sensor[0], sensor[2] ]; }), true);
 		var setPreference = function(key, event) {
 			self[key] = Number(event.currentTarget.value);
@@ -1059,7 +1070,7 @@ return view.extend({
 			E('div', { 'class': 'pf-heading' }, [ E('h2', {}, _('Fan control')), this.badge,
 				E('span', { 'class': 'pf-heading-gap' }), this.themeSwitcher(), this.languageSwitcher() ]),
 			this.makeReport(),
-			E('section', { 'class': 'pf-card' }, [ E('div', { 'class': 'pf-dispatch-head' }, [ E('h3', {}, _('Mode selection')), this.warnRow ]),
+			E('section', { 'class': 'pf-card' }, [ E('div', { 'class': 'pf-dispatch-head' }, [ E('h3', {}, _('Mode selection')), this.floorChip(), this.warnRow ]),
 				this.warnNote, this.policy ]),
 			E('details', { 'class': 'pf-card pf-curve-chart', 'data-detail': 'curve',
 				open: this.detailState('curve', false) ? true : null }, [ E('summary', {}, _('Fan curve')),

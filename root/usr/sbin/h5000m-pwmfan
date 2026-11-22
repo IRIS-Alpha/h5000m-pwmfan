@@ -168,6 +168,8 @@ write_status() {
 		printf 'effective_pwm=%s\n' "$effective"
 		printf 'protection_pwm=%s\n' "$PROTECTION_PWM"
 		printf 'mode_pwm=%s\n' "$MODE_PWM"
+		printf 'floor_pwm=%s\n' "$MIN_PWM"
+		printf 'floor_limited=%s\n' "${FLOOR_LIMITED:-0}"
 		printf 'writes_total=%s\n' "$PWM_WRITES"
 		printf 'sensors=%s\n' "$SENSOR_STATUS"
 		printf 'updated_at=%s\n' "$stamp"
@@ -328,13 +330,16 @@ load_settings() {
 	esac
 }
 
+# Prints "<applied> <raw>": the second field is what the mode asked for before
+# the floor and ceiling were applied, so the caller can report a floored request.
 requested_pwm() {
 	case "$MODE:$DRIVE" in
 	fixed:duty) value=$(((FIXED_DUTY * 255 + 50) / 100)) ;;
 	quiet:duty | balanced:duty | performance:duty) value=$(((DUTY * 255 + 50) / 100)) ;;
 	*) value=$(curve_value "$CURVE" "$CONTROL_TEMP_C") || return 1 ;;
 	esac
-	if [ "$value" -eq 0 ]; then printf '0\n'; else clamp_pwm "$value" "$MIN_PWM" "$MAX_PWM"; fi
+	if [ "$value" -eq 0 ]; then applied=0; else applied=$(clamp_pwm "$value" "$MIN_PWM" "$MAX_PWM") || return 1; fi
+	printf '%s %s\n' "$applied" "$value"
 }
 
 restore_history() {
@@ -361,10 +366,14 @@ calculate_request() {
 		IFS='|' read -r desired reason locked active boost count PI_INTEGRAL _ <<EOF_TARGET
 $result
 EOF_TARGET
+		if [ "$desired" -le "$MIN_PWM" ]; then FLOOR_LIMITED=1; fi
 		dispatch="$desired|$reason|$locked|$active|$boost|$count"
 	else
 		PI_INTEGRAL=0
-		MODE_PWM=$(requested_pwm) || return 1
+		if ! read -r MODE_PWM raw_pwm <<EOF_REQUEST; then return 1; fi
+$(requested_pwm)
+EOF_REQUEST
+		if [ "$raw_pwm" -gt 0 ] && [ "$raw_pwm" -lt "$MIN_PWM" ]; then FLOOR_LIMITED=1; fi
 		dispatch=$(protection_dispatch_step "$MODE_PWM" "$SAFETY_TEMP_C" "$SAFETY_TEMP" "$PROTECTION_RADIUS" "$PROTECTION_RELEASE" "$MIN_PWM" "$previous" "$PROTECTION_LOCKED" "$PROTECTION_ACTIVE" "$PROTECTION_COUNT") || return 1
 		IFS='|' read -r desired reason locked active boost count <<EOF_DISPATCH
 $dispatch
@@ -392,7 +401,7 @@ hold_down_allowed() {
 }
 
 apply_cycle() {
-	PROTECTION_PWM=-- MODE_PWM=--
+	PROTECTION_PWM=-- MODE_PWM=-- FLOOR_LIMITED=0
 	if ! load_settings; then
 		MODE=invalid
 		OWNER=none
