@@ -137,6 +137,11 @@ The original values are recorded in `$RUNDIR/thermal-takeover` and restored when
 `policy` is checked on start and repaired to `step_wise` if a previous release left it at `user_space`; the plugin
 never switches the whole zone to `user_space`.
 
+Result on the router (2026-11-22 18:06–18:17, 300 samples at 2 s): `pwm1` stayed 179, `cur_state` 1 and
+`writes_total` 2 for the whole window, temperature 36.3–40.4 °C, and `logread` no longer records any `0 ->` write
+correction. Stopping the service restores `40000`/`85000` and deletes the record; starting it pins `1000`/`114000`
+again.
+
 ## Rollback procedure
 
 ```sh
