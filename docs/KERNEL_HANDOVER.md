@@ -102,6 +102,14 @@ Caveats recorded: the device had both services enabled at boot with `S95h5000m-p
 script did not survive the SSH teardown (the backgrounded shell died with the session), so the run was monitored
 from the host every 2–3 s instead; no automatic rollback fired and none was needed.
 
+## PWM write policy
+
+The daemon used to write the duty every poll (2 s) even when it had not changed. On this SoC every apply
+recalculates the channel divider, and the fan can be heard as a brief hiccup; the run above showed stalls landing
+on the same second as a redundant write. `set_pwm_if_changed()` now writes only when the value differs, plus a
+30 s keepalive that also corrects an external writer, and the loop logs cycles longer than 5 s to
+`/var/run/h5000m-pwmfan/slow-cycles`. Forced writes (startup kick, failsafe release) still use `set_pwm()`.
+
 ## Rollback procedure
 
 ```sh

@@ -20,6 +20,8 @@ THERMAL_DIR=${H5000M_SYS_CLASS_THERMAL:-/sys/class/thermal}
 MODEM_CACHE_FILE=${H5000M_MODEM_CACHE_FILE:-/tmp/5gmodem/tele.json}
 ACTIVE_OWNER=0
 FAILSAFE_PWM=255
+KEEPALIVE_SECS=30
+LAST_WRITE_AT=0
 MAX_PWM=255
 MODE=balanced
 CURVE=
@@ -178,7 +180,26 @@ set_pwm() {
 	in_range "$effective" 0 255 || return 1
 	ACTIVE_OWNER=1
 	OWNER=userspace
+	LAST_WRITE_AT=$(date +%s)
 	return 0
+}
+
+# Re-applying an unchanged duty can glitch the PWM output: the MTK channel
+# recalculates its divider on every apply and the fan is briefly audible.
+# Write only when the value differs, with a periodic keepalive so an external
+# writer is still corrected within KEEPALIVE_SECS.
+set_pwm_if_changed() {
+	requested=$1
+	[ -n "$PWM_FILE" ] && [ -w "$PWM_FILE" ] || return 1
+	current=$(cat "$PWM_FILE" 2>/dev/null) || current=
+	now_ts=${now:-$(date +%s)}
+	if [ "$current" = "$requested" ] && [ $((now_ts - LAST_WRITE_AT)) -lt "$KEEPALIVE_SECS" ]; then
+		effective=$current
+		ACTIVE_OWNER=1
+		OWNER=userspace
+		return 0
+	fi
+	set_pwm "$requested"
 }
 
 failsafe() {
@@ -440,7 +461,7 @@ apply_cycle() {
 		if [ "$active" = 1 ]; then sleep 1; elif command -v usleep >/dev/null 2>&1; then usleep "$((KICK_MS * 1000))"; else sleep 1; fi
 	fi
 	if [ "$desired" != "$LAST_PWM" ]; then LAST_CHANGE=$now; fi
-	if set_pwm "$desired"; then
+	if set_pwm_if_changed "$desired"; then
 		LAST_PWM=$desired
 		LAST_TEMP=$CONTROL_TEMP_C
 		if [ "$effective" -ne "$desired" ]; then
@@ -476,7 +497,13 @@ daemon() {
 	trap 'exit 0' INT TERM
 	trap cleanup EXIT
 	while :; do
+		cycle_start=$(date +%s)
 		apply_cycle
+		cycle_elapsed=$(($(date +%s) - cycle_start))
+		if [ "$cycle_elapsed" -gt 5 ]; then
+			logger -t h5000m-pwmfan "slow cycle ${cycle_elapsed}s"
+			printf '%s %s\n' "$(date +%T)" "$cycle_elapsed" >>"$RUNDIR/slow-cycles"
+		fi
 		sleep "${POLL_INTERVAL:-2}"
 	done
 }
