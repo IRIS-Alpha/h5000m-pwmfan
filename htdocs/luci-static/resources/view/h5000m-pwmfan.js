@@ -357,10 +357,15 @@ return view.extend({
 		var curveChildren = [ curveTitle,
 			E('div', { 'class': 'pf-modes', role: 'group', 'aria-label': _('Curve preset') }, this.presetButtons),
 			E('div', { 'class': 'pf-modes pf-drives' }, this.driveButtons) ];
-		if (!fixed && curveMode === 'target') curveChildren.push(E('details', { 'class': 'pf-parameters', 'data-detail': 'target',
+		// Both drive modes are curve modes, so their parameters live with the curve
+		// itself: the panel opens below the chart it edits.
+		var params = [];
+		if (!fixed && curveMode === 'target') params.push(E('details', { 'class': 'pf-parameters', 'data-detail': 'target',
 			open: modeChanged || this.detailState('target', false) ? true : null }, [ E('summary', {}, _('Target drive parameters')), this.targetFields() ]));
-		if (!fixed && curveMode === 'manual') curveChildren.push(E('details', { 'class': 'pf-parameters', 'data-detail': 'manual',
+		if (!fixed && curveMode === 'manual') params.push(E('details', { 'class': 'pf-parameters', 'data-detail': 'manual',
 			open: modeChanged || this.detailState('manual', false) ? true : null }, [ E('summary', {}, _('Curve parameters')), this.editor ]));
+		this.curveParams.replaceChildren.apply(this.curveParams, params);
+		if (params.length && this.curveCard && modeChanged) this.curveCard.open = true;
 		this.policy.replaceChildren(
 			E('section', { 'class': 'pf-method', 'data-selected': String(fixed) }, [ fixedTitle, this.fixedControls() ]),
 			E('section', { 'class': 'pf-method', 'data-selected': String(!fixed) }, curveChildren));
@@ -715,16 +720,8 @@ return view.extend({
 		}
 		this.updateWarnings();
 		/* The protection band is only painted while it is active; dim its key otherwise. */
-		if (this.curveChart && this.curveChart.legendProtection) {
-			var guardValue = values.output[2];
-			var legendNode = this.curveChart.legendProtection;
-			var legendText = legendNode.childNodes[1];
-			legendNode.classList.toggle('is-off', guardValue === null);
-			// Keep the protection level readable even when it sits at 0% and the line
-			// disappears under the axis.
-			if (legendText && legendText.nodeType === 3)
-				legendText.nodeValue = ' ' + this.curveChart.protectionLabel + (guardValue === null ? '' : ' · ' + guardValue + '%');
-		}
+		if (this.curveChart && this.curveChart.legendProtection)
+			this.curveChart.legendProtection.classList.toggle('is-off', values.output[2] === null);
 		this.drawCharts();
 	},
 
@@ -740,11 +737,7 @@ return view.extend({
 		var legendNode = E('div', { 'class': 'pf-legend' }, legend.map(function(series) {
 			return E('span', series[2] ? { 'data-key': series[2] } : {}, [ E('i', { style: 'background:var(' + series[1] + ')' }), series[0] ]);
 		}));
-		if (!history) {
-			chart.legendProtection = legendNode.querySelector('[data-key="protection"]');
-			var guardEntry = legend.filter(function(entry) { return entry[2] === 'protection'; })[0];
-			chart.protectionLabel = guardEntry ? guardEntry[0] : '';
-		}
+		if (!history) chart.legendProtection = legendNode.querySelector('[data-key="protection"]');
 		chart.element = E('div', { 'class': 'pf-chart' }, [ legendNode, plot ]);
 		plot.addEventListener('pointerdown', function(event) {
 			var rect = canvas.getBoundingClientRect(), points = self.curvePoints();
@@ -895,17 +888,14 @@ return view.extend({
 				handle.style.left = x(point.t) + 'px';
 				handle.style.top = y(percent(point.pwm)) + 'px';
 			});
-			// The protection level is always readable: a dashed line at its value, with the
-			// tinted band only while protection is actually driving the fan.
-			// Protection only paints while it drives the fan; at 0% the level lives in the
-			// legend instead of a line that would sit on the axis.
-			if (readings && readings.output[2] > 0) {
-				var guard = y(readings.output[2]);
-				ctx.fillStyle = color('--pf-red'); ctx.globalAlpha = 0.16;
-				ctx.fillRect(left, guard, right - left, bottom - guard); ctx.globalAlpha = 1;
-				ctx.strokeStyle = color('--pf-red'); ctx.globalAlpha = 0.9;
+			// Protection is a temperature threshold, so it is marked on the temperature
+			// axis: a vertical line where the protection ramp locks to full output.
+			var guardTemp = Number(setting('protection_temp', 90));
+			if (isFinite(guardTemp) && guardTemp > 0 && guardTemp <= 100) {
+				var guardX = x(guardTemp);
+				ctx.strokeStyle = color('--pf-red'); ctx.globalAlpha = 0.75;
 				ctx.lineWidth = 1.4; ctx.setLineDash([ 5, 4 ]);
-				ctx.beginPath(); ctx.moveTo(left, guard); ctx.lineTo(right, guard); ctx.stroke();
+				ctx.beginPath(); ctx.moveTo(guardX, top); ctx.lineTo(guardX, bottom); ctx.stroke();
 				ctx.setLineDash([]); ctx.globalAlpha = 1;
 			}
 			if (points.length) {
@@ -972,6 +962,7 @@ return view.extend({
 		this.driveButtons = [ 'target', 'manual' ].map(modeButton);
 		this.modeButtons = this.presetButtons.concat(this.driveButtons);
 		this.policy = E('div', { 'class': 'pf-policy' });
+		this.curveParams = E('div', { 'class': 'pf-curve-params' });
 		this.editor = E('div', { 'class': 'pf-editor' });
 		this.warningRow();
 		this.saveCurve = E('button', { type: 'button', 'class': 'btn', click: function() {
@@ -1010,9 +1001,9 @@ return view.extend({
 			this.makeReport(),
 			E('section', { 'class': 'pf-card' }, [ E('div', { 'class': 'pf-dispatch-head' }, [ E('h3', {}, _('Mode selection')), this.floorChip(), this.warnRow ]),
 				this.warnNote, this.policy ]),
-			E('details', { 'class': 'pf-card pf-curve-chart', 'data-detail': 'curve',
+			this.curveCard = E('details', { 'class': 'pf-card pf-curve-chart', 'data-detail': 'curve',
 				open: this.detailState('curve', false) ? true : null }, [ E('summary', {}, _('Fan curve')),
-				this.curveChart.element ]), temps
+				this.curveChart.element, this.curveParams ]), temps
 		]);
 		this.applyTheme(this.themeMode());
 		if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').addEventListener)
