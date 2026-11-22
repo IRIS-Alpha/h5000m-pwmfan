@@ -270,16 +270,32 @@ load_settings() {
 	# value still counts as a broken setting.
 	config_get raw "$SECTION" min_pwm 51
 	is_uint "$raw" || return 1
-	MIN_PWM=$raw
+	min_raw=$raw
+	# test(1) is undefined for values past intmax, so trim the length first.
+	if [ "${#min_raw}" -gt 3 ]; then min_raw=255; fi
+	MIN_PWM=$min_raw
 	[ "$MIN_PWM" -le 255 ] || MIN_PWM=255
 	config_get raw "$SECTION" max_pwm 255
 	is_uint "$raw" || return 1
-	MAX_PWM=$raw
+	max_raw=$raw
+	if [ "${#max_raw}" -gt 3 ]; then max_raw=255; fi
+	MAX_PWM=$max_raw
 	[ "$MAX_PWM" -ge 102 ] || MAX_PWM=102
 	[ "$MAX_PWM" -le 255 ] || MAX_PWM=255
 	# A floor above the ceiling would leave nothing to honour. The floor is what
 	# keeps the fan turning, so the ceiling moves up instead of the floor down.
 	[ "$MIN_PWM" -le "$MAX_PWM" ] || MAX_PWM=$MIN_PWM
+	# A clamp is otherwise invisible, and "why did my ceiling change" is exactly
+	# the question a log line should answer. Log once per distinct result.
+	if [ "$MIN_PWM" != "$min_raw" ] || [ "$MAX_PWM" != "$max_raw" ]; then
+		clamped="$MIN_PWM/$MAX_PWM"
+		if [ "$clamped" != "${LAST_BOUNDS_LOG:-}" ]; then
+			LAST_BOUNDS_LOG=$clamped
+			logger -t h5000m-pwmfan "clamped the request bounds to $clamped" 2>/dev/null || true
+		fi
+	else
+		LAST_BOUNDS_LOG=
+	fi
 	config_get raw "$SECTION" kick_pwm 204
 	KICK_PWM=$(cfg_number "$raw" 0 255) || return 1
 	config_get raw "$SECTION" kick_ms 800

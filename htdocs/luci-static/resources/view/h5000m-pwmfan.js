@@ -656,7 +656,11 @@ return view.extend({
 		});
 		return { fresh: fresh, temps: temps, stamp: stamp,
 			floor: fresh && String(data.floor_limited) === '1',
-			output: [ 'requested_pwm', 'effective_pwm', 'protection_pwm' ].map(function(key) {
+			/* "Curve request" is what the selected policy asks for at this
+			   temperature; "actual output" is what the hardware really runs, so
+			   the downshift hold, the PID correction, the protection ramp and the
+			   startup boost all show up as a difference between the two. */
+			output: [ 'mode_pwm', 'effective_pwm' ].map(function(key) {
 				var value = fresh ? number(data[key], 0, 255) : null;
 				return value === null ? null : percent(value);
 			}), rpm: fresh ? number(data.rpm, 0, 100000) : null };
@@ -1015,7 +1019,7 @@ return view.extend({
 		this.history = [];
 		var storedRange = Number(setting('history_range', 5));
 		var storedInterval = Number(setting('history_interval', 2));
-		this.range = Number.isInteger(storedRange) && storedRange >= 5 && storedRange <= 360 ? storedRange : 15;
+		this.range = Number.isInteger(storedRange) && storedRange >= 5 && storedRange <= 360 ? storedRange : 5;
 		this.interval = Number.isInteger(storedInterval) && storedInterval >= 1 && storedInterval <= 60 ? storedInterval : 2;
 		this.badgeText = E('span', {}, _('Status unavailable'));
 		this.badge = E('span', { 'class': 'pf-live', role: 'status', 'data-state': 'idle' }, [ E('i', { 'aria-hidden': 'true' }), this.badgeText ]);

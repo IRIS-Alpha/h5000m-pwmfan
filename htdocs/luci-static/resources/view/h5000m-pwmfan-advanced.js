@@ -213,13 +213,23 @@ return view.extend({
 		floor.description = _('Except for an explicit 0% stop request, no request drives the fan below this value. A higher floor keeps an aging or dusty fan turning at low duty.');
 		var ceiling = this.percentOption(section, 'max_pwm', _('Curve output ceiling (%)'), 100, 40, 100);
 		ceiling.description = _('No request, protection ramp or startup boost drives the fan above this value. Lowering it caps high-speed noise, including the whine a small fan makes near full duty, at the cost of the highest speed protection can still reach; a fault still asks for a full 100%.');
-		// The two bounds overlap, so each field checks the other one as well.
+		/* The two bounds overlap, so each field checks the other one as well. An
+		   empty sibling is left to its own range check: `0` is a legal floor, so
+		   a `|| default` shorthand would compare against the wrong number. */
+		var siblingValue = function(option, sectionId) {
+			var text = option.formvalue(sectionId);
+			text = text == null ? '' : String(text).trim();
+			var parsed = Number(text);
+			return text === '' || !isFinite(parsed) ? null : parsed;
+		};
 		floor.validate = function(sectionId, value) {
-			return Number(value) <= Number(ceiling.formvalue(sectionId) || 100)
+			var ceilingValue = siblingValue(ceiling, sectionId);
+			return ceilingValue === null || Number(value) <= ceilingValue
 				|| _('The non-zero request floor must not exceed the curve output ceiling.');
 		};
 		ceiling.validate = function(sectionId, value) {
-			return Number(value) >= Number(floor.formvalue(sectionId) || 20)
+			var floorValue = siblingValue(floor, sectionId);
+			return floorValue === null || Number(value) >= floorValue
 				|| _('The curve output ceiling must not be below the non-zero request floor.');
 		};
 		this.group(section, 'temperature', _('Temperature protection'), _('Protection ramps up before the threshold, locks at 100%, and releases below the threshold by the configured hysteresis.'));

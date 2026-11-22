@@ -511,6 +511,12 @@ TEST_DUTY=40 TEST_MIN_PWM=51 TEST_MAX_PWM=102 load_settings || exit 1
 TEST_DUTY=40 TEST_MIN_PWM=51 TEST_MAX_PWM=400 load_settings || exit 1
 [ "$MAX_PWM" = 255 ] || exit 1
 if TEST_DUTY=40 TEST_MIN_PWM=51 TEST_MAX_PWM=high load_settings; then exit 1; fi
+# A number too long for test(1) is trimmed, not left to undefined behaviour.
+TEST_DUTY=40 TEST_MIN_PWM=51 TEST_MAX_PWM=999999999999999999999 load_settings || exit 1
+[ "$MAX_PWM" = 255 ] || exit 1
+# A stale drive left in the config must not send fixed mode down the curve path.
+MODE=fixed DRIVE=curve FIXED_DUTY=50 MIN_PWM=51 MAX_PWM=255
+[ "$(requested_pwm)" = '128 128' ] || exit 1
 # A duty the user sets applies at once; temperature-driven requests keep the guards.
 MODE=fixed DRIVE=duty
 if hold_down_allowed; then exit 1; fi
