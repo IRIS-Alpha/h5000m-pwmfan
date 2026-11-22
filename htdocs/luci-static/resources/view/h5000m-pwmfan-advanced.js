@@ -157,6 +157,10 @@ return view.extend({
 			'.pwmfan-advanced .pf-unit-host{display:flex;align-items:center;gap:6px}',
 			'.pwmfan-advanced .pf-unit-host > input{flex:1 1 auto;min-width:0;max-width:none;text-align:right;padding-right:10px}',
 			'.pwmfan-advanced .pf-unit-host > select,.pwmfan-advanced .pf-unit-host > .cbi-dropdown{flex:1 1 0;min-width:0;width:auto;max-width:100%}',
+			/* LuCI's apply button is a flex dropdown; with align-items:stretch the theme's
+			   spinner lands in the top-left corner. The bar sits outside the view node, so
+			   markActions() tags it with .pf-actions. */
+			'.pf-actions .cbi-button.spinning{align-items:center}',
 			'.pwmfan-advanced .pf-unit{flex:0 0 30px;width:30px;text-align:left;font-size:12px;line-height:1;color:' + muted + ';background:transparent;font-variant-numeric:tabular-nums}',
 			'.pwmfan-advanced .cbi-value > .pf-wide-note{grid-column:1 / -1;margin:6px 0 0;max-width:78ch;font-size:12px;line-height:18px}',
 			'.pwmfan-advanced .cbi-value.pf-note-row{padding:8px 0;row-gap:4px}',
@@ -266,9 +270,16 @@ return view.extend({
 		return this.map.save();
 	},
 
-	handleSaveApply: function() {
-		return this.handleSave().then(function() { return uci.apply(); }).then(function() {
-			ui.addNotification(null, E('p', {}, _('Settings applied.')), 'info');
+	handleSaveApply: function(ev, mode) {
+		/* Bare uci.apply() leaves LuCI's change indicator behind ("Unsaved Changes"
+		   stays on screen). Follow the stock flow instead: save, then let ui.changes
+		   run the apply dialog, clear the indicator and refresh the page. */
+		return this.handleSave(ev).then(function() {
+			if (ui.changes && typeof ui.changes.apply === 'function')
+				return ui.changes.apply(mode !== '1');
+			return uci.apply().then(function() {
+				ui.addNotification(null, E('p', {}, _('Settings applied.')), 'info');
+			});
 		});
 	},
 
@@ -342,6 +353,12 @@ return view.extend({
 		});
 	},
 
+	/* The action bar lives outside the view node, so tag it for the spinner fix. */
+	markActions: function() {
+		var bar = document.querySelector('.cbi-page-actions');
+		if (bar) bar.classList.add('pf-actions');
+	},
+
 	/* LuCI re-renders the form after a save/apply; redecorate the fresh nodes. */
 	watchForm: function(formNode) {
 		if (typeof MutationObserver !== 'function') return;
@@ -354,6 +371,7 @@ return view.extend({
 				self.decorateFlags(formNode);
 				self.decorateNotes(formNode);
 				self.decorateUnits(formNode);
+				self.markActions();
 			}, 30);
 		});
 		observer.observe(formNode, { childList: true, subtree: true });
@@ -399,6 +417,8 @@ return view.extend({
 			this.decorateFlags(formNode);
 			this.decorateNotes(formNode);
 			this.decorateUnits(formNode);
+			this.markActions();
+			window.setTimeout(L.bind(this.markActions, this), 0);
 			this.watchForm(formNode);
 			shared.applyTheme(shared.themeMode());
 			this._sensorTimer = window.setInterval(L.bind(this.refreshSensorOptions, this), 5000);
