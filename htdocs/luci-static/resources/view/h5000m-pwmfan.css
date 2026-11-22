@@ -217,11 +217,12 @@ html[data-darkmode=true] .pf-warn-stop { --pf-glow: 255, 138, 155; }
 .pf-field { display: flex; flex-direction: column; gap: 3px; margin: 0; min-width: 0; }
 .pf-field input { width: 100%; box-sizing: border-box; }
 .pf-chart { margin-top: 6px; }
-.pf-legend { display: grid; grid-template-columns: repeat(2, 112px); gap: 8px 30px; justify-content: start; margin-bottom: 8px; color: var(--pf-muted); font-size: 11px; }
-@media (min-width: 720px) { .pf-legend { grid-template-columns: repeat(4, 112px); } }
-.pf-legend > span { display: flex; align-items: center; gap: 7px; min-width: 0; }
-.pf-legend i { flex: none; width: 11px; height: 11px; border-radius: 3px; }
-.pf-legend-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-legend { display: grid; grid-template-columns: repeat(2, 10.2em); gap: 0.6em 2em; justify-content: start; margin-bottom: 8px; color: var(--pf-muted); font-size: 11px; }
+@media (min-width: 860px) { .pf-legend { grid-template-columns: repeat(4, 12.5em); gap: 0.6em 4em; } }
+.pf-legend > span { display: flex; align-items: center; gap: 0; min-width: 0; }
+.pf-legend i { flex: none; width: 1em; height: 1em; border-radius: 3px; }
+.pf-legend-label { flex: 0 0 4em; min-width: 0; margin-left: 0.35em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (min-width: 860px) { .pf-legend-label { margin-left: 0.7em; } }
 .pf-legend-value { flex: none; margin-left: auto; font-size: 11.5px; font-weight: 650; color: var(--pf-text); font-variant-numeric: tabular-nums; }
 .pf-plot { position: relative; border-radius: 8px; background: var(--pf-subtle); }
 .pf-chart-empty { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; color: var(--pf-muted);

@@ -42,6 +42,10 @@ function number(value, min, max) {
 function percent(pwm) { return Math.round(pwm * 100 / 255); }
 function clamp(value, min, max) { return Math.max(min, Math.min(value, max)); }
 function format(value, unit) { return value == null ? _('Unavailable') : value + unit; }
+
+/* The legend is a fixed-width table: "50 %" keeps the unit one space away from
+   the number so the right-aligned column stays readable. */
+function legendPercent(value) { return value == null ? _('Unavailable') : Math.round(value) + ' %'; }
 function select(label, options, selected, change) {
 	return E('label', { 'class': 'pf-field' }, [ E('span', {}, label), E('select', { change: change },
 		options.map(function(option) { return E('option', { value: option[0], selected: option[0] === selected ? '' : null }, option[1]); })) ]);
@@ -615,9 +619,9 @@ return view.extend({
 		var usable = temps.filter(function(value) { return value !== null && value !== undefined; });
 		/* The curve follows the controller's control temperature, which is the
 		   hottest usable sensor, not the first row. */
-		setValue(this.curveChart, 'request', format(output[0], '%'));
+		setValue(this.curveChart, 'request', legendPercent(output[0]));
 		setValue(this.curveChart, 'temperature', usable.length ? Math.max.apply(null, usable).toFixed(1) + ' °C' : '—');
-		setValue(this.curveChart, 'actual', format(output[1], '%'));
+		setValue(this.curveChart, 'actual', legendPercent(output[1]));
 		/* The protection key shows the threshold the dashed line marks, not a duty. */
 		setValue(this.curveChart, 'protection', Number(setting('protection_temp', 90)).toString() + ' °C');
 		temps.forEach(function(value, index) {
