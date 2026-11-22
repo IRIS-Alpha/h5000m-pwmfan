@@ -706,3 +706,24 @@ msgstr "切换到中文"
 
 msgid "No data · refresh the page"
 msgstr "无数据 · 请刷新页面"
+msgid "Minimum fan output (%)"
+msgstr "风扇最低输出（%）"
+
+msgid "Maximum curve output (%)"
+msgstr "曲线最高输出（%）"
+
+msgid "Startup boost output (%)"
+msgstr "启动助推输出（%）"
+
+msgid "All sensors (highest valid reading)"
+msgstr "全部传感器（取最高有效值）"
+
+msgid "no reading"
+msgstr "无读数"
+
+msgid "On a fault the fan runs at 100%; kernel thermal limits still apply."
+msgstr "故障时全速运行，内核温控仍然生效。"
+
+msgid "A reading counts as valid when the sensor file is readable and the value is within −40…150 °C; sensors without a valid reading are skipped. The curve follows the chosen sensor, or the highest valid one when “all sensors” is selected. Sensors outside the choice still count toward the safety maximum."
+msgstr "传感器文件可读且数值在 −40…150 °C 内才算有效，无有效读数的传感器会被跳过。曲线跟随所选传感器；选“全部传感器”时取其中最高有效值。未选中的传感器仍参与安全最高温仲裁。"
+

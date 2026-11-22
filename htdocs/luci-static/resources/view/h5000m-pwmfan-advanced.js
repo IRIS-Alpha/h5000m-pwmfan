@@ -3,13 +3,49 @@
 'require form';
 'require uci';
 'require ui';
+'require fs';
 
 var CONFIG = 'h5000m_pwmfan';
 var SECTION = 'main';
+var SENSOR_NAMES = [
+	[ _('CPU'), /^cpu[-_]thermal$|^cpu_thermal(?:_temp1)?$/i ],
+	[ _('Radio'), /^mt7996[-_]phy0[._][01](?:_temp1)?$/i ],
+	[ _('5G modem'), /^(?:modem|mt5700m)$/i ],
+	[ _('PHY'), /^(?:mdio_bus|phy)/i ]
+];
 
 return view.extend({
 	load: function() {
-		return uci.load(CONFIG);
+		return Promise.all([ uci.load(CONFIG), this.fetchSensors() ]);
+	},
+
+	fetchSensors: function() {
+		return fs.exec('/usr/sbin/h5000m-pwmfan-status').then(L.bind(function(result) {
+			var fields = {};
+			(result.stdout || '').split('\n').forEach(function(line) {
+				var boundary = line.indexOf('=');
+				if (boundary > 0) fields[line.slice(0, boundary)] = line.slice(boundary + 1);
+			});
+			var sensors = (fields.sensors || '').split(';').filter(function(row) {
+				return row.split('|').length === 4;
+			}).map(function(row) {
+				var parts = row.split('|'), label = parts[1], value = Number(parts[2]);
+				var named = SENSOR_NAMES.find(function(entry) { return entry[1].test(label); });
+				return {
+					label: label,
+					title: named ? named[0] : label,
+					state: parts[3],
+					celsius: isFinite(value) && parts[2] !== '--' ? (Math.round(value / 100) / 10).toFixed(1) : null
+				};
+			});
+			// Several probes can carry the same friendly name; keep them distinguishable.
+			var counts = {};
+			sensors.forEach(function(sensor) { counts[sensor.title] = (counts[sensor.title] || 0) + 1; });
+			sensors.forEach(function(sensor) {
+				if (counts[sensor.title] > 1) sensor.title += ' · ' + sensor.label;
+			});
+			this.sensors = sensors;
+		}, this)).catch(function() { this.sensors = []; });
 	},
 
 	percentOption: function(section, key, title, fallback) {
@@ -63,8 +99,8 @@ return view.extend({
 			/* Boolean rows: label and help on the left, one switch pinned to the right edge. */
 			'.pwmfan-advanced .pf-flag-row{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:8px 0}',
 			'.pwmfan-advanced .pf-flag-main{flex:1 1 auto;min-width:0}',
-			'.pwmfan-advanced .pf-flag-main .cbi-value-title{display:block}',
-			'.pwmfan-advanced .pf-flag-main .cbi-value-description{margin-top:5px;max-width:60ch}',
+			'.pwmfan-advanced .pf-flag-main .cbi-value-title{display:block;line-height:24px;margin:0}',
+			'.pwmfan-advanced .pf-flag-main .cbi-value-description{margin-top:6px;max-width:60ch}',
 			'.pwmfan-advanced .pf-switch{position:relative;display:inline-flex;flex:none;margin-top:1px;cursor:pointer;-webkit-tap-highlight-color:transparent}',
 			'.pwmfan-advanced .pf-switch input{position:absolute;width:0;height:0;opacity:0}',
 			'.pwmfan-advanced .pf-switch .pf-track{position:relative;display:block;width:44px;height:24px;border-radius:6px;background:var(--sw-off);transition:background .28s ease}',
@@ -100,8 +136,8 @@ return view.extend({
 			return (uci.get(CONFIG, sectionId, 'enabled') === '1' && uci.get(CONFIG, sectionId, 'kernel_takeover') === '1') ? '1' : null;
 		};
 		takeover.readonly = !verified;
-		this.percentOption(section, 'min_pwm', _('Minimum fan output'), 20);
-		this.percentOption(section, 'max_pwm', _('Maximum curve output'), 100);
+		this.percentOption(section, 'min_pwm', _('Minimum fan output (%)'), 20);
+		this.percentOption(section, 'max_pwm', _('Maximum curve output (%)'), 100);
 		this.group(section, 'temperature', _('Temperature protection'), _('Protection ramps up before the threshold, locks at 100%, and releases below the threshold by the configured hysteresis.'));
 		var safety = section.option(form.Value, 'protection_temp', _('Full-speed temperature threshold (°C)'));
 		safety.datatype = 'range(80,100)'; safety.default = '90'; safety.rmempty = false;
@@ -121,16 +157,19 @@ return view.extend({
 		var delay = section.option(form.Value, 'down_delay', _('Downshift delay (seconds)'));
 		delay.datatype = 'range(0,600)'; delay.default = '10'; delay.rmempty = false;
 		this.group(section, 'boost', _('Startup boost'), _('Briefly raise output when the fan starts, then return to the selected curve.'));
-		this.percentOption(section, 'kick_pwm', _('Startup boost output'), 100);
+		this.percentOption(section, 'kick_pwm', _('Startup boost output (%)'), 100);
 		var kick = section.option(form.Value, 'kick_ms', _('Startup boost duration (milliseconds)'));
 		kick.datatype = 'range(0,5000)'; kick.default = '750'; kick.rmempty = false;
-		this.group(section, 'fault', _('Fault response'), _('A sensor or controller fault requests 100% output; kernel thermal safeguards stay active.'));
-		this.group(section, 'sampling', _('Controller sampling and curve source'), _('The controller reads one sensor snapshot per control cycle. This is separate from the dashboard history sampling interval. Sensors not selected for curve control still participate in the safety maximum.'));
+		this.group(section, 'fault', _('Fault response'), _('On a fault the fan runs at 100%; kernel thermal limits still apply.'));
+		this.group(section, 'sampling', _('Controller sampling and curve source'), _('A reading counts as valid when the sensor file is readable and the value is within −40…150 °C; sensors without a valid reading are skipped. The curve follows the chosen sensor, or the highest valid one when “all sensors” is selected. Sensors outside the choice still count toward the safety maximum.'));
 		var interval = section.option(form.Value, 'poll_interval', _('Control interval (seconds)'));
 		interval.datatype = 'range(1,30)'; interval.default = '2'; interval.rmempty = false;
 		var source = section.option(form.Value, 'sensor_sources', _('Curve sensor source'));
 		source.width = '100%';
-		source.value('auto', _('Hottest valid sensor'));
+		source.value('auto', _('All sensors (highest valid reading)'));
+		(this.sensors || []).forEach(function(sensor) {
+			source.value(sensor.label, sensor.title + (sensor.state === 'ok' ? ' · ' + sensor.celsius + ' °C' : ' · ' + _('no reading')));
+		});
 		source.default = 'auto'; source.rmempty = false;
 		return map;
 	},

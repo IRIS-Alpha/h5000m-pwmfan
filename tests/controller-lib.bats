@@ -576,3 +576,21 @@ EOF_CYCLE
 	[ "$(cat "$zone/trip_point_3_temp")" -eq 115000 ]
 	[ "$(cat "$zone/trip_point_4_temp")" -eq 85000 ]
 }
+
+@test "the sensor selection accepts the stable label as well as the runtime id" {
+	SENSOR_SELECTION=auto
+	run sensor_selected tz_thermal_zone0 cpu-thermal
+	[ "$status" -eq 0 ]
+
+	SENSOR_SELECTION=cpu-thermal
+	run sensor_selected tz_thermal_zone0 cpu-thermal
+	[ "$status" -eq 0 ]
+	run sensor_selected hwmon1_temp1 cpu_thermal_temp1
+	[ "$status" -ne 0 ]
+
+	SENSOR_SELECTION="hwmon1_temp1"
+	run sensor_selected hwmon1_temp1 cpu_thermal_temp1
+	[ "$status" -eq 0 ]
+	run sensor_selected tz_thermal_zone0 cpu-thermal
+	[ "$status" -ne 0 ]
+}

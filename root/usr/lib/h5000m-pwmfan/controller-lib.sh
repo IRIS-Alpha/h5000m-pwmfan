@@ -36,7 +36,8 @@ modem_throttle_pwm() {
 
 sensor_selected() {
 	[ "$SENSOR_SELECTION" = auto ] && return 0
-	case " $SENSOR_SELECTION " in *" $1 "*) return 0 ;; esac
+	# Match the runtime id or the stable sysfs label: hwmon numbering can move between boots.
+	case " $SENSOR_SELECTION " in *" $1 "* | *" $2 "*) return 0 ;; esac
 	return 1
 }
 
@@ -51,7 +52,7 @@ record_sensor() {
 			# shellcheck disable=SC2034
 			SAFETY_SOURCE=$id
 		fi
-		if sensor_selected "$id"; then
+		if sensor_selected "$id" "$label"; then
 			if [ -z "$CONTROL_TEMP_MC" ] || [ "$value" -gt "$CONTROL_TEMP_MC" ]; then
 				CONTROL_TEMP_MC=$value
 				# shellcheck disable=SC2034
