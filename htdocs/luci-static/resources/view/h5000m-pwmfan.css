@@ -61,19 +61,18 @@
 .pf-method { position: relative; margin-top: 9px; padding: 10px; border: 1px solid var(--pf-line); border-radius: 8px; background: var(--pf-subtle); }
 .pf-method[data-selected=true] { border-color: color-mix(in srgb, var(--pf-green) 52%, var(--pf-line));
 	background: color-mix(in srgb, var(--pf-green) 6%, var(--pf-subtle)); }
-/* Star-border beam: the selection highlight belongs to the whole block, not its title row. */
-.pf-method[data-selected=true]::before { content: ''; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none;
-	background: conic-gradient(from var(--pf-beam-angle, 0deg), transparent 0 205deg,
-		color-mix(in srgb, var(--pf-green) 75%, transparent) 262deg, var(--pf-green) 296deg, transparent 344deg);
+/* Star-border beam: the selection highlight travels around the whole block. */
+.pf-method[data-selected=true]::before { content: ''; position: absolute; inset: -1.5px; border-radius: inherit; padding: 1.5px; pointer-events: none;
+	background: linear-gradient(115deg, transparent 30%, color-mix(in srgb, var(--pf-green) 72%, transparent) 46%,
+		var(--pf-green) 52%, transparent 70%);
+	background-size: 300% 300%;
 	-webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
 	mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
-	animation: pf-beam 4.6s linear infinite; }
-@property --pf-beam-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
-@keyframes pf-beam { to { --pf-beam-angle: 360deg; } }
+	animation: pf-beam 3.8s linear infinite; }
+@keyframes pf-beam { from { background-position: 0% 50%; } to { background-position: 300% 50%; } }
 .pf-method-title { display: flex; justify-content: space-between; align-items: center; width: 100%; text-align: left; font-weight: 650;
-	transition: color .15s ease; }
-.pf-page button.pf-method-title { height: auto; padding: 0; border-color: transparent; background: transparent; }
-.pf-page button.pf-method-title:is(:hover, [aria-pressed=true]) { border-color: transparent; background: transparent; color: var(--pf-green); }
+	transition: color .15s ease, border-color .15s ease; }
+.pf-method-title:hover { border-color: var(--pf-muted); }
 .pf-method-title span, .pf-chart-state { color: var(--pf-muted); font-size: 12px; font-weight: 400; }
 .pf-method-state[data-pending=true], .pf-method-state[data-draft=true] { color: var(--pf-amber); }
 .pf-fixed { display: grid; gap: 8px; margin-top: 9px; }
