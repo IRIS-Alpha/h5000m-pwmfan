@@ -130,7 +130,8 @@ return view.extend({
 			'.pwmfan-advanced .pf-switch input:disabled + .pf-track{opacity:.45}',
 			'.pwmfan-advanced .pf-switch:has(input:disabled){cursor:not-allowed}',
 			'.pwmfan-advanced .pf-unit-host{display:flex;align-items:center;gap:6px}',
-			'.pwmfan-advanced .pf-unit-host > input{flex:1 1 auto;min-width:0;text-align:right;padding-right:10px}',
+			'.pwmfan-advanced .pf-unit-host > input{flex:1 1 auto;min-width:0;max-width:none;text-align:right;padding-right:10px}',
+			'.pwmfan-advanced .pf-unit-host > select,.pwmfan-advanced .pf-unit-host > .cbi-dropdown{flex:1 1 0;min-width:0;width:auto;max-width:100%}',
 			'.pwmfan-advanced .pf-unit{flex:0 0 30px;width:30px;text-align:left;font-size:12px;line-height:1;color:' + muted + ';background:transparent;font-variant-numeric:tabular-nums}',
 			'.pwmfan-advanced .cbi-value.pf-note-row{padding:8px 0;row-gap:4px}',
 			'.pwmfan-advanced .cbi-value.pf-note-row > .cbi-value-field{min-height:0;padding:0;line-height:1.5}',
@@ -225,16 +226,28 @@ return view.extend({
 
 	decorateUnits: function(formNode) {
 		var units = /^\s*(.*?)\s*[（(]\s*([^（）()]{1,14}?)\s*[）)]\s*$/;
+		var short = {
+			second: 's', seconds: 's', '秒': 's',
+			millisecond: 'ms', milliseconds: 'ms', '毫秒': 'ms',
+			minute: 'min', minutes: 'min', '分钟': 'min'
+		};
 		formNode.querySelectorAll('.cbi-value').forEach(function(row) {
 			var title = row.querySelector('.cbi-value-title');
-			var input = row.querySelector('input.cbi-input-text');
-			if (!title || !input) return;
-			var m = units.exec(title.textContent || '');
-			if (!m || !m[1] || !m[2]) return;
-			var host = input.parentNode;
-			title.textContent = m[1];
+			var control = row.querySelector('input.cbi-input-text')
+				|| row.querySelector('.cbi-dropdown')
+				|| row.querySelector('select');
+			if (!control) return;
+			var unit = '';
+			if (title) {
+				var m = units.exec(title.textContent || '');
+				if (m && m[1] && m[2]) {
+					title.textContent = m[1];
+					unit = short[m[2].toLowerCase()] || short[m[2]] || m[2];
+				}
+			}
+			var host = control.parentNode;
 			host.classList.add('pf-unit-host');
-			host.appendChild(E('span', { 'class': 'pf-unit' }, m[2]));
+			host.appendChild(E('span', { 'class': 'pf-unit' }, unit));
 		});
 	},
 
