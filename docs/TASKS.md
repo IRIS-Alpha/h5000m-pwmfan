@@ -393,12 +393,23 @@ question that needs a person goes to "Awaiting decision" instead of being guesse
 - [x] D. Dead CSS: `.pf-danger` and `.pf-segment` are no longer referenced by any view; remove and confirm the bundle size
       and the preview.
 - [x] E. bats coverage: `in_range`, `is_signed_int` and `is_uint` have no direct cases.
-- [ ] F. Responsive × theme matrix: 320/360/390/430/651/736/880/992/1200/1360 × light/dark, with assertions (no
+- [x] F. Responsive × theme matrix: 320/360/390/430/651/736/880/992/1200/1360 × light/dark, with assertions (no
       horizontal overflow, chips never overlap, legend columns aligned, both canvases painted), and fix what it finds.
 - [ ] G. Web Interface Guidelines review on the four interface files, per `AGENTS.md`; fix the applicable findings
       (visible focus, ARIA, contrast, reduced motion, tap targets).
 - [ ] H. Docs-versus-code sweep: grep `docs/*.md` for hard-coded constants, function names and behaviour claims; the
       `kernel_takeover_ready() { return 1; }` find shows how far a paragraph can drift.
+
+### Awaiting decision
+
+- Fan curve card opens collapsed by default (`detailState('curve', false)` in
+  `htdocs/luci-static/resources/view/h5000m-pwmfan.js:1081`), while the temperature monitor opens expanded. It was
+  introduced together with the card in `9400ca3`; no requirement records the choice. The curve is the page's primary
+  picture and its legend now carries the live values, so collapsed-by-default hides both until the user taps. Leave it,
+  or open it by default like the monitor?
+- The monitor chart's time axis tilts by 45° on phones (six labels do not fit upright). It stays inside the canvas and
+  never overflows, but the tilted run crowds the 0 °C line and the y labels. Options: keep it, label every other tick on
+  phones while keeping six gridlines, or make the canvas taller under 430 px.
 
 Not in scope (needs a person): the five externally blocked items, any change to live device behaviour, signing and feed
 decisions.
@@ -455,3 +466,8 @@ nine `cat` calls are gone without an awk pass):
 - 2026-11-23: 删除死样式：`.pf-page .pf-danger`、`.pf-page .pf-danger[aria-pressed=true]` 两条规则，以及 `.pf-segment` 与 `.pf-editor-actions` 共用选择器里的 `.pf-segment`（后者保留）。全仓再无 `pf-danger` / `pf-segment` 引用。
 
 - 2026-11-23: 补齐三个从前没有直接用例的谓词（`tests/controller-lib.bats` 现在 40 项）：`is_uint` 收 `0/007/51/999999`、拒 `''/-/+1/-1/1.0/' 1'/'1 '/12a/a12/0x10`；`is_signed_int` 收 `0/-1/-85000/0007`、拒 `''/-/--1/1-/+5/-1.5/' -1'/'1 '/-a`；`in_range` 覆盖边界命中（0、255）、越界（256、5<10）、负数与 **非数字/空上界要“静默失败”**（`[ -z "$output" ]`，因为 `in_range` 里的 `2>/dev/null` 就是为此存在）。循环里的断言写成 `if ! fn; then …; return 1; fi`，而不是 `run` 后接 `|| printf`——后者只打印不失败，等于没断言。
+
+- 2026-11-23: 响应式 × 主题矩阵（40 组合：10 档宽度 × 明暗，两个页面）：横向溢出全部为 0，芯片全部落在卡片内，图例列宽一致，卡片标题不再被截断。矩阵顺带抓到两个真问题：
+  - **高 DPR 下图表会变空**（手机常见 2–3 倍像素比）：第 106 轮为了让重复刷新不重画，改成“尺寸没变就不给 `canvas.width` 赋值”，可这个赋值同时是**画布变换的重置**。于是每次重绘都再 `ctx.scale(scale, scale)` 一次，DPR 3 上叠加三次后整幅图被推到画布外——实测温度监控画布 `painted=0` 且此后一直为 0。改成 `setTransform(1,0,0,1,0,0)` → `clearRect(0,0,canvas.width,canvas.height)` → `setTransform(scale,0,0,scale,0,0)`，DPR 1/2/3 着色像素数回到 5686 / 17206 / 37436，`tests/preview.mjs` 新增一条高 DPR 断言（回退修复时它会报 `[["history",0]]`）。
+  - **卡片标题的可点击高度只有 23px**（`<summary>`），低于 24px 的最小触控目标；`min-height: 32px` 后矩阵里不再出现小目标。
+- 2026-11-23: 两个“看着不对但不能替用户拍板”的问题写进 `Awaiting decision`（曲线卡片默认收起、手机上的斜排时间轴）。

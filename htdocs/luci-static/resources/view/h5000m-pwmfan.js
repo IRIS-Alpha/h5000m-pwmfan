@@ -881,8 +881,12 @@ return view.extend({
 			var value = vars.getPropertyValue(name).trim();
 			return value.startsWith('light-dark(') ? value.slice(11, -1).split(',')[vars.colorScheme === 'dark' ? 1 : 0].trim() : value;
 		};
-		ctx.clearRect(0, 0, width, height);
-		ctx.scale(scale, scale);
+		/* Resetting the size is what normally resets the transform, but the size is
+		   now only touched when it changed. Set the transform outright so repeated
+		   repaints on a high-DPR screen cannot scale the drawing again and again. */
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		ctx.setTransform(scale, 0, 0, scale, 0, 0);
 		var left = 37, top = 12, right = width - 17, bottom = height - 26;
 		var now = Date.now(), start = chart.history ? now - this.range * 60000 : 0, end = chart.history ? now : 100;
 		var x = function(value) { return left + (right - left) * clamp((value - start) / (end - start), 0, 1); };

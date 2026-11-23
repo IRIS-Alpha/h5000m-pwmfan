@@ -242,7 +242,7 @@ html[data-darkmode=true] .pf-warn-stale { --pf-glow: 122, 190, 255; }
 .pf-chart-empty[hidden] { display: none; }
 .pf-plot canvas { display: block; width: 100%; height: 196px; touch-action: pan-y; }
 .pf-tooltip { position: absolute; top: 7px; z-index: 1; padding: 5px 8px; background: var(--pf-surface); color: var(--pf-text); border: 1px solid var(--pf-line); border-radius: 7px; box-shadow: 0 2px 8px #0002; font: 11px/1.55 var(--pf-mono); white-space: pre-line; pointer-events: none; }
-.pf-page summary { display: flex; justify-content: space-between; align-items: center; gap: 8px; list-style: none; }
+.pf-page summary { display: flex; justify-content: space-between; align-items: center; gap: 8px; list-style: none; min-height: 32px; }
 .pf-page summary h3 { margin: 0; font-size: inherit; font-weight: inherit; line-height: inherit; }
 .pf-page summary::-webkit-details-marker { display: none; }
 .pf-page summary::after { content: ''; display: block; border-right: 1.5px solid var(--pf-muted); border-bottom: 1.5px solid var(--pf-muted); width: 7px; height: 7px; transform: rotate(45deg); margin: 0 3px 3px 0; }

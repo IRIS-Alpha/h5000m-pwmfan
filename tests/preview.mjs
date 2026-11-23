@@ -254,11 +254,41 @@ async function advancedChecks() {
 	if (out) await page.screenshot({ path: join(out, 'advanced-1200.png'), fullPage: true });
 }
 
+/*
+ * A high-DPR phone is the common case for this page. Repainting without resetting
+ * the size must not scale the drawing again: a stale transform pushes the chart
+ * off the bitmap and the card ends up empty.
+ */
+async function highDensityChecks() {
+	const phone = await browser.newPage({ viewport: { width: 320, height: 900 }, deviceScaleFactor: 3 });
+	phone.setDefaultTimeout(8000);
+	try {
+		await phone.goto(dashboard, { waitUntil: 'domcontentloaded' });
+		await phone.waitForFunction(() => Number(document.querySelector('.pf-history canvas')?.dataset.samples) > 100);
+		await phone.waitForTimeout(3000);
+		const painted = await phone.evaluate(() => {
+			const count = (canvas) => {
+				const data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+				let total = 0;
+				for (let i = 3; i < data.length; i += 4) if (data[i] > 8) total++;
+				return total;
+			};
+			const cards = [ ...document.querySelectorAll('details.pf-card') ].filter((card) => card.open);
+			return cards.map((card) => [ card.dataset.detail, count(card.querySelector('canvas')) ]);
+		});
+		check('high-DPR charts keep their pixels after repaint', painted.every(([ , ink ]) => ink > 1000), JSON.stringify(painted));
+	}
+	finally {
+		await phone.close();
+	}
+}
+
 try {
 	await dashboardChecks();
 	await statusChecks();
 	await responsiveChecks();
 	await advancedChecks();
+	await highDensityChecks();
 	check('no console errors', errors.length === 0, errors.join(' | '));
 	if (problems.length) {
 		console.error(problems.length + ' problem(s):');
