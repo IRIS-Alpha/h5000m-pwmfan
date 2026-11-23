@@ -506,6 +506,9 @@ msgstr "已保存的曲线无效，请恢复六个默认点后编辑。"
 msgid "Select Manual to edit the six curve points."
 msgstr "选择手动后可编辑六个曲线点。"
 
+msgid "Select Custom curve to edit the six curve points."
+msgstr "选择「自定义曲线」后可编辑六个曲线点。"
+
 msgid "%s · Point %s"
 msgstr "%s · 第 %s 点"
 

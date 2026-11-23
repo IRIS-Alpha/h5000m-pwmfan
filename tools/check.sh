@@ -51,6 +51,7 @@ if command -v node >/dev/null 2>&1; then
 	node --check htdocs/luci-static/resources/view/h5000m-pwmfan-advanced.js
 	node --check htdocs/luci-static/resources/view/h5000m-pwmfan-shared.js
 	node --check tests/preview.mjs
+	node tools/check-i18n.mjs
 	# The browser pass needs a running preview and Playwright; opt in with the URL.
 	if [ -n "${PWMFAN_PREVIEW_URL:-}" ] && [ -f tests/preview.mjs ]; then
 		node tests/preview.mjs
