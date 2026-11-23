@@ -379,17 +379,18 @@ Constraints for this block: only work that needs no human decision. The router i
 thermal-zone writes). Every item ends with `STRICT=1 sh tools/check.sh`, a look at the preview, and its own commit. A
 question that needs a person goes to "Awaiting decision" instead of being guessed.
 
-- [ ] A. Safety net: record the current device state (`uci export`, package list, `/var/run/h5000m-pwmfan/status`, APK
+- [x] A. Safety net: record the current device state (`uci export`, package list, `/var/run/h5000m-pwmfan/status`, APK
       hash) in `docs/device-baseline-20261123.md` so later changes can be diffed and rolled back.
 - [x] B. Rebuild the preview regression test: `tests/preview.mjs` still asserts `.pf-metric`, `.pf-modes`,
       `.pf-danger` and `.pf-method-title`, none of which exist after the report-card removal and the layout rework. Rewrite
       it against the current DOM (legend, chips, dropdown, both canvases, responsive matrix, three themes) and make sure it
       runs.
-- [ ] C. i18n gaps: `_('Select Custom curve to edit the six curve points.')` and `_('Except for an explicit 0% stop
+- [x] C. i18n gaps: `_('Select Custom curve to edit the six curve points.')` and `_('Except for an explicit 0% stop
       request, no request drives the fan below this value. A higher floor keeps an aging or dusty fan turning at low
-      duty.')` have no msgid, so they show English in the Chinese UI. Add them and add a `check.sh` guard that fails when a
+      duty.')` were reported as untranslated. The first was really missing; the second was already in the catalogue and the
+      report was a multi-line-msgid artefact. Add the missing one and a `check.sh` guard that fails when a
       `_('…')` in the views has no msgid.
-- [ ] D. Dead CSS: `.pf-danger` and `.pf-segment` are no longer referenced by any view; remove and confirm the bundle size
+- [x] D. Dead CSS: `.pf-danger` and `.pf-segment` are no longer referenced by any view; remove and confirm the bundle size
       and the preview.
 - [ ] E. bats coverage: `in_range`, `is_signed_int` and `is_uint` have no direct cases.
 - [ ] F. Responsive × theme matrix: 320/360/390/430/651/736/880/992/1200/1360 × light/dark, with assertions (no
@@ -447,3 +448,8 @@ nine `cat` calls are gone without an awk pass):
 - 2026-11-23: 预览回归测试重写。旧的 `tests/preview.mjs` 还在断言 `.pf-metric`（读数卡片已下线）、`.pf-modes`、`.pf-danger`、`.pf-method-title` 与 `#theme` 下拉，整套 harness 早已跑不通。新版按当前 DOM 覆盖：五个驱动方式、两个带 `aria-label` 的画布、曲线图例四项（键序 request/temperature/actual/protection、数值与列右缘对齐、列宽相等、元素确实有宽度）、下限与温度过期芯片默认隐藏、固定请求滑块与倒计时保存条、主题按钮三态循环、状态快照改写（`state=disabled` → 未接管，追加 `stale_temperature=1` → 芯片点亮）、10 档宽度 × 3 主题矩阵（无横向溢出、芯片在卡片内且不重叠、图例列对齐、头部不塌）、高级设置七张行为卡片与保存往返。
 - 2026-11-23: 负向验证过这套测试确实会失败：把 `.pf-legend span[data-key]` 隐藏 → “legend items are painted 0/0/0/0”；给条目加 `padding-right:3px` → 四条 “value flush right … 972 vs 975”。两个变异都在验证后 `git checkout --` 还原。
 - 2026-11-23: 两条 harness 事实：预览的静态资源从仓库 `htdocs/` 出，不是 rootfs 副本（所以预览永远反映工作区，改 rootfs 里的 css 无效）；预览没有 `cgi-exec` 与 `uci/apply_rollback`，传感器字段在预览里是原生 `<select>`、设备上是主题的 `.cbi-dropdown`，测试两种形态都接受。`tools/check.sh` 只在设置了 `PWMFAN_PREVIEW_URL` 时才跑浏览器一遍，并且新增 `node --check` 覆盖 shared 视图与测试文件本身。
+
+- 2026-11-23: 新增 `tools/check-i18n.mjs` 作为目录守卫：解析 po（含多行 msgid 的续行拼接），扫描三个视图里的 `_('…')` 字面量（含 `'a' + 'b'` 拼接形式），缺译文或译文为空即失败，并列出没有代码引用的目录条目。接进 `tools/check.sh` 的 node 段。首跑抓到一处真缺口：`h5000m-pwmfan.js:606` 的 `Select Custom curve to edit the six curve points.` 没有中文，补为“选择「自定义曲线」后可编辑六个曲线点。”；同一个守卫也证明先前以为缺的“非零请求下限”说明其实已经在目录里（多行 msgid 被粗略 grep 误判）。
+
+- 2026-11-23: 目录瘦身。守卫列出 146 条没有任何视图引用的 msgid（旧读数卡片、旧“交棒核验”行、旧分组标题、旧单位写法等），全部删除；`po` 从 245 条降到 123 条，`msgfmt --check` 通过，守卫复跑无缺口。删除前后用 `tools/snap-text.mjs` 抓两个页面在 390px 下的全部可见文本做对比，除演示数据的时间与温度跳动外**逐行一致**，证明删的确实是死条目。
+- 2026-11-23: 删除死样式：`.pf-page .pf-danger`、`.pf-page .pf-danger[aria-pressed=true]` 两条规则，以及 `.pf-segment` 与 `.pf-editor-actions` 共用选择器里的 `.pf-segment`（后者保留）。全仓再无 `pf-danger` / `pf-segment` 引用。
