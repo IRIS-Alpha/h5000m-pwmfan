@@ -381,7 +381,7 @@ question that needs a person goes to "Awaiting decision" instead of being guesse
 
 - [ ] A. Safety net: record the current device state (`uci export`, package list, `/var/run/h5000m-pwmfan/status`, APK
       hash) in `docs/device-baseline-20261123.md` so later changes can be diffed and rolled back.
-- [ ] B. Rebuild the preview regression test: `tests/preview.mjs` still asserts `.pf-metric`, `.pf-modes`,
+- [x] B. Rebuild the preview regression test: `tests/preview.mjs` still asserts `.pf-metric`, `.pf-modes`,
       `.pf-danger` and `.pf-method-title`, none of which exist after the report-card removal and the layout rework. Rewrite
       it against the current DOM (legend, chips, dropdown, both canvases, responsive matrix, three themes) and make sure it
       runs.
@@ -444,3 +444,6 @@ nine `cat` calls are gone without an awk pass):
 - 2026-11-23: 低风险清理。删除 `h5000m-pwmfan.js` 里 `REPORT_KEY`（读数卡片下线后遗留的死常量，全仓无引用），部署包从 42,999 字节降到 42,968。卸载设备上的旧包 `luci-app-h5000m-fancontrol-2.1.3-r1`：卸载前把 `/usr/sbin/h5000m-fancontrol`、status helper、init 脚本、menu/acl json、`h5000m/fancontrol.js`、`/etc/config/h5000m_fancontrol` 与旧 i18n 目录打成 `/root/h5000m-backup/legacy-fancontrol-20261123.tgz`（16,201 B，md5 `09ba65f4c580663e0585250a7dd5d087`，工作区另存一份），因为快照 feed 不可达、卸载无法用 `apk add` 回滚。卸载后 menu.d 只剩 netmode 与 pwmfan，旧页面文件消失，`/etc/config/h5000m_fancontrol` 作为 conffile 保留；本插件 `.lmo` 11,456 B、`state=running`、`effective_pwm=51` 未受影响。
 - 2026-11-23: 修正 `docs/BUILD_AND_INSTALL.md` 的过期段落：原文还写着 `kernel_takeover_ready() { return 1; }`（“装了也不会接管”），实际门禁早已是 `kernel_takeover_ready_dir`，要求 `enabled=1` + `kernel_takeover=1` + `takeover_verified=1` + 可写 `pwm1` + `pwm-fan` 冷却设备，并列出 `takeover_pending` / `not_enabled` / `released` 三种释放原因；同时补“旧控制器”一节记录备份位置与手工恢复方式。
 
+- 2026-11-23: 预览回归测试重写。旧的 `tests/preview.mjs` 还在断言 `.pf-metric`（读数卡片已下线）、`.pf-modes`、`.pf-danger`、`.pf-method-title` 与 `#theme` 下拉，整套 harness 早已跑不通。新版按当前 DOM 覆盖：五个驱动方式、两个带 `aria-label` 的画布、曲线图例四项（键序 request/temperature/actual/protection、数值与列右缘对齐、列宽相等、元素确实有宽度）、下限与温度过期芯片默认隐藏、固定请求滑块与倒计时保存条、主题按钮三态循环、状态快照改写（`state=disabled` → 未接管，追加 `stale_temperature=1` → 芯片点亮）、10 档宽度 × 3 主题矩阵（无横向溢出、芯片在卡片内且不重叠、图例列对齐、头部不塌）、高级设置七张行为卡片与保存往返。
+- 2026-11-23: 负向验证过这套测试确实会失败：把 `.pf-legend span[data-key]` 隐藏 → “legend items are painted 0/0/0/0”；给条目加 `padding-right:3px` → 四条 “value flush right … 972 vs 975”。两个变异都在验证后 `git checkout --` 还原。
+- 2026-11-23: 两条 harness 事实：预览的静态资源从仓库 `htdocs/` 出，不是 rootfs 副本（所以预览永远反映工作区，改 rootfs 里的 css 无效）；预览没有 `cgi-exec` 与 `uci/apply_rollback`，传感器字段在预览里是原生 `<select>`、设备上是主题的 `.cbi-dropdown`，测试两种形态都接受。`tools/check.sh` 只在设置了 `PWMFAN_PREVIEW_URL` 时才跑浏览器一遍，并且新增 `node --check` 覆盖 shared 视图与测试文件本身。

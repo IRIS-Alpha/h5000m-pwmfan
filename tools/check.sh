@@ -49,6 +49,12 @@ if command -v msgfmt >/dev/null 2>&1; then msgfmt --check --check-format -o /dev
 if command -v node >/dev/null 2>&1; then
 	node --check htdocs/luci-static/resources/view/h5000m-pwmfan.js
 	node --check htdocs/luci-static/resources/view/h5000m-pwmfan-advanced.js
+	node --check htdocs/luci-static/resources/view/h5000m-pwmfan-shared.js
+	node --check tests/preview.mjs
+	# The browser pass needs a running preview and Playwright; opt in with the URL.
+	if [ -n "${PWMFAN_PREVIEW_URL:-}" ] && [ -f tests/preview.mjs ]; then
+		node tests/preview.mjs
+	fi
 fi
 
 if [ "$strict" = 1 ] && [ "$missing" -ne 0 ]; then
