@@ -248,7 +248,13 @@ async function advancedChecks() {
 	await page.waitForFunction(async (value) => (await L.require('uci')).get('h5000m_pwmfan', 'main', 'protection_temp') === value, wanted);
 	await page.reload({ waitUntil: 'domcontentloaded' });
 	await field().waitFor();
-	check('form keeps the saved value', await field().inputValue() === wanted);
+	// The form is filled from the saved config after it renders, so poll instead of
+	// sampling once: a single read races the render on a slow first paint.
+	const restored = await page.waitForFunction((value) => {
+		const input = document.querySelector('input[id$=protection_temp]');
+		return !!input && input.value === value;
+	}, wanted, { timeout: 4000 }).then(() => true, () => false);
+	check('form keeps the saved value', restored);
 	await field().fill(previous);
 	await page.locator('.cbi-button-apply').first().click();
 	await page.waitForTimeout(600);
