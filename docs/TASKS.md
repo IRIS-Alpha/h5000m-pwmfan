@@ -373,6 +373,35 @@
 - 2026-11-23: 控制周期区间由 1–30 秒收窄到 1–10 秒（默认 2），守护进程改为钳制；理由是它同时决定温度历史分辨率与保护斜坡的可采样性。
 - 2026-11-23: 控制周期区间由 1–10 秒进一步收到 1–5 秒（默认 2）；依据是旧插件 `h5000m-fancontrol` 的 `interval` 默认 5 秒、下限 2 秒（代码与本机旧 uci 一致），60 秒上限从未被合理使用。
 
+## Active: unattended cleanup (planned 2026-11-23)
+
+Constraints for this block: only work that needs no human decision. The router is read-only (no `uci set`, no PWM or
+thermal-zone writes). Every item ends with `STRICT=1 sh tools/check.sh`, a look at the preview, and its own commit. A
+question that needs a person goes to "Awaiting decision" instead of being guessed.
+
+- [ ] A. Safety net: record the current device state (`uci export`, package list, `/var/run/h5000m-pwmfan/status`, APK
+      hash) in `docs/device-baseline-20261123.md` so later changes can be diffed and rolled back.
+- [ ] B. Rebuild the preview regression test: `tests/preview.mjs` still asserts `.pf-metric`, `.pf-modes`,
+      `.pf-danger` and `.pf-method-title`, none of which exist after the report-card removal and the layout rework. Rewrite
+      it against the current DOM (legend, chips, dropdown, both canvases, responsive matrix, three themes) and make sure it
+      runs.
+- [ ] C. i18n gaps: `_('Select Custom curve to edit the six curve points.')` and `_('Except for an explicit 0% stop
+      request, no request drives the fan below this value. A higher floor keeps an aging or dusty fan turning at low
+      duty.')` have no msgid, so they show English in the Chinese UI. Add them and add a `check.sh` guard that fails when a
+      `_('…')` in the views has no msgid.
+- [ ] D. Dead CSS: `.pf-danger` and `.pf-segment` are no longer referenced by any view; remove and confirm the bundle size
+      and the preview.
+- [ ] E. bats coverage: `in_range`, `is_signed_int` and `is_uint` have no direct cases.
+- [ ] F. Responsive × theme matrix: 320/360/390/430/651/736/880/992/1200/1360 × light/dark, with assertions (no
+      horizontal overflow, chips never overlap, legend columns aligned, both canvases painted), and fix what it finds.
+- [ ] G. Web Interface Guidelines review on the four interface files, per `AGENTS.md`; fix the applicable findings
+      (visible focus, ARIA, contrast, reduced motion, tap targets).
+- [ ] H. Docs-versus-code sweep: grep `docs/*.md` for hard-coded constants, function names and behaviour claims; the
+      `kernel_takeover_ready() { return 1; }` find shows how far a paragraph can drift.
+
+Not in scope (needs a person): the five externally blocked items, any change to live device behaviour, signing and feed
+decisions.
+
 ## Done: shell daemon micro-optimisations (2026-11-23)
 
 Measured baseline on 192.168.10.1 (4x Cortex-A73, `poll_interval=2`): one daemon cycle costs
