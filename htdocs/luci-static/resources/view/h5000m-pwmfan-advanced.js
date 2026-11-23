@@ -137,14 +137,16 @@ return view.extend({
 			'.pwmfan-advanced .cbi-value:has(> .cbi-value-field > .cbi-checkbox) > .cbi-value-field > .cbi-value-description{grid-column:2 / -1}',
 			'.pwmfan-advanced .cbi-value{padding:8px 0;row-gap:8px}',
 			/* Boolean rows: label and help on the left, one switch pinned to the right edge. */
-			'.pwmfan-advanced .pf-flag-row{display:grid;grid-template-columns:minmax(0,1fr);row-gap:8px;align-items:start;padding:8px 0}',
-			'.pwmfan-advanced .pf-flag-main{min-width:0}',
+			// Title and switch share the first line at every width; the description
+			// takes the whole second line. `display: contents` lets the two children
+			// of the title block place themselves instead of being boxed together.
+			'.pwmfan-advanced .pf-flag-row{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:14px;row-gap:6px;align-items:start;padding:8px 0}',
+			'.pwmfan-advanced .pf-flag-main{display:contents}',
+			'.pwmfan-advanced .pf-flag-row > .pf-flag-main > .cbi-value-title{grid-column:1;grid-row:1;display:block;line-height:24px;margin:0}',
+			'.pwmfan-advanced .pf-flag-row > .pf-toggle{grid-column:2;grid-row:1;align-self:center;margin-top:0}',
+			'.pwmfan-advanced .pf-flag-row > .pf-flag-main > .cbi-value-description{grid-column:1 / -1;grid-row:2;margin-top:0;max-width:78ch}',
 			'@media (min-width:992px){.pwmfan-advanced .pf-flag-row{grid-template-columns:minmax(0,0.46fr) minmax(0,1fr);column-gap:20px}}',
-			'.pwmfan-advanced .pf-flag-row > .pf-flag-main{grid-column:1}',
-			'.pwmfan-advanced .pf-flag-row > .pf-toggle{grid-column:1;justify-self:start}',
-			'@media (min-width:992px){.pwmfan-advanced .pf-flag-row > .pf-toggle{grid-column:2}}',
-			'.pwmfan-advanced .pf-flag-main .cbi-value-title{display:block;line-height:24px;margin:0}',
-			'.pwmfan-advanced .pf-flag-main .cbi-value-description{margin-top:6px;max-width:60ch}',
+			'@media (min-width:992px){.pwmfan-advanced .pf-flag-row > .pf-toggle{justify-self:start}}',
 			'.pwmfan-advanced .pf-toggle{position:relative;display:inline-flex;flex:none;margin-top:1px;cursor:pointer;-webkit-tap-highlight-color:transparent}',
 			'.pwmfan-advanced .pf-toggle input{position:absolute;width:0;height:0;opacity:0}',
 			'.pwmfan-advanced .pf-toggle .pf-track{position:relative;display:block;width:44px;height:24px;border-radius:6px;background:var(--sw-off);transition:background .28s ease}',
