@@ -116,7 +116,7 @@
 - [x] Restore non-interactive WSL SSH access to H5000M.
 - [x] Observe CPU trips, governor, cooling-device state, PWM readback, and fan service status while the installed controller is running.
 - [x] Sample PWM and thermal state during a bounded pause of the installed fan controller, then verify service restoration.
-- [ ] Confirm the kernel request on a natural trip crossing after fan replacement and stock controller baseline verification. High-temperature handover remains unverified.
+- [ ] Confirm the kernel request on a natural trip crossing after fan replacement and stock controller baseline verification. High-temperature handover remains unverified. The fan was replaced by 2026-11-24, so the replacement half is done; what is still missing is the observation itself (see `docs/ROLLBACK.md` for the release path and the abort criteria).
 - [x] Add project working agreement and reconcile V3 historical discussion with confirmed control decisions.
 - [x] Add deterministic pure helpers for target-drive interpolation/blending, bounded PI anti-windup, and global-protection transitions with offline boundary tests.
 - [x] Confirm and test target temperature, response interval, and transition-width limits, including zero-degree onset and automatic width compression.
@@ -146,7 +146,7 @@
 
 ## Deferred until the plugin is stable
 
-- [ ] Decide whether to submit to an official feed or maintain a self-hosted APK repository; add index signing and device trust only if standalone package updates are still desired.
+- [ ] Decide whether to submit to an official feed or maintain a self-hosted APK repository; add index signing and device trust only if standalone package updates are still desired. Parked by the user on 2026-11-24 until the plugin is stable; the matching-SDK build below stays blocked on this decision.
 
 - 2026-11-21: Recorded and implemented five local-preview UI corrections: top-control spacing, fixed-request label/slider/stop alignment, Wake-style slider feedback, and history unit spacing. Verified all 10 mobile/desktop theme combinations with no horizontal overflow and confirmed 10% keyboard increments.
 
