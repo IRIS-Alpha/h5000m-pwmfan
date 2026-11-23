@@ -740,7 +740,7 @@ return view.extend({
 	},
 
 	makeChart: function(label, legend, history) {
-		var self = this, canvas = E('canvas', { role: 'img', 'aria-label': label });
+		var self = this, canvas = E('canvas', { role: 'img', 'aria-label': label, tabindex: '0' });
 		var tip = E('div', { 'class': 'pf-tooltip', hidden: true });
 		var chart = { canvas: canvas, tip: tip, cursor: null, history: history, handles: [] };
 		if (!history) {

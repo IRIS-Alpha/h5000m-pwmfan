@@ -37,7 +37,7 @@ Environment:
 
 | Variable | Meaning |
 | --- | --- |
-| `PWMFAN_PREVIEW_URL` | Preview base URL, default `http://127.0.0.1:8028/` |
+| `PWMFAN_PREVIEW_URL` | The dashboard page URL, e.g. `http://127.0.0.1:8028/cgi-bin/luci/admin/system/h5000m_pwmfan/dashboard` (the advanced page is derived from it) |
 | `PWMFAN_PREVIEW_OUTPUT` | Screenshot directory, skipped when unset |
 
 What it covers:

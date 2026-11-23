@@ -9,13 +9,14 @@ import { join } from 'node:path';
  *   python3 tools/preview.py --port 8028 <rootfs>
  * Then run this file where Playwright resolves, e.g.
  *   NODE_PATH=/path/to/node_modules node tests/preview.mjs
- * Env: PWMFAN_PREVIEW_URL (default http://127.0.0.1:8028/),
- *      PWMFAN_PREVIEW_OUTPUT (screenshot directory, optional).
+ * Env: PWMFAN_PREVIEW_URL — the dashboard page itself (the advanced page is
+ *      derived from it), and PWMFAN_PREVIEW_OUTPUT — screenshot directory.
  */
 
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
-const base = process.env.PWMFAN_PREVIEW_URL || 'http://127.0.0.1:8028/';
+const base = process.env.PWMFAN_PREVIEW_URL
+	|| 'http://127.0.0.1:8028/cgi-bin/luci/admin/system/h5000m_pwmfan/dashboard';
 const out = process.env.PWMFAN_PREVIEW_OUTPUT;
 if (out) await mkdir(out, { recursive: true });
 

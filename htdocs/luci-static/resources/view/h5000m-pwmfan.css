@@ -37,7 +37,7 @@
 .pf-page :is(input:not([type=range]), select, button) { height: 34px; padding: 0 9px; }
 /* The switchers are fixed squares: the generic 34px height would stretch them into rectangles. */
 .pf-page button.pf-switch { width: 32px; height: 32px; padding: 0; border-radius: 9px; }
-.pf-page :is(button, select, summary) { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pf-page :is(button, select, summary) { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .pf-page button:disabled { opacity: .5; cursor: default; }
 .pf-page :is(input, select, button, summary, canvas):focus-visible { outline: 2px solid var(--pf-blue); outline-offset: 2px; }
 .pf-live { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 10px; color: var(--pf-muted); background: var(--pf-surface); border: 1px solid var(--pf-line); border-radius: 9px; white-space: nowrap; }
@@ -50,7 +50,7 @@
 @keyframes pf-pulse { from { opacity: .45; transform: scale(1); } 75%, to { opacity: 0; transform: scale(2.4); } }
 @media (prefers-reduced-motion: reduce) { .pf-live i::after { animation: none !important; } }
 .pf-card { background: var(--pf-surface); border: 1px solid var(--pf-line); border-radius: var(--v-r-lg, 13px); padding: 13px; min-width: 0; }
-.pf-card h3, .pf-card > summary { font-size: 15px; font-weight: 650; }
+.pf-card h3, .pf-card > summary { font-size: 15px; font-weight: 650; text-wrap: balance; }
 .pf-note, .pf-field { color: var(--pf-muted); font-size: 12px; }
 .pf-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 9px; }
 .pf-modes.pf-drives { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 7px; }
@@ -213,6 +213,7 @@ html[data-darkmode=true] .pf-warn-stale { --pf-glow: 122, 190, 255; }
 	border-top: 1px solid var(--pf-line); border-bottom: 1px solid var(--pf-line);
 	color: var(--pf-muted); font-size: 11px; text-align: center; }
 .pf-page button.pf-mode { font-weight: 650; height: auto; min-height: 34px; padding: 6px 7px; line-height: 1.2; white-space: normal; }
+.pf-page button.pf-mode:hover { border-color: var(--pf-muted); background: var(--pf-subtle); }
 @media (max-width: 380px) { .pf-live { font-size: 11px; padding-inline: 7px; } .pf-live span { letter-spacing: 0; } }
 @media (max-width: 380px) { .pf-page button.pf-mode { font-size: 11px; padding: 6px 4px; } }
 .pf-page button[aria-pressed=true] { border-color: var(--pf-blue); color: var(--pf-blue); background: color-mix(in srgb, var(--pf-blue) 10%, var(--pf-surface)); }

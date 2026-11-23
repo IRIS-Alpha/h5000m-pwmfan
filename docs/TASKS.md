@@ -395,8 +395,12 @@ question that needs a person goes to "Awaiting decision" instead of being guesse
 - [x] E. bats coverage: `in_range`, `is_signed_int` and `is_uint` have no direct cases.
 - [x] F. Responsive × theme matrix: 320/360/390/430/651/736/880/992/1200/1360 × light/dark, with assertions (no
       horizontal overflow, chips never overlap, legend columns aligned, both canvases painted), and fix what it finds.
-- [ ] G. Web Interface Guidelines review on the four interface files, per `AGENTS.md`; fix the applicable findings
-      (visible focus, ARIA, contrast, reduced motion, tap targets).
+- [x] G. Web Interface Guidelines review on the four interface files, per `AGENTS.md`; fix the applicable findings
+      (visible focus, ARIA, contrast, reduced motion, tap targets). Result in
+      `docs/design-review-20261123.md`. Four fixes: the chart canvas is now a tab stop (its key handler was
+      unreachable), the preset buttons got a hover state, `touch-action: manipulation` now covers every control, and
+      card headings balance their wrap. Two reported findings were retracted after measuring: the legend already
+      truncates correctly, and the advanced page's native `<select>` inherits the theme colours in both schemes.
 - [ ] H. Docs-versus-code sweep: grep `docs/*.md` for hard-coded constants, function names and behaviour claims; the
       `kernel_takeover_ready() { return 1; }` find shows how far a paragraph can drift.
 
@@ -407,9 +411,19 @@ question that needs a person goes to "Awaiting decision" instead of being guesse
   introduced together with the card in `9400ca3`; no requirement records the choice. The curve is the page's primary
   picture and its legend now carries the live values, so collapsed-by-default hides both until the user taps. Leave it,
   or open it by default like the monitor?
+- Curve editing is pointer-only (`docs/design-review-20261123.md`): the six drag handles are `aria-hidden`, and the
+  canvas key handler only moves the read cursor, so a keyboard user cannot move a curve point. Options: six focusable
+  per-point controls (six more tab stops), a point list beside the chart, or leave it and document the limitation.
 - The monitor chart's time axis tilts by 45° on phones (six labels do not fit upright). It stays inside the canvas and
   never overflows, but the tilted run crowds the 0 °C line and the y labels. Options: keep it, label every other tick on
   phones while keeping six gridlines, or make the canvas taller under 430 px.
+
+Brief log: 2026-11-23 — G closed. The canvas had a `keydown` handler since the cursor was added, but no
+`tabindex`, so keyboard focus never reached it; `ArrowRight`/`ArrowLeft`/`Escape` now move and clear the read cursor
+(painted pixels 63387 → 63542 → 63488 → 63386). The preset buttons changed border colour on hover only after
+`[aria-pressed=true]`; the idle → hover transition is `rgb(214, 218, 222)` → `rgb(74, 81, 90)`. `touch-action:
+manipulation` reached two control classes and now reaches all of them. `tests/preview.mjs` also gained the right
+default URL (the dashboard page), because the old default 404'd and the run timed out on `.pf-page`.
 
 Not in scope (needs a person): the five externally blocked items, any change to live device behaviour, signing and feed
 decisions.
