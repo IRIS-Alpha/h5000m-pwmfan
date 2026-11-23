@@ -25,11 +25,10 @@ PROC=${WD_PROC:-/proc}
 LOGGER=${WD_LOGGER:-logger}
 ONESHOT=${WD_ONESHOT:-0}
 BACKOFF=${WD_BACKOFF:-30}
-# How long the temperature must stay at the threshold before acting.
-HOLD=${WD_HOLD:-30}
-# The shutdown trip the early reboot stays below, and the margin it keeps.
+# How long the temperature must stay above the protection threshold before acting.
+HOLD=${WD_HOLD:-20}
+# The shutdown trip the reboot point stays below.
 SHUTDOWN_TEMP=${WD_SHUTDOWN_TEMP:-125}
-EARLY_LEAD=${WD_EARLY_LEAD:-15}
 
 # Full duty, the same value the controller uses as its failsafe
 # (root/usr/sbin/h5000m-pwmfan:26).
@@ -112,22 +111,24 @@ hot_since() (
 	printf '%s' "$value"
 )
 
-# Reboot before the shutdown trip rather than after it. The threshold is derived
-# from the protection threshold, not configured on its own: protection + lead,
-# and never closer than the lead to the shutdown trip.
-early_reboot_temp() (
-	[ "$early_reboot" -eq 1 ] || exit 1
-	threshold=$((protection_temp + EARLY_LEAD))
-	[ "$threshold" -le $((SHUTDOWN_TEMP - EARLY_LEAD)) ] ||
-		threshold=$((SHUTDOWN_TEMP - EARLY_LEAD))
-	printf '%s' "$threshold"
-)
-
+# Two ways to act, both before the shutdown trip rather than after it: at the
+# reboot point the temperature has left no time to wait, and between the
+# protection threshold and that point it only counts once the fan has failed to
+# bring the temperature back down for a full hold window.
 reboot_watch() {
-	threshold=$(early_reboot_temp) || return 0
+	[ "$early_reboot" -eq 1 ] || {
+		rm -f "$HOT_MARK"
+		return 0
+	}
 	temp=$(read_one "$THERMAL/thermal_zone0/temp")
 	case "$temp" in '' | *[!0-9]*) return 0 ;; esac
-	if [ "$temp" -lt $((threshold * 1000)) ]; then
+	if [ "$temp" -ge $((reboot_temp * 1000)) ]; then
+		rm -f "$HOT_MARK"
+		"$LOGGER" -t h5000m-pwmfan "watchdog: ${temp}mc reached the ${reboot_temp}C reboot point, $((SHUTDOWN_TEMP - reboot_temp))C below the shutdown trip, rebooting"
+		"$REBOOT_CMD"
+		return 0
+	fi
+	if [ "$temp" -lt $((protection_temp * 1000)) ]; then
 		rm -f "$HOT_MARK"
 		return 0
 	fi
@@ -136,7 +137,8 @@ reboot_watch() {
 		return 0
 	fi
 	[ $(($1 - since)) -ge "$HOLD" ] || return 0
-	"$LOGGER" -t h5000m-pwmfan "watchdog: ${temp}mc for ${HOLD}s, ${EARLY_LEAD}C below the shutdown trip, rebooting"
+	rm -f "$HOT_MARK"
+	"$LOGGER" -t h5000m-pwmfan "watchdog: ${temp}mc stayed above the ${protection_temp}C protection threshold for ${HOLD}s, rebooting"
 	"$REBOOT_CMD"
 }
 
@@ -194,6 +196,14 @@ protection_temp=${WD_PROTECTION_TEMP:-}
 case "$protection_temp" in '' | *[!0-9]*) protection_temp=90 ;; esac
 [ "$protection_temp" -ge 40 ] || protection_temp=40
 [ "$protection_temp" -le 110 ] || protection_temp=110
+
+# The point where waiting is over. Capped so it stays clear of the shutdown trip
+# and floored so it is never below the protection threshold.
+reboot_temp=${WD_EARLY_REBOOT_TEMP:-}
+[ -n "$reboot_temp" ] || reboot_temp=$(uci_get early_reboot_temp 110)
+case "$reboot_temp" in '' | *[!0-9]*) reboot_temp=110 ;; esac
+[ "$reboot_temp" -ge 100 ] || reboot_temp=100
+[ "$reboot_temp" -le $((SHUTDOWN_TEMP - 5)) ] || reboot_temp=$((SHUTDOWN_TEMP - 5))
 
 if [ "$ONESHOT" = 1 ]; then
 	check_once "$(date +%s)"

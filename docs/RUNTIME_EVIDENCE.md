@@ -181,14 +181,20 @@ duty it last wrote.
   `pwm1=255`, kernel trips restored from `thermal-takeover`, controller
   `SIGTERM`ed so procd restarts it. The controller then pins the trips again and
   resumes the curve.
-- early reboot: off by default (`early_reboot=0`); when on, the trigger is
-  `min(protection_temp + 15, 110)` °C (105 °C at the default 90 °C threshold),
-  held for 30 s, then `/sbin/reboot`. The hold is timed in `watchdog-hot`, and the
-  check also runs while the controller is being rescued.
+- early reboot: off by default (`early_reboot=0`); when on, it fires in two
+  cases. Above the protection threshold (`protection_temp`, default 90 °C) the
+  temperature is timed in `watchdog-hot` and `/sbin/reboot` runs once it has
+  stayed there for 20 s — at that point the fan is already locked at 100 % and
+  has failed to pull the temperature back down. At the reboot point
+  (`early_reboot_temp`, 100…120 °C, default 110 °C) it reboots at once: 125 °C is
+  where the kernel shuts the board down, and a reboot itself takes a while with
+  the CPU still at full load, so 15 °C of that gap is reserved for it. The check
+  also runs while the controller is being rescued.
 - cost: one file read per poll (2 s) plus one `date`; no extra processes.
 
-Covered by `tests/watchdog.bats` (six cases: fresh, stale, missing status file,
-foreign pid, reboot off, reboot hold).
+Covered by `tests/watchdog.bats` (eleven cases: fresh, stale, missing status
+file, foreign pid, reboot off, reboot point immediate, hold window, clock
+cleared below the threshold, floor and ceiling clamps).
 
 ## Mutual restart (measured 2026-11-24)
 

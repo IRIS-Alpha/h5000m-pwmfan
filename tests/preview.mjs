@@ -261,7 +261,7 @@ async function advancedChecks() {
 		const note = row && row.querySelector('.cbi-value-description');
 		return note ? note.textContent.trim() : '';
 	});
-	check('early reboot hint names the derived point', /105 °C/.test(earlyHint) && /20 °C/.test(earlyHint), earlyHint);
+	check('early reboot hint names both trigger points', /90 °C/.test(earlyHint) && /110 °C/.test(earlyHint) && /15 °C/.test(earlyHint), earlyHint);
 	const hosts = await page.locator('.pf-unit-host').count();
 	check('unit hosts', hosts >= 10, String(hosts));
 	const folded = await page.evaluate(() => [ ...document.querySelectorAll('.cbi-value-description') ]

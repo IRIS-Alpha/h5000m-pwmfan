@@ -145,6 +145,7 @@ return view.extend({
 			'.pwmfan-advanced .pf-flag-row > .pf-flag-main > .cbi-value-title{grid-column:1;grid-row:1;display:block;line-height:24px;margin:0}',
 			'.pwmfan-advanced .pf-flag-row > .pf-toggle{grid-column:2;grid-row:1;align-self:center;margin-top:0}',
 			'.pwmfan-advanced .pf-flag-row > .pf-flag-main > .cbi-value-description{grid-column:1 / -1;grid-row:2;margin-top:0;max-width:78ch}',
+			'.pwmfan-advanced .pf-flag-row > .cbi-value-field{grid-column:1 / -1;grid-row:2;margin:0;max-width:78ch}',
 			'@media (min-width:992px){.pwmfan-advanced .pf-flag-row{grid-template-columns:minmax(0,0.46fr) minmax(0,1fr);column-gap:20px}}',
 			'@media (min-width:992px){.pwmfan-advanced .pf-flag-row > .pf-toggle{justify-self:start}}',
 			'.pwmfan-advanced .pf-toggle{position:relative;display:inline-flex;flex:none;margin-top:1px;cursor:pointer;-webkit-tap-highlight-color:transparent}',
@@ -247,11 +248,14 @@ return view.extend({
 		};
 		var release = section.option(form.Value, 'protection_release', _('Release hysteresis (°C)'));
 		release.datatype = 'range(2,100)'; release.default = '3'; release.rmempty = false;
-		// The reboot point is not a setting of its own: it sits a fixed lead above
-		// the protection threshold, and never closer than that lead to the trip.
+		// Two triggers: the protection threshold held for a while, and a point so
+		// close to the shutdown trip that there is no time to hold.
 		var early = section.option(form.Flag, 'early_reboot', _('Reboot before thermal shutdown'));
 		early.default = '0'; early.rmempty = false;
-		early.description = this.earlyHint(safety.cfgvalue(SECTION));
+		early.description = this.earlyHint(safety.cfgvalue(SECTION), '110');
+		var point = section.option(form.Value, 'early_reboot_temp', _('Reboot temperature (°C)'));
+		point.datatype = 'range(100,120)'; point.default = '110'; point.rmempty = false;
+		point.description = _('When the temperature reaches this point the reboot starts at once. Keep it at least 15 °C below the 125 °C shutdown trip: the reboot takes a while and the CPU is still at full load while it runs.');
 		this.group(section, 'downshift', _('Downshift hysteresis'), _('Avoid rapid fan-speed drops when temperature fluctuates near a curve point.'));
 		var hysteresis = section.option(form.Value, 'hysteresis', _('Temperature hysteresis (°C)'));
 		hysteresis.datatype = 'range(0,30)'; hysteresis.default = '2'; hysteresis.rmempty = false;
@@ -372,30 +376,29 @@ return view.extend({
 		});
 	},
 
-	// Protection + 15 °C, kept 15 °C clear of the shutdown trip.
-	earlyTemperature: function(protection) {
-		var value = Number(protection);
-		if (!isFinite(value) || value <= 0) value = 90;
-		return Math.min(value + 15, 110);
+	earlyHint: function(protection, point) {
+		var threshold = Number(protection);
+		if (!isFinite(threshold) || threshold <= 0) threshold = 90;
+		var trigger = Number(point);
+		if (!isFinite(trigger) || trigger <= 0) trigger = 110;
+		return _('Reboots once the temperature stays above the protection threshold (%s) for 20 seconds, or immediately at %s — %s below the 125 °C shutdown trip. Off by default: the router may hold unsaved data.')
+			.format(threshold + ' °C', trigger + ' °C', (125 - trigger) + ' °C');
 	},
 
-	earlyHint: function(protection) {
-		var threshold = this.earlyTemperature(protection);
-		return _('Reboots when the temperature stays 15 °C above the protection threshold — %s now — for 30 seconds, still %s below the 125 °C shutdown trip. Off by default: the router may hold unsaved data.')
-			.format(threshold + ' °C', (125 - threshold) + ' °C');
-	},
-
-	// Rebuild the hint when the threshold changes, but decorate each node once.
+	// Rebuild the hint when either number changes, but decorate each node once.
 	bindEarlyHint: function(formNode) {
 		var source = formNode.querySelector('[data-name="protection_temp"] input');
+		var point = formNode.querySelector('[data-name="early_reboot_temp"] input');
 		var row = formNode.querySelector('[data-name="early_reboot"]');
 		if (!source || !row || source.dataset.pfEarly === '1') return;
 		var hint = row.querySelector('.cbi-value-description');
 		if (!hint) return;
 		source.dataset.pfEarly = '1';
-		source.addEventListener('input', L.bind(function() {
-			hint.textContent = this.earlyHint(source.value);
-		}, this));
+		var update = L.bind(function() {
+			hint.textContent = this.earlyHint(source.value, point ? point.value : '110');
+		}, this);
+		source.addEventListener('input', update);
+		if (point) point.addEventListener('input', update);
 	},
 
 	decorateFlags: function(formNode) {

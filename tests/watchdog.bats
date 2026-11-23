@@ -85,57 +85,75 @@ status_file() {
 @test "the early reboot stays off while the switch is off" {
 	now=$(date +%s)
 	status_file "$now"
-	echo 99000 >"$WD_THERMAL/thermal_zone0/temp"
-	export WD_EARLY_REBOOT=0 WD_PROTECTION_TEMP=90
+	echo 115000 >"$WD_THERMAL/thermal_zone0/temp"
+	export WD_EARLY_REBOOT=0 WD_PROTECTION_TEMP=90 WD_EARLY_REBOOT_TEMP=110
 	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
 	[ "$status" -eq 0 ]
 	[ ! -e "$ROOT/rebooted" ]
 }
 
-@test "the early reboot fires at the protection threshold plus fifteen" {
+@test "reaching the reboot point fires at once, without waiting out the hold" {
 	now=$(date +%s)
 	status_file "$now"
-	# 105 °C is the derived point for a 90 °C threshold: hold already started.
-	echo 105000 >"$WD_THERMAL/thermal_zone0/temp"
-	printf '%s\n' $((now - 40)) >"$WD_HOT_MARK"
-	export WD_EARLY_REBOOT=1 WD_PROTECTION_TEMP=90
+	echo 110000 >"$WD_THERMAL/thermal_zone0/temp"
+	export WD_EARLY_REBOOT=1 WD_PROTECTION_TEMP=90 WD_EARLY_REBOOT_TEMP=110
 	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
 	[ "$status" -eq 0 ]
 	[ -e "$ROOT/rebooted" ]
+	grep -q "reboot point" "$ROOT/log"
 }
 
-@test "the early reboot ignores a temperature just below the derived point" {
+@test "between the threshold and the point the clock has to run out first" {
 	now=$(date +%s)
 	status_file "$now"
-	echo 104000 >"$WD_THERMAL/thermal_zone0/temp"
-	printf '%s\n' $((now - 40)) >"$WD_HOT_MARK"
-	export WD_EARLY_REBOOT=1 WD_PROTECTION_TEMP=90
+	echo 95000 >"$WD_THERMAL/thermal_zone0/temp"
+	export WD_EARLY_REBOOT=1 WD_PROTECTION_TEMP=90 WD_EARLY_REBOOT_TEMP=110
+	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
+	[ "$status" -eq 0 ]
+	[ ! -e "$ROOT/rebooted" ]
+	[ -e "$WD_HOT_MARK" ]
+}
+
+@test "a temperature that stays above the threshold for the hold fires" {
+	now=$(date +%s)
+	status_file "$now"
+	echo 95000 >"$WD_THERMAL/thermal_zone0/temp"
+	printf '%s\n' $((now - 25)) >"$WD_HOT_MARK"
+	export WD_EARLY_REBOOT=1 WD_PROTECTION_TEMP=90 WD_EARLY_REBOOT_TEMP=110
+	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
+	[ "$status" -eq 0 ]
+	[ -e "$ROOT/rebooted" ]
+	grep -q "protection threshold" "$ROOT/log"
+}
+
+@test "a temperature below the protection threshold clears the clock" {
+	now=$(date +%s)
+	status_file "$now"
+	echo 85000 >"$WD_THERMAL/thermal_zone0/temp"
+	printf '%s\n' $((now - 60)) >"$WD_HOT_MARK"
+	export WD_EARLY_REBOOT=1 WD_PROTECTION_TEMP=90 WD_EARLY_REBOOT_TEMP=110
 	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
 	[ "$status" -eq 0 ]
 	[ ! -e "$ROOT/rebooted" ]
 	[ ! -e "$WD_HOT_MARK" ]
 }
 
-@test "a high threshold cannot push the early reboot into the shutdown trip" {
+@test "a reboot point below the floor is raised to it" {
 	now=$(date +%s)
 	status_file "$now"
-	# 110 °C is the cap: 100 °C protection plus 15 would be 115 °C.
-	echo 110000 >"$WD_THERMAL/thermal_zone0/temp"
-	printf '%s\n' $((now - 40)) >"$WD_HOT_MARK"
-	export WD_EARLY_REBOOT=1 WD_PROTECTION_TEMP=100
+	echo 100000 >"$WD_THERMAL/thermal_zone0/temp"
+	export WD_EARLY_REBOOT=1 WD_PROTECTION_TEMP=90 WD_EARLY_REBOOT_TEMP=90
 	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
 	[ "$status" -eq 0 ]
 	[ -e "$ROOT/rebooted" ]
 }
 
-@test "the early reboot waits out the hold window before it fires" {
+@test "a reboot point inside the shutdown trip is pulled back" {
 	now=$(date +%s)
 	status_file "$now"
-	echo 106000 >"$WD_THERMAL/thermal_zone0/temp"
-	export WD_EARLY_REBOOT=1 WD_PROTECTION_TEMP=90
-	# First pass only starts the clock.
+	echo 120000 >"$WD_THERMAL/thermal_zone0/temp"
+	export WD_EARLY_REBOOT=1 WD_PROTECTION_TEMP=90 WD_EARLY_REBOOT_TEMP=130
 	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
 	[ "$status" -eq 0 ]
-	[ ! -e "$ROOT/rebooted" ]
-	[ -e "$WD_HOT_MARK" ]
+	[ -e "$ROOT/rebooted" ]
 }

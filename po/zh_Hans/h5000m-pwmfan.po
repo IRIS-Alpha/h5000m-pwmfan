@@ -390,5 +390,11 @@ msgstr "由一个独立的第二进程检查控制器心跳，procd 会单独重
 msgid "Reboot before thermal shutdown"
 msgstr "关机前重启"
 
-msgid "Reboots when the temperature stays 15 °C above the protection threshold — %s now — for 30 seconds, still %s below the 125 °C shutdown trip. Off by default: the router may hold unsaved data."
-msgstr "温度持续停在保护阈值以上 15 °C（当前 %s）满 30 秒就重启，仍比 125 °C 的关机触点低 %s。默认关闭：路由器上可能有未保存的数据。"
+msgid "Reboot temperature (°C)"
+msgstr "重启温度（°C）"
+
+msgid "When the temperature reaches this point the reboot starts at once. Keep it at least 15 °C below the 125 °C shutdown trip: the reboot takes a while and the CPU is still at full load while it runs."
+msgstr "温度到达这个点就立即开始重启。请让它比 125 °C 的关机触点至少低 15 °C：重启需要一段时间，而这段时间里 CPU 仍在满载。"
+
+msgid "Reboots once the temperature stays above the protection threshold (%s) for 20 seconds, or immediately at %s — %s below the 125 °C shutdown trip. Off by default: the router may hold unsaved data."
+msgstr "温度停在保护阈值（%s）以上满 20 秒就重启；达到 %s 时立即重启——比 125 °C 的关机触点低 %s。默认关闭：路由器上可能有未保存的数据。"
