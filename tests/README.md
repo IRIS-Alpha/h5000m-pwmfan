@@ -21,6 +21,11 @@ requested PWM and the effective PWM read back from hwmon.
 
 # Preview regression test
 
+> Do not `rsync --delete` into `.h5000m-work/rootfs/www`. That tree is not a copy
+> of `htdocs/`: it mirrors the device's `/www`, including the LuCI framework and
+> `luci-static/vantage`. Overlay with `rsync -a htdocs/ rootfs/www/` (no `--delete`);
+> a delete pass strips the framework and every page renders blank.
+
 `tests/preview.mjs` drives the running preview in a real browser and checks what
 the pages are actually made of, so a markup or layout regression fails instead of
 slipping through a visual review.

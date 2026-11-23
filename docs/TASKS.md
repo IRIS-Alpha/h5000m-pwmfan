@@ -150,6 +150,8 @@
 
 ## Distribution
 
+- 2026-11-24: 预览事故与修复：重启预览前误用 `rsync -a --delete htdocs/ rootfs/www/`，把 `.h5000m-work/rootfs/www` 里的 LuCI 框架与 Vantage 主题删掉（该目录是设备的 `/www` 镜像，不是 `htdocs/` 的拷贝），页面因此空白（`.pf-page` 不存在）。已从设备 `scp` 回 `/www/luci-static/resources`（6.8 MB）与 `/www/luci-static/vantage`（244 KB）恢复，再用 `rsync -a`（不带 `--delete`）覆盖本仓库视图；复验 3 张卡片、两块画布着色 22194 / 7238 像素。教训写入 `tests/README.md`。
+
 - 2026-11-24: 两份评审文档的中文版落地：`docs/RUNTIME_EVIDENCE.zh-CN.md` 与 `docs/ROLLBACK.zh-CN.md`（逐节对应，命令、路径与数字保持原样，篇首注明以英文原文为准），英文原文顶部加了互链。同日把分发决策写入下一节，并新增 `docs/DISTRIBUTION.md`：仓库布局、已验证的 `apk mkndx --allow-untrusted` / `apk adbsign --sign-key --reset-signatures --allow-untrusted`（不带 `--allow-untrusted` 会把 45,807 字节的包截成 1,970 字节且返回 0，已记为陷阱一次）、以及两个仍需在设备上确认的点——我们自建密钥的 key id 与 `apk verify` 对不上、索引文件名（`APKINDEX.adb` / `packages.adb`）未验证。
 
 - [x] Distribution path decided by the user on 2026-11-24: maintain a **self-hosted APK repository with a signed index** rather than submitting to an official feed. Plan, layout and the two open verification points are in `docs/DISTRIBUTION.md`; the signing round-trip (whether apk 3.0.5 accepts a key we generate) is the one thing that must be proven on the device before the repository is published.
