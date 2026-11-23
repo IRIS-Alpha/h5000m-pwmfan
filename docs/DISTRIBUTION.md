@@ -25,80 +25,80 @@ Measured 2026-11-24 on `192.168.10.1`:
 |---|---|
 | Distribution | ImmortalWrt SNAPSHOT, `r0-a4ba824`, `mediatek/filogic`, `aarch64_cortex-a53` |
 | apk | `3.0.5` (v3 index format, `.adb`) |
-| `/etc/apk/repositories` | **absent** — every install so far was a manual `apk add --allow-untrusted /tmp/…apk` |
+| Repository configuration | `/etc/apk/repositories` is **absent**; the device uses `/etc/apk/repositories.d/` (`customfeeds.list`, `distfeeds.list`) |
 | Trusted keys | `/etc/apk/keys/{immortalwrt-snapshots,openwrt-snapshots,public-key}.pem`, EC P-256, 178 B each |
 
-The three keys belong to the firmware builds. We cannot sign with them, and a
-repository signed with a key the device does not know is refused exactly like an
-unsigned one — so publishing our own public key is part of the install instructions,
-not an afterthought.
+Our key is the same shape (EC P-256, 178 B) and is accepted by the device's `apk verify` once installed in
+`/etc/apk/keys/`. That test passed: a package signed with it verifies `OK` on the router.
+
+The three firmware keys cannot be used — the SDK's own `public-key.pem` has md5 `33aa0401…` while the device's has
+`0bc11f49…`, so even the SDK's original APK verifies as `UNTRUSTED signature` on the router. Publishing our public key
+is therefore part of the install instructions, not an afterthought.
 
 ## Layout
 
 ```
 repo/
-  packages/
+  aarch64_cortex-a53/
+    packages.adb                     # v3 index (this exact name; see below)
     luci-app-h5000m-pwmfan-0.1.0-r2.apk
-    luci-i18n-h5000m-pwmfan-zh-cn-….apk
-  APKINDEX.adb            # v3 index; file name to confirm, see below
-  h5000m-apk.pem          # our public key, for /etc/apk/keys/
-  h5000m-apk.pem.sha256
+    luci-i18n-h5000m-pwmfan-zh-cn-<version>.apk
+  h5000m-apk.pem                     # our public key, installed to /etc/apk/keys/
 ```
 
-Client side, once the trust question is settled:
+Client side:
 
 ```sh
 wget -O /etc/apk/keys/h5000m-apk.pem https://<host>/apk/h5000m-apk.pem
-echo 'https://<host>/apk/aarch64_cortex-a53' >> /etc/apk/repositories
+echo 'https://<host>/apk/aarch64_cortex-a53/packages.adb' >> /etc/apk/repositories.d/customfeeds.list
 apk update && apk add luci-app-h5000m-pwmfan
 ```
 
-## Tooling, verified on the build host
+The line in `customfeeds.list` must point at **the index file itself**. A directory is accepted by the parser but apk
+then probes `<dir>/aarch64_cortex-a53/APKINDEX.tar.gz` (the v2 layout) and fails with `1 unavailable`.
 
-The SDK's host `apk` (3.0.5, `staging_dir/host/bin/apk`) is a full copy of the
-package manager, so the repository can be built offline:
+## Tooling, verified end to end
 
-- `apk mkndx --allow-untrusted -o APKINDEX.adb *.apk` builds a v3 index and reports
-  `Index has N packages (of which M are new)`.
-- `apk adbsign --sign-key <private.pem> --reset-signatures <apk>` rewrites the
-  signature in place and keeps the payload (45,807 → 45,801 B in the test).
-- `apk adbdump <file>` prints the block structure; the signature record is the last
-  line of the dump.
-- The device's own `apk` has no `mkndx`/`adbsign`, so index building has to happen on
-  the host. That is expected and is why the file is committed/prebuilt rather than
-  generated on the router.
+Everything below was executed on the router, not just on the host.
 
-Two traps found while testing:
+- `openssl ecparam -name prime256v1 -genkey -noout` plus `openssl ec -pubout` yields the key pair. Public key
+  `packaging/h5000m-apk.pem`, sha256 `d8827e25…18aa0`; the private half is kept outside the repository.
+- `apk --allow-untrusted adbsign --sign-key <private> --reset-signatures <apk>` rewrites the signature in place.
+- `apk mkndx --allow-untrusted --sign-key <private> -o packages.adb *.apk` builds the signed index
+  (`Index has 2 packages`).
+- Served from `/www/apk/aarch64_cortex-a53/` by the device's own uhttpd, `apk update` reported
+  `http://127.0.0.1/apk/aarch64_cortex-a53/packages.adb` as a source, `apk search h5000m` listed both packages, and
+  `apk add luci-i18n-h5000m-pwmfan-zh-cn` installed **without** `--allow-untrusted` after the public key was placed in
+  `/etc/apk/keys/`.
 
-1. **`adbsign` without `--allow-untrusted` truncates the package.** Our SDK APKs
-   carry a signature from a key we do not have, so `adbsign` stops at the existing
-   signature and leaves a 1,970-byte stub in place of a 45,807-byte package — it
-   prints no error and returns 0. Always pass `--allow-untrusted`, then verify the
-   file size.
-2. **`mkndx` refuses packages whose signature it cannot check.** Same flag is
-   required there, otherwise the index is not written and only
-   `ERROR: … UNTRUSTED signature` is printed.
+Traps found while testing:
+
+1. **`adbsign` without `--allow-untrusted` truncates the package.** It stops at the signature it cannot check and
+   leaves a 1,970-byte stub in place of a 45,807-byte package, prints no error and returns 0. Always pass the flag,
+   then check the file size.
+2. **`mkndx` needs the same flag** for the same reason: without it only `ERROR: … UNTRUSTED signature` is printed and
+   no index is written.
+3. **A host `apk verify` can report `UNTRUSTED` for a package the device accepts.** The SDK's host build does not
+   derive the key id the same way; verify on the router (`apk verify --keys-dir /tmp/kd /tmp/pkg.apk`) before
+   concluding the signature is wrong.
+4. **The index is `packages.adb`, not `APKINDEX.adb`.** apk 3.0.5 looks for `packages.adb` for v3 repositories.
+
+## Why not pin the device's LuCI revision
+
+The device runs LuCI `26.315.10273~ad75cde` while the SDK carries `ebc4118b71`. `git diff ebc4118b71 ad75cde -- luci.mk`
+is **empty**, and this package only copies files (`root/`, `htdocs/`, `po/`), so the revision makes no difference to the
+package. Pinning it in the binary SDK is also impossible: checkout plus rebuild fails on `package/utils/ucode`
+(missing `json-c`) because the binary SDK ships no `package/libs` sources.
 
 ## Open before publishing
 
-1. **Key format for trust.** A key made with `openssl ecparam -name prime256v1` is
-   accepted by `adbsign` (the dump shows a new 16-byte key id) but
-   `apk verify --keys-dir <dir>` still says `UNTRUSTED`, and the id matches none of
-   SHA-256 / SHA-1 / MD5 over the PEM, the SPKI DER, or the raw EC point. Until the
-   encoding OpenWrt's build uses is reproduced, a package we sign cannot be checked
-   by the device. Fallback while this is open: keep
-   `apk add --allow-untrusted` and pin the file by its `sha256` in the instructions.
-2. **Index file name.** Whether apk 3.0.5 asks for `APKINDEX.adb` or `packages.adb`
-   in a repository it has not seen before is untested; a scratch `--root` would not
-   initialise its database on this host, so the check needs a real root or the
-   device itself.
-
-Both are one-sitting checks on the device; neither blocks the current manual install
-path, which is what the router runs today.
+1. **Hosting.** Nothing is published yet. The user reviews the repository contents and the cleanup (no keys, no build
+   directories) before it goes live.
+2. **Version bumping.** `PKG_RELEASE` in `Makefile` and `RELEASE` in `tools/build-apk.sh` must move together; the
+   translation package derives its version from the build clock instead.
 
 ## Update path
 
-Until the repository exists, an update is the same loop as today:
-`deploy2.sh` (build → `scp` → `apk add --allow-untrusted --force-overwrite` → i18n
-catalogue → LuCI caches → `rpcd` restart). After publishing, the same loop only
-changes the last two steps to `apk update && apk upgrade`.
+The manual loop stays until the repository is published: `sh tools/build-apk.sh` → `scp build/*.apk` → `apk add
+--allow-untrusted --force-overwrite` → clear LuCI caches. After publishing, the last step becomes `apk update && apk
+upgrade`.

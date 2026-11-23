@@ -18,3 +18,9 @@ Thumbs.db
 
 
 __pycache__/
+
+# Package signing material (never commit the private half)
+packaging/*private*.pem
+packaging/*.key
+keys/
+build/
