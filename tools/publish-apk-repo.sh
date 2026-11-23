@@ -53,15 +53,34 @@ cp "$PUBLIC_KEY" "$OUT/h5000m-apk.pem"
 	"$APK_BIN" mkndx --allow-untrusted --sign-key "$SIGN_KEY" -o packages.adb ./*.apk
 )
 
+# Feed line the page advertises. Derived from the origin remote unless the
+# caller overrides it, so the page never ships a placeholder address.
+FEED_URL=${FEED_URL:-}
+if [ -z "$FEED_URL" ]; then
+	remote=$(git -C "$REPO" remote get-url origin 2>/dev/null || true)
+	remote=${remote%.git}
+	remote=${remote%/}
+	case $remote in
+	git@github.com:*) slug=${remote#git@github.com:} ;;
+	https://github.com/*) slug=${remote#https://github.com/} ;;
+	*) slug= ;;
+	esac
+	if [ -n "$slug" ]; then
+		owner=$(printf '%s' "${slug%%/*}" | tr '[:upper:]' '[:lower:]')
+		FEED_URL="https://$owner.github.io/${slug#*/}/$ARCH/packages.adb"
+	fi
+fi
+[ -n "$FEED_URL" ] || FEED_URL="https://OWNER.github.io/REPO/$ARCH/packages.adb"
+
 # A short readme so the Pages site explains itself and does not look like a stray
 # directory listing.
-cat >"$OUT/index.html" <<'EOF'
+cat >"$OUT/index.html" <<EOF
 <!doctype html>
 <meta charset="utf-8">
 <title>H5000M PWM fan plugin packages</title>
 <h1>H5000M PWM fan plugin — apk repository</h1>
 <p>Feed line for <code>/etc/apk/repositories.d/customfeeds.list</code>:</p>
-<pre><code>https://OWNER.github.io/REPO/aarch64_cortex-a53/packages.adb</code></pre>
+<pre><code>$FEED_URL</code></pre>
 <p>Public key: <a href="h5000m-apk.pem">h5000m-apk.pem</a></p>
 EOF
 
