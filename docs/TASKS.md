@@ -158,6 +158,8 @@
 
 - 2026-11-24: 分发通道按用户拍板（托管 GitHub、优先级 apk 包 feed > 代码 feed）落文档与工具。新增 `tools/publish-apk-repo.sh`：清旧包 → `tools/build-apk.sh` 出两个签名包 → `apk mkndx --allow-untrusted --sign-key … -o packages.adb` → 组装 `repo/{aarch64_cortex-a53/packages.adb,*.apk,h5000m-apk.pem,index.html}`；加 `--push` 时用 detached worktree 提交到 `gh-pages`，不碰工作区（本仓库尚无 remote，未推送）。实测 `Index has 2 packages`，脚本进 `tools/check.sh` 的 shellcheck/shfmt 列表。`docs/DISTRIBUTION.md` 增「Hosting on GitHub Pages」「Source feed for the custom firmware」「The SDK question」三节，并修正“厂商固件”表述——路由器跑的是用户 CI 自建的 `H5000M-CI-Qmodem-OP`（`E:\WorkSpace\A20_Project\H5000M-CI-Qmodem-OP-git`），其 `Scripts/Packages.sh` 已用 `src-link` + `scripts/feeds install -a -p <feed>` 接入外部包，Model Pro 段落还记录了“仓库根有 Makefile 不能直接当 feed”的坑（需 `feed_dir/<pkg>/` 子目录）。
 
+- 2026-11-24: 依赖补 `kmod-hwmon-pwmfan`（`Makefile` 的 `LUCI_DEPENDS:=+luci-base +kmod-hwmon-pwmfan`，`tools/build-apk.sh` 的 `--info "depends:libc kmod-hwmon-pwmfan"`）。设备装包后 `/lib/apk/db/installed` 记录 `D:kmod-hwmon-pwmfan libc`，安装正常（该模块已在设备上，`kmod-hwmon-pwmfan-6.18.60-r1`）。
+
 - [x] Distribution path decided by the user on 2026-11-24: maintain a **self-hosted APK repository with a signed index** rather than submitting to an official feed. Plan, layout and the two open verification points are in `docs/DISTRIBUTION.md`; the signing round-trip (whether apk 3.0.5 accepts a key we generate) is the one thing that must be proven on the device before the repository is published.
 
 - 2026-11-21: Recorded and implemented five local-preview UI corrections: top-control spacing, fixed-request label/slider/stop alignment, Wake-style slider feedback, and history unit spacing. Verified all 10 mobile/desktop theme combinations with no horizontal overflow and confirmed 10% keyboard increments.

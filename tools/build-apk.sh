@@ -117,7 +117,7 @@ apk_file=$OUT/$NAME-$VERSION-r$RELEASE.apk
 	--info "origin:feeds/base/$NAME" \
 	--info "maintainer:H5000M PWM Fan contributors" \
 	--info "url:https://github.com/openwrt/luci" \
-	--info "depends:libc" \
+	--info "depends:libc kmod-hwmon-pwmfan" \
 	--files "$stage" \
 	--script "post-install:$work/post-install" \
 	--script "pre-deinstall:$work/pre-deinstall" \

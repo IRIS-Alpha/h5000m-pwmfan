@@ -8,7 +8,7 @@ PKG_LICENSE_FILES:=LICENSE
 PKG_MAINTAINER:=H5000M PWM Fan contributors
 
 LUCI_TITLE:=H5000M PWM fan control
-LUCI_DEPENDS:=+luci-base
+LUCI_DEPENDS:=+luci-base +kmod-hwmon-pwmfan
 LUCI_PKGARCH:=all
 
 define Package/luci-app-h5000m-pwmfan/postinst
