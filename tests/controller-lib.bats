@@ -435,6 +435,7 @@ config_get() {
 	drive) setting=${TEST_DRIVE:-duty} ;;
 	fixed_duty) setting=$TEST_DUTY ;;
 	min_pwm) setting=${TEST_MIN_PWM:-51} ;;
+	poll_interval) setting=${TEST_POLL:-2} ;;
 	max_pwm) setting=${TEST_MAX_PWM:-255} ;;
 	kick_ms) setting=0 ;;
 	hysteresis) setting=${TEST_HYST:-0} ;;
@@ -514,6 +515,15 @@ if TEST_DUTY=40 TEST_MIN_PWM=51 TEST_MAX_PWM=high load_settings; then exit 1; fi
 # A number too long for test(1) is trimmed, not left to undefined behaviour.
 TEST_DUTY=40 TEST_MIN_PWM=51 TEST_MAX_PWM=999999999999999999999 load_settings || exit 1
 [ "$MAX_PWM" = 255 ] || exit 1
+# The control period is clamped to 1-10 seconds: it is also the history
+# resolution, and a long one would delay the protection ramp.
+TEST_DUTY=40 TEST_POLL=30 load_settings || exit 1
+[ "$POLL_INTERVAL" = 10 ] || exit 1
+TEST_DUTY=40 TEST_POLL=0 load_settings || exit 1
+[ "$POLL_INTERVAL" = 1 ] || exit 1
+TEST_DUTY=40 TEST_POLL=4 load_settings || exit 1
+[ "$POLL_INTERVAL" = 4 ] || exit 1
+if TEST_DUTY=40 TEST_POLL=slow load_settings; then exit 1; fi
 # A stale drive left in the config must not send fixed mode down the curve path.
 MODE=fixed DRIVE=curve FIXED_DUTY=50 MIN_PWM=51 MAX_PWM=255
 [ "$(requested_pwm)" = '128 128' ] || exit 1
