@@ -1,5 +1,5 @@
 #!/bin/sh
-# shellcheck source=root/usr/lib/h5000m-pwmfan/controller-lib.sh
+# shellcheck source=luci-app-h5000m-pwmfan/root/usr/lib/h5000m-pwmfan/controller-lib.sh
 . /usr/lib/h5000m-pwmfan/controller-lib.sh
 
 runtime_dir=/var/run/h5000m-pwmfan

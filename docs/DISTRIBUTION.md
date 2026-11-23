@@ -95,7 +95,7 @@ Traps found while testing:
 ## Why not pin the device's LuCI revision
 
 The device runs LuCI `26.315.10273~ad75cde` while the SDK carries `ebc4118b71`. `git diff ebc4118b71 ad75cde -- luci.mk`
-is **empty**, and this package only copies files (`root/`, `htdocs/`, `po/`), so the revision makes no difference to the
+is **empty**, and this package only copies files (`luci-app-h5000m-pwmfan/{root,htdocs,po}`), so the revision makes no difference to the
 package. Pinning it in the binary SDK is also impossible: checkout plus rebuild fails on `package/utils/ucode`
 (missing `json-c`) because the binary SDK ships no `package/libs` sources.
 
@@ -194,42 +194,71 @@ The device carries `ca-bundle` and `/etc/ssl/certs/ca-certificates.crt`, and `wg
 
 ## Source feed for the custom firmware
 
-The firmware repository `H5000M-CI-Qmodem-OP` (`E:\WorkSpace\A20_Project\H5000M-CI-Qmodem-OP-git`) builds snapshots with
-GitHub Actions and already handles external packages:
+Decision (2026-11-24): the repository itself is a feed, so the firmware needs one line. The package now lives under
+`luci-app-h5000m-pwmfan/` (`Makefile`, `root/`, `htdocs/`, `po/`), which is exactly the layout `scripts/feeds`
+expects (`feed/<pkg>/Makefile`); `docs/`, `tools/`, `tests/`, `packaging/` and the workflows stay at the root and are
+ignored by the scan because they carry no `Makefile`.
 
-- `Scripts/Packages.sh` clones extra repositories and registers them as feeds with `src-link` plus
-  `./scripts/feeds update <name> && ./scripts/feeds install -a -p <name>`.
-- QModem and Model Pro use that path. The Model Pro block documents the single-package trap verbatim: a repository
-  whose `Makefile` sits at the tree root cannot be used as a feed directly, because `scripts/feeds` requires
-  `feed_dir/<pkg>/Makefile`, and the scan misreads the root Makefile (`target pattern contains no '%'`, later
-  `No feed for package`). The workaround is to copy the build inputs into `../<feed>-feed/<pkg>/` and register that
-  directory with `src-link`.
+Verified with the SDK's own `scripts/feeds`: `src-link h5000m <repo>` produced `feeds/h5000m.index` with
+`Package: luci-app-h5000m-pwmfan`, `Source-Makefile: feeds/h5000m/luci-app-h5000m-pwmfan/Makefile`, and
+`feeds install -a -p h5000m` created `package/feeds/h5000m/luci-app-h5000m-pwmfan` pointing at the feed. That is the
+same mechanism the firmware uses, so `src-git` fetch will scan identically.
 
-This repository has the same single-package shape (root `Makefile`, `root/`, `htdocs/`, `po/`), and its `Makefile` is a
-plain luci.mk package (`include $(TOPDIR)/rules.mk` … `include $(TOPDIR)/feeds/luci/luci.mk`), so both routes work:
+Firmware side (`H5000M-CI-Qmodem-OP`), two lines that upstream never touches:
 
-**A. Copy like Model Pro (smallest change).** After
-`UPDATE_PACKAGE "h5000m-pwmfan" "<owner>/h5000m-pwmfan" "main"`, copy `Makefile`, `root`, `htdocs`, `po` into
-`../h5000m-feed/luci-app-h5000m-pwmfan/`, move the clone out of `package/`, append `src-link h5000m <abs path>` to
-`feeds.conf`/`feeds.conf.default` (feed names allow only `[A-Za-z0-9_]`), then
-`./scripts/feeds update h5000m && ./scripts/feeds install -a -p h5000m`. Select
-`CONFIG_PACKAGE_luci-app-h5000m-pwmfan=y` and, for the translation,
-`CONFIG_PACKAGE_luci-i18n-h5000m-pwmfan-zh-cn=y`.
+```sh
+# feeds.conf or feeds.conf.default
+src-git h5000m https://github.com/<owner>/h5000m-pwmfan.git
 
-**B. Publish a real feed repository.** A second repository whose root contains `luci-app-h5000m-pwmfan/` can be used as
-`src-git h5000m https://github.com/<owner>/h5000m-feed.git` without the copy step. It costs a sync workflow and a second
-repository, so it is only worth it when more than one firmware tree consumes the package.
+# Scripts/Packages.sh, after the existing feed handling
+./scripts/feeds update h5000m && ./scripts/feeds install -a -p h5000m
+```
 
-Either way the firmware build compiles the package from source — the same code path the previous fan controller used,
-since `/rom/lib/apk/db/installed` records `o:feeds/base/luci-app-h5000m-fancontrol`. That build has the full source
-tree, so it needs no SDK.
+Selection in the board config (`Config/H5000M-*.txt`):
+
+```
+CONFIG_PACKAGE_luci-app-h5000m-pwmfan=y
+CONFIG_PACKAGE_luci-i18n-h5000m-pwmfan-zh-cn=y
+```
+
+Two guards keep a silent drop from shipping an image without the plugin:
+
+```sh
+grep -q '^CONFIG_PACKAGE_luci-app-h5000m-pwmfan=y' .config \
+  || { echo '::error::plugin symbol dropped from defconfig'; exit 1; }
+grep -q 'luci-app-h5000m-pwmfan' bin/targets/*/*/*.manifest \
+  || { echo '::error::plugin missing from the built image'; exit 1; }
+```
+
+The second one matters more than it looks: `feeds install` can succeed and `defconfig` can still throw the symbol away,
+which produces a "successful" image with no menu entry. Checking the manifest proves the package reached the rootfs.
+
+### Compatibility with the other build variants
+
+The `*-modem-pro` configuration is not used for this device, but the feed must not disturb a build that selects it.
+It does not: the feed line is configuration independent, `feeds update` scans our tree once (proven above), and the
+package only enters an image when `CONFIG_PACKAGE_luci-app-h5000m-pwmfan=y` is set. The Model Pro block in
+`Scripts/Packages.sh` only runs for `*-modem-pro` configs and touches its own `../modem-pro-feed/` directory; the two
+never meet. Names do not collide either: our package is `luci-app-h5000m-pwmfan`, Model Pro's is `modem-pro`.
+
+The one thing a `*-modem-pro` build would notice is the extra `feeds update` call, which costs a clone of this
+repository (a few hundred kilobytes). That is the whole compatibility cost.
+
+### When upstream breaks the injection
+
+1. **Build fails** (`feeds install` says `No feed for package`, or the package fails to compile): the fault is in this
+   repository. Fix `Makefile` or the view, tag a release, re-run the workflow. The firmware tree needs no change.
+2. **Build "succeeds" without the plugin**: the manifest guard fails the run instead of shipping it. Cause is almost
+   always the config symbol, so check `Config/H5000M-*.txt` and the `feeds install` output.
+3. **Emergency**: ship the fix through the APK repository (hosting section above) to devices already in the field, and
+   fix the feed afterwards. Devices never need a reflash for a plugin update.
 
 ## The SDK question
 
 - The downloadable binary SDK (`immortalwrt-sdk-mediatek-filogic_gcc-14.4.0_musl`, `r42542-e695009c15`) is finished as a
   *build host for this package*: the attempt to pin LuCI removed the `ucode` staging marks and the archive does not
   carry them either, while `package/libs` sources are absent, so `make package/…/compile` cannot run again.
-- It is not needed. This package ships files only (`root/`, `htdocs/`, `po/`); `tools/build-apk.sh` produces a payload
+- It is not needed. This package ships files only (`luci-app-h5000m-pwmfan/{root,htdocs,po}`); `tools/build-apk.sh` produces a payload
   that matches the SDK-built package file for file, and the firmware build compiles the same package from source.
 - A *matching* SDK is still obtainable if it is ever wanted: build it from the same tree (`CONFIG_SDK=y`, then `make`;
   artefact under `bin/targets/`) instead of downloading one. That costs a full toolchain build; nothing in the current

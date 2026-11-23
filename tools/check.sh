@@ -1,6 +1,10 @@
 #!/bin/sh
 set -eu
 
+# The package is laid out as a feed (feed/<pkg>/Makefile) so the firmware can
+# consume it with a single src-git line.
+PKG=luci-app-h5000m-pwmfan
+
 # Run with STRICT=1 in CI to turn missing developer tools into failures.
 strict=${STRICT:-0}
 missing=0
@@ -16,12 +20,12 @@ require_tool() {
 
 run_shellcheck() {
 	shellcheck \
-		root/usr/sbin/h5000m-pwmfan \
-		root/etc/init.d/h5000m-pwmfan \
-		root/usr/lib/h5000m-pwmfan/controller-lib.sh \
-		root/usr/sbin/h5000m-pwmfan-status \
-		root/usr/sbin/h5000m-pwmfan-language \
-		root/usr/sbin/h5000m-pwmfan-watchdog \
+		"$PKG"/root/usr/sbin/h5000m-pwmfan \
+		"$PKG"/root/etc/init.d/h5000m-pwmfan \
+		"$PKG"/root/usr/lib/h5000m-pwmfan/controller-lib.sh \
+		"$PKG"/root/usr/sbin/h5000m-pwmfan-status \
+		"$PKG"/root/usr/sbin/h5000m-pwmfan-language \
+		"$PKG"/root/usr/sbin/h5000m-pwmfan-watchdog \
 		tests/controller-lib.bats \
 		tests/watchdog.bats \
 		tools/check.sh \
@@ -34,12 +38,12 @@ run_shellcheck() {
 
 run_shfmt() {
 	shfmt -d \
-		root/usr/sbin/h5000m-pwmfan \
-		root/etc/init.d/h5000m-pwmfan \
-		root/usr/lib/h5000m-pwmfan/controller-lib.sh \
-		root/usr/sbin/h5000m-pwmfan-status \
-		root/usr/sbin/h5000m-pwmfan-language \
-		root/usr/sbin/h5000m-pwmfan-watchdog \
+		"$PKG"/root/usr/sbin/h5000m-pwmfan \
+		"$PKG"/root/etc/init.d/h5000m-pwmfan \
+		"$PKG"/root/usr/lib/h5000m-pwmfan/controller-lib.sh \
+		"$PKG"/root/usr/sbin/h5000m-pwmfan-status \
+		"$PKG"/root/usr/sbin/h5000m-pwmfan-language \
+		"$PKG"/root/usr/sbin/h5000m-pwmfan-watchdog \
 		tests/controller-lib.bats \
 		tests/watchdog.bats \
 		tools/check.sh \
@@ -59,11 +63,11 @@ require_tool msgfmt
 if command -v shellcheck >/dev/null 2>&1; then run_shellcheck; fi
 if command -v shfmt >/dev/null 2>&1; then run_shfmt; fi
 if command -v bats >/dev/null 2>&1 && [ -d tests ]; then bats tests; fi
-if command -v msgfmt >/dev/null 2>&1; then msgfmt --check --check-format -o /dev/null po/zh_Hans/h5000m-pwmfan.po; fi
+if command -v msgfmt >/dev/null 2>&1; then msgfmt --check --check-format -o /dev/null "$PKG"/po/zh_Hans/h5000m-pwmfan.po; fi
 if command -v node >/dev/null 2>&1; then
-	node --check htdocs/luci-static/resources/view/h5000m-pwmfan.js
-	node --check htdocs/luci-static/resources/view/h5000m-pwmfan-advanced.js
-	node --check htdocs/luci-static/resources/view/h5000m-pwmfan-shared.js
+	node --check "$PKG"/htdocs/luci-static/resources/view/h5000m-pwmfan.js
+	node --check "$PKG"/htdocs/luci-static/resources/view/h5000m-pwmfan-advanced.js
+	node --check "$PKG"/htdocs/luci-static/resources/view/h5000m-pwmfan-shared.js
 	node --check tests/preview.mjs
 	node tools/check-i18n.mjs
 	# The browser pass needs a running preview and Playwright; opt in with the URL.

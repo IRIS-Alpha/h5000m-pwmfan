@@ -23,15 +23,15 @@ thermal_zone0  type=cpu-thermal  policy=step_wise  temp≈46–51 °C
 
 ## 所有权
 
-- 只有在 `enabled=1`、`kernel_takeover=1`、`takeover_verified=1`、`pwm1` 路径可写、且存在 `pwm-fan` 冷却设备时，插件才接管风扇（`kernel_takeover_ready_dir()`，`root/usr/lib/h5000m-pwmfan/controller-lib.sh:493`）。
+- 只有在 `enabled=1`、`kernel_takeover=1`、`takeover_verified=1`、`pwm1` 路径可写、且存在 `pwm-fan` 冷却设备时，插件才接管风扇（`kernel_takeover_ready_dir()`，`luci-app-h5000m-pwmfan/root/usr/lib/h5000m-pwmfan/controller-lib.sh:493`）。
 - 接管时钉住 trip 4 与 trip 5（`thermal_takeover_apply()`，`controller-lib.sh:538`）：trip 5 变成 1000 m°C，trip 4 变成“第三冷触点 − 1000”，于是 governor 既不能要求零占空比，也不能覆盖可配置的过温策略。原始值先写进 `/var/run/h5000m-pwmfan/thermal-takeover`（格式 `v1 <冷触点号> <冷触点温度> <次冷触点号> <次冷触点温度>`）。
 - 释放时按相反顺序恢复这两个触点并删除记录（`thermal_takeover_restore()`，`controller-lib.sh:570`）。写 `trip_point_*_temp` 会让内核重新评估热区，这正是释放后唤醒 `step_wise` 的原因——钉触点本身并没有留下可回滚的状态，只留下一个 governor 已经越过的触点。
 - **实测**：插件持有风扇期间，`cooling_device0/cur_state` 为 `0`，`pwm1` 是插件写入的值（测量时为 51）。governor 处于空闲，没有和插件抢。
-- 释放会把 255 写入 `pwm1`（`release_fan()`，`root/usr/sbin/h5000m-pwmfan:269`），所以交棒从全速开始，governor 在热区下一次更新时才把它降下来。
+- 释放会把 255 写入 `pwm1`（`release_fan()`，`luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan:269`），所以交棒从全速开始，governor 在热区下一次更新时才把它降下来。
 
 ## 请求管线（读码）
 
-1. `requested_pwm()`（`root/usr/sbin/h5000m-pwmfan:430`）把模式换算成占空比：`fixed:*` 用 `fixed_duty`，三个预设用 `duty_*`，其余读曲线。它输出 `<applied> <raw>` 两段。
+1. `requested_pwm()`（`luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan:430`）把模式换算成占空比：`fixed:*` 用 `fixed_duty`，三个预设用 `duty_*`，其余读曲线。它输出 `<applied> <raw>` 两段。
 2. 请求为 0 就保持 0；其他请求一律钳进 `min_pwm … max_pwm`。当原始请求非零且低于下限时置 `floor_limited`（第 474 行）。
 3. `protection_dispatch_step()` 可以用保护斜坡或锁定覆盖请求；只有这些原因才会写 `protection_pwm`（早前一轮的证据里是第 478 行，仍是同一个 `case`）。
 4. 5G 模块下限可以抬高占空比（`modem_throttle_floor`，第 601 行）。

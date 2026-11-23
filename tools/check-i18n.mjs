@@ -8,8 +8,9 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const viewDir = join(root, 'htdocs/luci-static/resources/view');
-const poPath = join(root, 'po/zh_Hans/h5000m-pwmfan.po');
+const pkg = join(root, 'luci-app-h5000m-pwmfan');
+const viewDir = join(pkg, 'htdocs/luci-static/resources/view');
+const poPath = join(pkg, 'po/zh_Hans/h5000m-pwmfan.po');
 
 // Join "msgid" lines that continue on following quoted lines.
 function parsePo(text) {

@@ -32,8 +32,8 @@ jobs:
       - name: Run repository checks
         run: |
           dtc --version
-          node --check htdocs/luci-static/resources/view/h5000m-pwmfan.js
-          msgfmt --check --check-format -o /dev/null po/zh_Hans/h5000m-pwmfan.po
+          node --check luci-app-h5000m-pwmfan/htdocs/luci-static/resources/view/h5000m-pwmfan.js
+          msgfmt --check --check-format -o /dev/null luci-app-h5000m-pwmfan/po/zh_Hans/h5000m-pwmfan.po
           STRICT=1 sh tools/check.sh
           git diff --check
 

@@ -4,7 +4,7 @@ umask 077
 
 # shellcheck disable=SC1091
 . /lib/functions.sh
-# shellcheck source=root/usr/lib/h5000m-pwmfan/controller-lib.sh
+# shellcheck source=luci-app-h5000m-pwmfan/root/usr/lib/h5000m-pwmfan/controller-lib.sh
 . /usr/lib/h5000m-pwmfan/controller-lib.sh
 
 CONFIG=h5000m_pwmfan

@@ -1,8 +1,8 @@
 #!/usr/bin/env bats
 
 setup() {
-	# shellcheck source=root/usr/lib/h5000m-pwmfan/controller-lib.sh
-	. "$BATS_TEST_DIRNAME/../root/usr/lib/h5000m-pwmfan/controller-lib.sh"
+	# shellcheck source=luci-app-h5000m-pwmfan/root/usr/lib/h5000m-pwmfan/controller-lib.sh
+	. "$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/lib/h5000m-pwmfan/controller-lib.sh"
 }
 
 @test "accepts a strictly ascending curve with bounded PWM values" {
@@ -298,7 +298,7 @@ EOF
 	[ "$(protection_history_save_step "$file" 100000 90 "$first")" = '1|1|100000|90' ]
 	[ "$(stat -c %a "$file")" = 600 ]
 	# Load the state in a fresh shell with no in-memory lock or counter.
-	run sh -c '. "$1"; protection_history_load "$2" 100010' sh "$BATS_TEST_DIRNAME/../root/usr/lib/h5000m-pwmfan/controller-lib.sh" "$file"
+	run sh -c '. "$1"; protection_history_load "$2" 100010' sh "$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/lib/h5000m-pwmfan/controller-lib.sh" "$file"
 	[ "$status" -eq 0 ]
 	[ "$output" = '1|1|1|100000|90
 100000|90' ]
@@ -369,11 +369,11 @@ EOF
 	runtime_dir=$BATS_TEST_TMPDIR
 	status_command="$runtime_dir/status-command"
 	history_file="$runtime_dir/protection-history"
-	lib="$BATS_TEST_DIRNAME/../root/usr/lib/h5000m-pwmfan/controller-lib.sh"
+	lib="$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/lib/h5000m-pwmfan/controller-lib.sh"
 	# Route the installed entry point to an isolated status directory and library.
 	sed -e "s|^\. /usr/lib/h5000m-pwmfan/controller-lib.sh$|. '$lib'|" \
 		-e "s|^runtime_dir=/var/run/h5000m-pwmfan$|runtime_dir='$runtime_dir'|" \
-		"$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-status" >"$status_command"
+		"$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan-status" >"$status_command"
 	printf '%s\n' 'state=running' >"$runtime_dir/status"
 	run sh "$status_command"
 	[ "$status" -eq 0 ]
@@ -418,8 +418,8 @@ EOF
 
 @test "daemon control path preserves the takeover gate and applies protection in an isolated fixture" {
 	fixture=$BATS_TEST_TMPDIR
-	controller="$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan"
-	lib="$BATS_TEST_DIRNAME/../root/usr/lib/h5000m-pwmfan/controller-lib.sh"
+	controller="$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan"
+	lib="$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/lib/h5000m-pwmfan/controller-lib.sh"
 	sed -e '/^\. \/lib\/functions.sh$/d' -e "s|^\. /usr/lib/h5000m-pwmfan/controller-lib.sh$|. '$lib'|" \
 		-e "s|^RUNDIR=/var/run/h5000m-pwmfan$|RUNDIR='$fixture'|" -e '/^case "${1:-status}" in/,$d' \
 		"$controller" >"$fixture/controller"

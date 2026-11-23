@@ -22,8 +22,8 @@ requested PWM and the effective PWM read back from hwmon.
 # Preview regression test
 
 > Do not `rsync --delete` into `.h5000m-work/rootfs/www`. That tree is not a copy
-> of `htdocs/`: it mirrors the device's `/www`, including the LuCI framework and
-> `luci-static/vantage`. Overlay with `rsync -a htdocs/ rootfs/www/` (no `--delete`);
+> of `luci-app-h5000m-pwmfan/htdocs/`: it mirrors the device's `/www`, including the LuCI framework and
+> `luci-static/vantage`. Overlay with `rsync -a luci-app-h5000m-pwmfan/htdocs/ rootfs/www/` (no `--delete`);
 > a delete pass strips the framework and every page renders blank.
 
 `tests/preview.mjs` drives the running preview in a real browser and checks what
@@ -64,7 +64,7 @@ What it covers:
 
 Two notes on the harness:
 
-- static assets are served from the repository's `htdocs/`, not from the rootfs
+- static assets are served from `luci-app-h5000m-pwmfan/htdocs/`, not from the rootfs
   copy, so a preview run always reflects the working tree;
 - the preview has no `cgi-exec` and no `uci/apply_rollback`, and its sensor field
   is a plain `<select>` while the router's theme renders a dropdown. The test

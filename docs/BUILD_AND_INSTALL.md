@@ -9,9 +9,22 @@ no package sources. Its ucode/json-c staging was lost while pinning LuCI, and re
 (`No rule to make target 'package/libs/json-c/compile'`). The same archives it ships contain no ucode target staging,
 so the SDK cannot be repaired from the tarball either.
 
-Nothing of value was lost. The package is a plain file tree — `root/` and `htdocs/` are copied into the payload and
-nothing is compiled — and `git -C $S/feeds/luci diff --stat ebc4118b71 ad75cde -- luci.mk` is **empty**, so pinning the
+Nothing of value was lost. The package is a plain file tree — `luci-app-h5000m-pwmfan/root/` and
+`luci-app-h5000m-pwmfan/htdocs/` are copied into the payload and nothing is compiled — and `git -C $S/feeds/luci diff --stat ebc4118b71 ad75cde -- luci.mk` is **empty**, so pinning the
 LuCI revision for the device (`ad75cde`) would not have changed a single byte of the package anyway.
+
+## Layout
+
+The repository root is a feed, so the package lives in its own directory:
+
+```
+luci-app-h5000m-pwmfan/   Makefile, root/, htdocs/, po/   <- what the firmware builds
+docs/ tools/ tests/ packaging/ .github/                  <- development only, no Makefile
+```
+
+`scripts/feeds` scans a feed for `<dir>/Makefile`, so the firmware consumes this repository with a single
+`src-git` line; see `docs/DISTRIBUTION.md`. `tools/build-apk.sh` reads the same directory, so a local package and a
+firmware-built package come from identical sources.
 
 ## Build
 
@@ -30,7 +43,7 @@ The script produces two packages in `build/`:
 - `luci-app-h5000m-pwmfan-0.1.0-r2.apk` — about 52 KB. The SDK build was 45.8 KB because `luci.mk` minified the view
   scripts with jsmin; the mkpkg build ships the readable sources. The file set is identical (17 files, verified by
   extracting both and diffing).
-- `luci-i18n-h5000m-pwmfan-zh-cn-<date>.<time>.apk` — about 4.3 KB, compiled from `po/zh_Hans/h5000m-pwmfan.po` with
+- `luci-i18n-h5000m-pwmfan-zh-cn-<date>.<time>.apk` — about 4.3 KB, compiled from `luci-app-h5000m-pwmfan/po/zh_Hans/h5000m-pwmfan.po` with
   `po2lmo`. The version is derived from the build clock so upgrades move forward.
 
 Things the script does that are easy to miss when packing by hand:
@@ -68,7 +81,7 @@ like it came from us.
 
 ## Translations
 
-`po/zh_Hans/h5000m-pwmfan.po` is compiled by `tools/build-apk.sh` into the `luci-i18n-h5000m-pwmfan-zh-cn` package,
+`luci-app-h5000m-pwmfan/po/zh_Hans/h5000m-pwmfan.po` is compiled by `tools/build-apk.sh` into the `luci-i18n-h5000m-pwmfan-zh-cn` package,
 and `tools/preview.py` compiles it at startup — restart the preview after editing the po, otherwise the preview keeps
 serving the old catalogue. Installing only the app package leaves the device on whatever catalogue was installed last:
 the device reads `/usr/lib/lua/luci/i18n/h5000m-pwmfan.zh-cn.lmo`, and new msgids stay in English until the i18n
@@ -82,7 +95,7 @@ are unlikely to exist elsewhere.
 ## Takeover gate after installing
 
 `apply_cycle` takes the fan only when all of these hold, checked by
-`kernel_takeover_ready()` → `kernel_takeover_ready_dir()` (`root/usr/sbin/h5000m-pwmfan:487`):
+`kernel_takeover_ready()` → `kernel_takeover_ready_dir()` (`luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan:487`):
 
 - `h5000m_pwmfan.main.enabled=1`;
 - `h5000m_pwmfan.main.kernel_takeover=1` **and** `takeover_verified=1` (a value this repository never writes itself);

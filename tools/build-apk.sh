@@ -71,9 +71,9 @@ sign() {
 # ---------------------------------------------------------------- ucode app --
 stage=$work/stage
 mkdir -p "$stage"
-cp -a "$REPO/root/." "$stage/"
+cp -a "$REPO/luci-app-h5000m-pwmfan/root/." "$stage/"
 mkdir -p "$stage/www"
-cp -a "$REPO/htdocs/." "$stage/www/"
+cp -a "$REPO/luci-app-h5000m-pwmfan/htdocs/." "$stage/www/"
 # Everything a shell, procd or rpcd executes must stay executable; the tree mode
 # is the only thing mkpkg can record.
 chmod 0755 "$stage/usr/sbin/"* "$stage/etc/init.d/"*
@@ -134,7 +134,7 @@ fi
 
 stage=$work/stage-i18n
 mkdir -p "$stage/usr/lib/lua/luci/i18n" "$stage/etc/uci-defaults"
-"$PO2LMO" "$REPO/po/zh_Hans/h5000m-pwmfan.po" "$stage/usr/lib/lua/luci/i18n/h5000m-pwmfan.zh-cn.lmo"
+"$PO2LMO" "$REPO/luci-app-h5000m-pwmfan/po/zh_Hans/h5000m-pwmfan.po" "$stage/usr/lib/lua/luci/i18n/h5000m-pwmfan.zh-cn.lmo"
 # luci.mk registers the language the same way: one uci-defaults line.
 printf "%s\n" "uci set luci.languages.zh_cn='简体中文 (Simplified Chinese)'; uci commit luci" \
 	>"$stage/etc/uci-defaults/$I18N_NAME"

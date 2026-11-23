@@ -13,13 +13,13 @@ import time
 from urllib.parse import urlsplit
 
 REPO = Path(__file__).resolve().parent.parent
-ASSETS = REPO / 'htdocs'
+ASSETS = REPO / 'luci-app-h5000m-pwmfan' / 'htdocs'
 CONFIG = 'h5000m_pwmfan'
 BASE = '/cgi-bin/luci/admin/system/h5000m_pwmfan'
 
 
 def settings():
-    config = (REPO / 'root/etc/config/h5000m_pwmfan').read_text()
+    config = (REPO / 'luci-app-h5000m-pwmfan/root/etc/config/h5000m_pwmfan').read_text()
     result = dict(re.findall(r"^\s*option (\w+) '([^']*)'", config, re.M))
     return {CONFIG: {'main': {'.name': 'main', '.type': 'settings', **result}},
             'luci': {'main': {'.name': 'main', '.type': 'core', 'lang': 'zh_cn'}}}
@@ -185,7 +185,7 @@ def main():
     args = parser.parse_args()
     if not (args.rootfs / 'www/luci-static/vantage/vantage.css').is_file():
         parser.error('rootfs must contain the Vantage theme assets')
-    mo = subprocess.check_output(['msgfmt', '-o', '-', str(REPO / 'po/zh_Hans/h5000m-pwmfan.po')])
+    mo = subprocess.check_output(['msgfmt', '-o', '-', str(REPO / 'luci-app-h5000m-pwmfan/po/zh_Hans/h5000m-pwmfan.po')])
     from io import BytesIO
     messages = {key: value for key, value in gettext.GNUTranslations(BytesIO(mo))._catalog.items() if key}
     with ThreadingHTTPServer(('127.0.0.1', args.port), make_handler(args.rootfs.resolve(), messages)) as server:

@@ -39,7 +39,7 @@ status_file() {
 	now=$(date +%s)
 	status_file "$now"
 	printf 'v1 5 40000 4 85000\n' >"$WD_TAKEOVER"
-	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
+	run sh "$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan-watchdog"
 	[ "$status" -eq 0 ]
 	[ -f "$WD_TAKEOVER" ]
 	[ ! -s "$ROOT/pwm1" ]
@@ -52,7 +52,7 @@ status_file() {
 	printf 'v1 5 40000 4 85000\n' >"$WD_TAKEOVER"
 	echo 1000 >"$WD_THERMAL/thermal_zone0/trip_point_5_temp"
 	echo 114000 >"$WD_THERMAL/thermal_zone0/trip_point_4_temp"
-	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
+	run sh "$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan-watchdog"
 	[ "$status" -eq 0 ]
 	[ ! -e "$WD_TAKEOVER" ]
 	[ "$(cat "$WD_THERMAL/thermal_zone0/trip_point_5_temp")" = 40000 ]
@@ -61,7 +61,7 @@ status_file() {
 }
 
 @test "a missing status file is not a hang" {
-	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
+	run sh "$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan-watchdog"
 	[ "$status" -eq 0 ]
 	[ ! -e "$ROOT/log" ]
 	[ ! -e "$WD_TAKEOVER" ]
@@ -75,7 +75,7 @@ status_file() {
 	echo "$controller" >"$WD_CONTROLLER_PID"
 	# The real /proc/<pid>/comm is "sleep", which is not the controller, so the
 	# watchdog must leave it alone.
-	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
+	run sh "$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan-watchdog"
 	[ "$status" -eq 0 ]
 	kill -0 "$controller"
 	kill "$controller" 2>/dev/null || true
@@ -87,7 +87,7 @@ status_file() {
 	status_file "$now"
 	echo 115000 >"$WD_THERMAL/thermal_zone0/temp"
 	export WD_EARLY_REBOOT=0 WD_PROTECTION_TEMP=90 WD_EARLY_REBOOT_TEMP=110
-	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
+	run sh "$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan-watchdog"
 	[ "$status" -eq 0 ]
 	[ ! -e "$ROOT/rebooted" ]
 }
@@ -97,7 +97,7 @@ status_file() {
 	status_file "$now"
 	echo 110000 >"$WD_THERMAL/thermal_zone0/temp"
 	export WD_EARLY_REBOOT=1 WD_PROTECTION_TEMP=90 WD_EARLY_REBOOT_TEMP=110
-	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
+	run sh "$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan-watchdog"
 	[ "$status" -eq 0 ]
 	[ -e "$ROOT/rebooted" ]
 	grep -q "reboot point" "$ROOT/log"
@@ -108,7 +108,7 @@ status_file() {
 	status_file "$now"
 	echo 95000 >"$WD_THERMAL/thermal_zone0/temp"
 	export WD_EARLY_REBOOT=1 WD_PROTECTION_TEMP=90 WD_EARLY_REBOOT_TEMP=110
-	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
+	run sh "$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan-watchdog"
 	[ "$status" -eq 0 ]
 	[ ! -e "$ROOT/rebooted" ]
 	[ -e "$WD_HOT_MARK" ]
@@ -120,7 +120,7 @@ status_file() {
 	echo 95000 >"$WD_THERMAL/thermal_zone0/temp"
 	printf '%s\n' $((now - 25)) >"$WD_HOT_MARK"
 	export WD_EARLY_REBOOT=1 WD_PROTECTION_TEMP=90 WD_EARLY_REBOOT_TEMP=110
-	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
+	run sh "$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan-watchdog"
 	[ "$status" -eq 0 ]
 	[ -e "$ROOT/rebooted" ]
 	grep -q "protection threshold" "$ROOT/log"
@@ -132,7 +132,7 @@ status_file() {
 	echo 85000 >"$WD_THERMAL/thermal_zone0/temp"
 	printf '%s\n' $((now - 60)) >"$WD_HOT_MARK"
 	export WD_EARLY_REBOOT=1 WD_PROTECTION_TEMP=90 WD_EARLY_REBOOT_TEMP=110
-	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
+	run sh "$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan-watchdog"
 	[ "$status" -eq 0 ]
 	[ ! -e "$ROOT/rebooted" ]
 	[ ! -e "$WD_HOT_MARK" ]
@@ -143,7 +143,7 @@ status_file() {
 	status_file "$now"
 	echo 100000 >"$WD_THERMAL/thermal_zone0/temp"
 	export WD_EARLY_REBOOT=1 WD_PROTECTION_TEMP=90 WD_EARLY_REBOOT_TEMP=90
-	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
+	run sh "$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan-watchdog"
 	[ "$status" -eq 0 ]
 	[ -e "$ROOT/rebooted" ]
 }
@@ -153,7 +153,7 @@ status_file() {
 	status_file "$now"
 	echo 120000 >"$WD_THERMAL/thermal_zone0/temp"
 	export WD_EARLY_REBOOT=1 WD_PROTECTION_TEMP=90 WD_EARLY_REBOOT_TEMP=130
-	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
+	run sh "$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan-watchdog"
 	[ "$status" -eq 0 ]
 	[ -e "$ROOT/rebooted" ]
 }

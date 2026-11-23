@@ -37,7 +37,7 @@ to and read back from `pwm1`, never about the blade.
 
 - The plugin takes the fan when `enabled=1`, `kernel_takeover=1` and
   `takeover_verified=1`, the `pwm1` path is writable, and a `pwm-fan` cooling
-  device exists (`kernel_takeover_ready_dir()`, `root/usr/lib/h5000m-pwmfan/controller-lib.sh:493`).
+  device exists (`kernel_takeover_ready_dir()`, `luci-app-h5000m-pwmfan/root/usr/lib/h5000m-pwmfan/controller-lib.sh:493`).
 - Taking over pins trips 4 and 5 (`thermal_takeover_apply()`,
   `controller-lib.sh:538`): trip 5 becomes 1000 m°C and trip 4 becomes
   "third coldest − 1000", so the governor cannot demand a zero duty or override
@@ -51,13 +51,13 @@ to and read back from `pwm1`, never about the blade.
 - **Measured**: while the plugin owns the fan, `cooling_device0/cur_state` is `0`
   and `pwm1` is whatever the plugin wrote (51 at the time of measurement). The
   governor is idle, not fighting the plugin.
-- Releasing writes 255 into `pwm1` (`release_fan()`, `root/usr/sbin/h5000m-pwmfan:269`),
+- Releasing writes 255 into `pwm1` (`release_fan()`, `luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan:269`),
   so a hand-over starts from full duty and the governor lowers it on the next
   zone update.
 
 ## The request pipeline (read from code)
 
-1. `requested_pwm()` (`root/usr/sbin/h5000m-pwmfan:430`) turns the mode into a
+1. `requested_pwm()` (`luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan:430`) turns the mode into a
    duty: `fixed:*` uses `fixed_duty`, the three presets use `duty_*`, everything
    else reads the curve. It prints `<applied> <raw>`.
 2. A zero request stays zero; every other request is clamped into
