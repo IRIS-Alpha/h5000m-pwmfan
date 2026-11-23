@@ -283,18 +283,25 @@ return view.extend({
 
 	switcher: function(options) { return shared.switcher(options); },
 
+	/* Only a collapse is remembered. Nothing stored means the card's default, and
+	   reopening a card is the same statement as never having folded it — so a
+	   stale entry can never hide a chart the user expects to see. */
 	detailState: function(name, fallback) {
-		try {
-			var stored = JSON.parse(localStorage.getItem(DETAILS_KEY) || '{}');
-			if (typeof stored[name] === 'boolean') return stored[name];
-		} catch (error) { /* Panel state is optional. */ }
+		if (this.foldState()[name] === false) return false;
 		return fallback;
+	},
+
+	foldState: function() {
+		try {
+			return JSON.parse(localStorage.getItem(DETAILS_KEY) || '{}');
+		} catch (error) { /* Panel state is optional. */ }
+		return {};
 	},
 
 	rememberDetail: function(name, open) {
 		try {
-			var stored = JSON.parse(localStorage.getItem(DETAILS_KEY) || '{}');
-			stored[name] = !!open;
+			var stored = this.foldState();
+			if (open) delete stored[name]; else stored[name] = false;
 			localStorage.setItem(DETAILS_KEY, JSON.stringify(stored));
 		} catch (error) { /* Panel state is optional. */ }
 	},
@@ -1082,7 +1089,7 @@ return view.extend({
 				E('div', { 'class': 'pf-head-right' }, [ this.warnRow, this.floorChip() ]) ]),
 				this.warnNote, this.policy ]),
 			this.curveCard = E('details', { 'class': 'pf-card pf-curve-chart', 'data-detail': 'curve',
-				open: this.detailState('curve', false) ? true : null }, [ E('summary', {}, E('h3', {}, _('Fan curve'))),
+				open: this.detailState('curve', true) ? true : null }, [ E('summary', {}, E('h3', {}, _('Fan curve'))),
 				this.curveChart.element, this.curveParams ]), temps,
 			this.makeSaveBar()
 		]);
@@ -1096,10 +1103,24 @@ return view.extend({
 			   so the chart never shows a gap that already closed. */
 			self.fetchStatus().then(self.update.bind(self)).catch(function() { });
 		});
-		this.root.addEventListener('toggle', function(event) {
-			var node = event.target;
-			if (node && node.dataset && node.dataset.detail) self.rememberDetail(node.dataset.detail, node.open);
+		this.root.addEventListener('toggle', function() {
+			if (!self.foldArmed) return;
+			window.requestAnimationFrame(function() {
+				self.root.querySelectorAll('details[data-detail]').forEach(function(node) {
+					if (node.isConnected) self.rememberDetail(node.dataset.detail, node.open);
+				});
+			});
 		}, true);
+		/* Deferred on purpose: a card that starts open fires its initial toggle in
+		   the microtask that inserts the tree, and restoring a fold fires another
+		   one. Only what happens after the stored state is back is the user's. */
+		window.setTimeout(L.bind(function() {
+			var state = this.foldState();
+			this.root.querySelectorAll('details[data-detail]').forEach(function(node) {
+				node.open = this.detailState(node.dataset.detail, node.open);
+			}, this);
+			this.foldArmed = true;
+		}, this), 0);
 		this.refreshPolicy();
 		this.update(data);
 		this.loadTemperatureHistory();

@@ -45,6 +45,34 @@ function check(name, condition, detail) {
 	if (!condition) problems.push(name + (detail === undefined ? '' : ' — ' + detail));
 }
 
+/* Both charts start expanded, and a fold is remembered only while it lasts:
+   reopening a card must survive the next visit. */
+await page.goto(dashboard, { waitUntil: 'networkidle' });
+await page.evaluate(() => localStorage.removeItem('h5000m-pwmfan-details'));
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(800);
+const foldState = () => page.evaluate(() => {
+	const cards = {};
+	document.querySelectorAll('details[data-detail]').forEach((node) => { cards[node.dataset.detail] = node.open; });
+	cards.stored = localStorage.getItem('h5000m-pwmfan-details');
+	return cards;
+});
+const fresh = await foldState();
+if (fresh.curve !== true || fresh.history !== true) check('both charts do not start expanded: ' + JSON.stringify(fresh));
+await page.click('details[data-detail=curve] > summary');
+await page.waitForTimeout(400);
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(800);
+const folded = await foldState();
+if (folded.curve !== false) check('a folded chart does not stay folded: ' + JSON.stringify(folded));
+await page.click('details[data-detail=curve] > summary');
+await page.waitForTimeout(400);
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(800);
+const reopened = await foldState();
+if (reopened.curve !== true) check('a reopened chart does not stay open: ' + JSON.stringify(reopened));
+await page.evaluate(() => localStorage.removeItem('h5000m-pwmfan-details'));
+
 async function boot() {
 	await page.goto(dashboard, { waitUntil: 'domcontentloaded' });
 	await page.waitForSelector('.pf-page');

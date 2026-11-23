@@ -409,19 +409,13 @@ question that needs a person goes to "Awaiting decision" instead of being guesse
       names and the legend order actual-before-temperature). They now match the code, and the theme path no longer
       claims to live in this repository. The sweep also found one dead rule, `.pf-legend span.is-off` — removed.
 
-### Awaiting decision
+### Decided by the user (2026-11-23, round 117)
 
-- Fan curve card opens collapsed by default (`detailState('curve', false)` in
-  `htdocs/luci-static/resources/view/h5000m-pwmfan.js:1081`), while the temperature monitor opens expanded. It was
-  introduced together with the card in `9400ca3`; no requirement records the choice. The curve is the page's primary
-  picture and its legend now carries the live values, so collapsed-by-default hides both until the user taps. Leave it,
-  or open it by default like the monitor?
-- Curve editing is pointer-only (`docs/design-review-20261123.md`): the six drag handles are `aria-hidden`, and the
-  canvas key handler only moves the read cursor, so a keyboard user cannot move a curve point. Options: six focusable
-  per-point controls (six more tab stops), a point list beside the chart, or leave it and document the limitation.
-- The monitor chart's time axis tilts by 45° on phones (six labels do not fit upright). It stays inside the canvas and
-  never overflows, but the tilted run crowds the 0 °C line and the y labels. Options: keep it, label every other tick on
-  phones while keeping six gridlines, or make the canvas taller under 430 px.
+- The fan curve card opens expanded by default, like the temperature monitor. Both cards remember a collapse only, so a
+  card the user reopens stays open on the next visit (`detailState()` in
+  `htdocs/luci-static/resources/view/h5000m-pwmfan.js` reads `h5000m-pwmfan-details` for `false` and ignores `true`).
+- The monitor chart's tilted time axis on phones stays as it is.
+- Curve editing stays pointer-only, with the limitation documented in `docs/design-review-20261123.md`.
 
 Brief log: 2026-11-23 — H closed. Sweep method: extract every backticked token from `docs/*.md`, then check paths
 against the tree, `name()` against the shell/JS corpus, CSS selectors against the stylesheet, and `key=value` against
