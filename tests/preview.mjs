@@ -250,8 +250,18 @@ async function advancedChecks() {
 	await page.waitForSelector('.pwmfan-advanced');
 
 	const groups = await page.locator('.pwmfan-advanced .pf-group').count();
-	check('seven behaviour cards', groups === 7, String(groups));
-	check('one takeover toggle', await page.locator('.pf-toggle input[type=checkbox]').count() === 1);
+	check('eight behaviour cards', groups === 8, String(groups));
+	// Two switches now: taking over the fan, and rebooting before the trip.
+	const toggles = await page.evaluate(() => [ ...document.querySelectorAll('.pf-toggle input[type=checkbox]') ]
+		.map((input) => input.closest('.cbi-value')?.dataset.name));
+	check('both switches are toggles', toggles.length === 2 && toggles.includes('enabled') && toggles.includes('early_reboot'), toggles.join(','));
+	// The reboot point is derived from the threshold, and the hint says so.
+	const earlyHint = await page.evaluate(() => {
+		const row = document.querySelector('[data-name=early_reboot]');
+		const note = row && row.querySelector('.cbi-value-description');
+		return note ? note.textContent.trim() : '';
+	});
+	check('early reboot hint names the derived point', /105 °C/.test(earlyHint) && /20 °C/.test(earlyHint), earlyHint);
 	const hosts = await page.locator('.pf-unit-host').count();
 	check('unit hosts', hosts >= 10, String(hosts));
 	const folded = await page.evaluate(() => [ ...document.querySelectorAll('.cbi-value-description') ]
@@ -274,6 +284,9 @@ async function advancedChecks() {
 	await field().fill(wanted);
 	await page.locator('.cbi-button-apply').first().click();
 	await page.waitForFunction(async (value) => (await L.require('uci')).get('h5000m_pwmfan', 'main', 'protection_temp') === value, wanted);
+	// The preview applies through its own queue; give it a moment to land before
+	// the reload, or the reload can outrun the write.
+	await page.waitForTimeout(800);
 	await page.reload({ waitUntil: 'domcontentloaded' });
 	await field().waitFor();
 	// The form is filled from the saved config after it renders, so poll instead of
