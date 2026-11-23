@@ -3,6 +3,7 @@
 日期：2026-11-22
 对象：`docs/UIUX_IMPROVEMENTS_2026-11.md` 中的四项既有问题与九组新增提案
 范围：只做核查与判定，本报告不修改界面、控制器或正式需求
+快照：报告中的行号与结论对应 `96f6971`（2026-11-22 的最后一个提交），不代表当前 HEAD；后续改动只回填到 `docs/REQUIREMENTS_V3.md`。
 环境：本地预览 `python3 tools/preview.py --port 8028 /home/devcc/Projects/.h5000m-work/rootfs`（直接服务工作树 `htdocs`，主题取自固件 rootfs 中的 Vantage CSS）；Chromium 以 320/390/500/651/1360 视口、浅色与深色主题、展开与折叠状态截图并读取计算样式。
 
 ## 结论摘要

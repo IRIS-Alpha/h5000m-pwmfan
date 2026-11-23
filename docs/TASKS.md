@@ -401,8 +401,13 @@ question that needs a person goes to "Awaiting decision" instead of being guesse
       unreachable), the preset buttons got a hover state, `touch-action: manipulation` now covers every control, and
       card headings balance their wrap. Two reported findings were retracted after measuring: the legend already
       truncates correctly, and the advanced page's native `<select>` inherits the theme colours in both schemes.
-- [ ] H. Docs-versus-code sweep: grep `docs/*.md` for hard-coded constants, function names and behaviour claims; the
-      `kernel_takeover_ready() { return 1; }` find shows how far a paragraph can drift.
+- [x] H. Docs-versus-code sweep: grep `docs/*.md` for hard-coded constants, function names and behaviour claims; the
+      `kernel_takeover_ready() { return 1; }` find shows how far a paragraph can drift. Result: eleven bullets in
+      `docs/REQUIREMENTS_V3.md` still described designs that no longer exist (the readings card with its “自定义” picker
+      and `pwmfan-report` key, the MiSans subset, the legend without values, the 42% dimmed protection key, the
+      `minmax(…, max-content)` legend columns, the five-minute-multiple window, the old panel names, the old preset
+      names and the legend order actual-before-temperature). They now match the code, and the theme path no longer
+      claims to live in this repository. The sweep also found one dead rule, `.pf-legend span.is-off` — removed.
 
 ### Awaiting decision
 
@@ -417,6 +422,11 @@ question that needs a person goes to "Awaiting decision" instead of being guesse
 - The monitor chart's time axis tilts by 45° on phones (six labels do not fit upright). It stays inside the canvas and
   never overflows, but the tilted run crowds the 0 °C line and the y labels. Options: keep it, label every other tick on
   phones while keeping six gridlines, or make the canvas taller under 430 px.
+
+Brief log: 2026-11-23 — H closed. Sweep method: extract every backticked token from `docs/*.md`, then check paths
+against the tree, `name()` against the shell/JS corpus, CSS selectors against the stylesheet, and `key=value` against
+the config and views. Every remaining hit was a dated snapshot, a line-suffixed path (`file.js:470`) or an upstream
+kernel symbol (`KERNEL_HANDOVER.md` quotes `drivers/hwmon/pwm-fan.c`), so they stay as historical evidence.
 
 Brief log: 2026-11-23 — G closed. The canvas had a `keydown` handler since the cursor was added, but no
 `tabindex`, so keyboard focus never reached it; `ArrowRight`/`ArrowLeft`/`Escape` now move and clear the read cursor
