@@ -167,6 +167,27 @@ What this settles:
 Still untested: what the governor does above the remaining trip (85 degC). Seeing
 that needs the SoC heated past 85 degC, which is outside what this review will do.
 
+## Supervision (added 2026-11-24)
+
+The measurements above are the reason a watchdog exists at all: after a release
+the kernel restores its trips and pushes `cooling_device0/cur_state` to 3, but it
+never writes `pwm1` again. A hung controller therefore leaves the fan at whatever
+duty it last wrote.
+
+- heartbeat: the watchdog stamps `/var/run/h5000m-pwmfan/watchdog-alive` every
+  poll; the controller kills it after 20 s of silence (own pid checked against
+  `/proc/<pid>/comm` first).
+- rescue: stale `updated_at` (older than `poll_interval × 3 + 3`) means
+  `pwm1=255`, kernel trips restored from `thermal-takeover`, controller
+  `SIGTERM`ed so procd restarts it. The controller then pins the trips again and
+  resumes the curve.
+- reboot fallback: off by default (`watchdog_reboot_temp=0`); when set, 30 s above
+  the value with the fan already at full duty triggers `/sbin/reboot`.
+- cost: one file read per poll (2 s) plus one `date`; no extra processes.
+
+Covered by `tests/watchdog.bats` (six cases: fresh, stale, missing status file,
+foreign pid, reboot off, reboot hold).
+
 ## Still open
 
 - **Cold boot.** Deferred by the user on 2026-11-24.

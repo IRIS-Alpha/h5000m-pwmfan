@@ -502,3 +502,7 @@ nine `cat` calls are gone without an awk pass):
 - 2026-11-23: 两个“看着不对但不能替用户拍板”的问题写进 `Awaiting decision`（曲线卡片默认收起、手机上的斜排时间轴）。
 
 - 2026-11-24: Rollback runbook started: `docs/ROLLBACK.md` now defines five levels (release control, unpin the trips by hand, uninstall, restore the legacy controller, reboot), the exact trip values to write back, abort criteria for a live test, and what a rollback does not restore. `tools/device-snapshot.sh` captures the device read-only and is now in `tools/check.sh`; verified against the router (uptime 382199 s, pid 6735, `v1 5 40000 4 85000`).
+
+- 2026-11-24: L1 观察（用户放行）：释放接管后 `pwm1` 立刻被写成 255、`cooling_device0/cur_state` 被驱动到 3、内核触点回到 85000/40000，但 60 秒内 `pwm1` 始终 255；第二次释放后手动写 51，`pwm1` 保持 51 达 20 秒且 `cur_state` 被驱回 0——即**内核会唤醒热区，但不接管占空比**。`docs/RUNTIME_EVIDENCE.md` 新增 “Release and handover”，`docs/ROLLBACK.md` 的语义与中止判据按实测改正，两个探针 `tools/l1-release.sh` / `tools/l1-poke.sh` 进 `check.sh`。
+
+- 2026-11-24: 进程监督（第 119 轮）。原因是上面那条实测：控制器挂死时风扇停在最后一次占空比，procd 的 respawn 只覆盖退出。新增独立实例 `root/usr/sbin/h5000m-pwmfan-watchdog`（自包含，不 source 控制器库）：心跳 `watchdog-alive`、控制器侧 `watch_watchdog()` 在心跳沉默 20 s 时杀掉它、看门狗侧在 `updated_at` 超过 `poll_interval × 3 + 3` 时写 `pwm1=255` → 恢复内核触点 → `SIGTERM` 控制器让 procd 重建，然后退避 30 s。**只做全速与重启进程，不重跑曲线逻辑**——重建后的控制器会重新钉触点并继续出曲线。硬重启兜底 `watchdog_reboot_temp`（默认 0 关闭）：高于该值持续 30 秒（用 `watchdog-hot` 文件计时，重启看门狗不丢表）且风扇已全速时 `/sbin/reboot`。init 脚本改成两个命名实例（`daemon` / `watchdog`），`reload_service()` 只给 `daemon` 发 HUP。`tests/watchdog.bats` 六项（fresh / stale / 无状态文件 / 外来 pid / 重启关闭 / 重启需保持时间）全过，bats 共 46 项。

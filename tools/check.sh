@@ -21,7 +21,9 @@ run_shellcheck() {
 		root/usr/lib/h5000m-pwmfan/controller-lib.sh \
 		root/usr/sbin/h5000m-pwmfan-status \
 		root/usr/sbin/h5000m-pwmfan-language \
+		root/usr/sbin/h5000m-pwmfan-watchdog \
 		tests/controller-lib.bats \
+		tests/watchdog.bats \
 		tools/check.sh \
 		tools/device-snapshot.sh \
 		tools/l1-release.sh \
@@ -35,7 +37,9 @@ run_shfmt() {
 		root/usr/lib/h5000m-pwmfan/controller-lib.sh \
 		root/usr/sbin/h5000m-pwmfan-status \
 		root/usr/sbin/h5000m-pwmfan-language \
+		root/usr/sbin/h5000m-pwmfan-watchdog \
 		tests/controller-lib.bats \
+		tests/watchdog.bats \
 		tools/check.sh \
 		tools/device-snapshot.sh \
 		tools/l1-release.sh \

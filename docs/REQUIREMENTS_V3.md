@@ -406,6 +406,19 @@ PWM cooling levels 为 `[0,128,192,255]`：40°C `active-low` 通过名为 `cpu-
 - 启动时检查热区 `policy`，若为 `user_space` 则恢复为 `step_wise`（历史版本可能留下该状态），插件从不把整区改成 `user_space`。
 - 过温保护阈值可继续在 80–100 °C 调整；此时内核已无风扇触点，插件曲线是唯一的风扇保护层，`thermal_floor` 只写入状态文件，不参与决策。
 
+## 18. 进程监督（2026-11-24 确认）
+
+插件只有**一个**常驻进程（`h5000m-pwmfan daemon`）；`-status`、`-history`、`-language` 都是 rpcd 按次启动的一次性脚本，温度历史也由该守护进程写。因此控制器挂死时没有任何东西会察觉：procd 的 `respawn 3600 5 5` 只覆盖退出，而 L1 实测证明内核在释放后**不会接管占空比**（`docs/RUNTIME_EVIDENCE.md` 的 “Release and handover”）。
+
+监督契约：
+
+- `root/usr/sbin/h5000m-pwmfan-watchdog` 是**独立的第二个 procd 实例**，自包含、不 source `controller-lib.sh`，控制器脚本坏掉也不影响它。
+- 看门狗每轮写心跳 `/var/run/h5000m-pwmfan/watchdog-alive`（含自己的 pid）；控制器在每次 `sleep` 前调用 `watch_watchdog()`，心跳超过 `WATCHDOG_GRACE=20` 秒就 `kill -TERM` 看门狗，由 procd 重建。
+- 反向：看门狗读控制器状态文件里的 `updated_at`，超过 `poll_interval × 3 + 3` 秒即判定挂死，按顺序 ① 写 `pwm1=255` ② 按 `thermal-takeover` 记录恢复内核触点（先恢复 next-cold，再恢复 cold）③ 校验 `/proc/<pid>/comm` 属于控制器后 `kill -TERM`，由 procd 重建。随后退避 30 秒，避免和重建中的进程抢资源。
+- **只做“全速 + 重启进程”，不重跑曲线逻辑**：看门狗读不到配置语义、也不应该读——它的唯一职责是把系统拉回安全态，控制逻辑由重建后的控制器重新接管（会重新钉触点、按曲线输出）。
+- 硬重启兜底：`watchdog_reboot_temp`（默认 `0` 关闭，`range(0,110)`）。温度高于该值并持续 30 秒（用 `watchdog-hot` 文件计时，重启看门狗不丢表）且风扇已在全速时执行 `/sbin/reboot`，避免一直等到 125 °C 的临界关机触点。默认关闭，因为重启对家庭路由器的代价高于再等 30 秒。
+- 两侧都只对**对方的沉默**做反应，正常运行时互不打扰；两个实例各自被 procd 重启。
+
 ## 讨论中（未定案）
 
 以下细节尚未确认，不构成要求。

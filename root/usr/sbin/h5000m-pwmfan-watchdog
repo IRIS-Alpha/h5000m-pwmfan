@@ -1,0 +1,186 @@
+#!/bin/sh
+# Outside supervisor for the fan controller.
+#
+# The controller writes pwm1 itself and pins the pwm-fan trips, so while it owns
+# the fan nothing else notices if it stops running: the fan keeps the last duty
+# and the kernel governor stays at cur_state 0 instead of stepping in (measured
+# 2026-11-24, docs/RUNTIME_EVIDENCE.md). A crash is covered by procd respawn; a
+# hang is not, and that is what this script is for.
+#
+# It runs as its own procd instance and deliberately shares no code with the
+# controller: if that script is broken, this one still works.
+
+set -u
+
+STATUS=${WD_STATUS:-/var/run/h5000m-pwmfan/status}
+ALIVE=${WD_ALIVE:-/var/run/h5000m-pwmfan/watchdog-alive}
+PIDFILE=${WD_PIDFILE:-/var/run/h5000m-pwmfan/watchdog.pid}
+CONTROLLER_PID=${WD_CONTROLLER_PID:-/var/run/h5000m-pwmfan/pid}
+TAKEOVER=${WD_TAKEOVER:-/var/run/h5000m-pwmfan/thermal-takeover}
+THERMAL=${WD_THERMAL:-/sys/class/thermal}
+REBOOT_CMD=${WD_REBOOT_CMD:-/sbin/reboot}
+PWM=${WD_PWM:-}
+HOT_MARK=${WD_HOT_MARK:-/var/run/h5000m-pwmfan/watchdog-hot}
+LOGGER=${WD_LOGGER:-logger}
+ONESHOT=${WD_ONESHOT:-0}
+BACKOFF=${WD_BACKOFF:-30}
+
+# Full duty, the same value the controller uses as its failsafe
+# (root/usr/sbin/h5000m-pwmfan:26).
+FAILSAFE_PWM=255
+
+uci_get() (
+	if ! command -v uci >/dev/null 2>&1; then
+		printf '%s' "$2"
+		exit 0
+	fi
+	value=$(uci -q get "h5000m_pwmfan.main.$1" 2>/dev/null) || value=
+	if [ -n "$value" ]; then
+		printf '%s' "$value"
+		exit 0
+	fi
+	printf '%s' "$2"
+)
+
+read_one() (
+	value=
+	{ read -r value <"$1"; } 2>/dev/null || value=
+	printf '%s' "$value"
+)
+
+status_field() (
+	value=
+	while IFS='=' read -r key field_value; do
+		if [ "$key" = "$1" ]; then
+			value=$field_value
+			break
+		fi
+	done <"$STATUS" 2>/dev/null
+	printf '%s' "$value"
+)
+
+find_pwm() (
+	for candidate in /sys/class/hwmon/hwmon*/pwm1; do
+		[ -w "$candidate" ] || continue
+		printf '%s' "$candidate"
+		exit 0
+	done
+	exit 1
+)
+
+# Mirror of thermal_takeover_restore() in controller-lib.sh: the next-cold trip
+# went down first, so it goes back first.
+restore_trips() {
+	[ -f "$TAKEOVER" ] || return 0
+	version=''
+	cold_index=''
+	cold_temp=''
+	next_index=''
+	next_temp=''
+	{ read -r version cold_index cold_temp next_index next_temp <"$TAKEOVER"; } 2>/dev/null || true
+	if [ "$version" != v1 ]; then
+		rm -f "$TAKEOVER"
+		return 0
+	fi
+	for zone in "$THERMAL"/thermal_zone*; do
+		[ -w "$zone/trip_point_${next_index}_temp" ] || continue
+		printf '%s\n' "$next_temp" >"$zone/trip_point_${next_index}_temp" 2>/dev/null || true
+		printf '%s\n' "$cold_temp" >"$zone/trip_point_${cold_index}_temp" 2>/dev/null || true
+	done
+	rm -f "$TAKEOVER"
+}
+
+controller_pid() (
+	pid=$(read_one "$CONTROLLER_PID")
+	case "$pid" in '' | *[!0-9]*) exit 1 ;; esac
+	comm=$(read_one "/proc/$pid/comm")
+	case "$comm" in h5000m-pwmfan*) ;; *) exit 1 ;; esac
+	printf '%s' "$pid"
+)
+
+# The clock for the reboot fallback lives in a file, so it survives a restart of
+# this script and can be tested a pass at a time.
+hot_since() (
+	value=$(read_one "$HOT_MARK")
+	case "$value" in '' | *[!0-9]*) exit 1 ;; esac
+	printf '%s' "$value"
+)
+
+reboot_watch() {
+	[ "$reboot_temp" -gt 0 ] || return 0
+	temp=$(read_one "$THERMAL/thermal_zone0/temp")
+	case "$temp" in '' | *[!0-9]*) return 0 ;; esac
+	if [ "$temp" -lt $((reboot_temp * 1000)) ]; then
+		rm -f "$HOT_MARK"
+		return 0
+	fi
+	if ! since=$(hot_since); then
+		printf '%s\n' "$1" >"$HOT_MARK" 2>/dev/null || true
+		return 0
+	fi
+	[ $(($1 - since)) -ge 30 ] || return 0
+	"$LOGGER" -t h5000m-pwmfan "watchdog: ${temp}mc for 30s with the fan already at full duty, rebooting"
+	"$REBOOT_CMD"
+}
+
+rescue() {
+	pwm=$PWM
+	[ -n "$pwm" ] || pwm=$(find_pwm) || pwm=
+	if [ -n "$pwm" ]; then
+		printf '%s\n' "$FAILSAFE_PWM" >"$pwm" 2>/dev/null || true
+	fi
+	restore_trips
+	if pid=$(controller_pid); then
+		kill -TERM "$pid" 2>/dev/null || true
+		"$LOGGER" -t h5000m-pwmfan "watchdog: controller silent for ${age}s, fan set to ${FAILSAFE_PWM} and the controller restarted"
+	else
+		"$LOGGER" -t h5000m-pwmfan "watchdog: controller silent for ${age}s, fan set to ${FAILSAFE_PWM}"
+	fi
+}
+
+# Returns non-zero when it acted, so the caller can back off.
+check_once() {
+	stamp=$(status_field updated_at)
+	case "$stamp" in '' | *[!0-9]*) return 0 ;; esac
+	age=$(($1 - stamp))
+	if [ "$age" -gt "$grace" ]; then
+		rescue
+		return 1
+	fi
+	reboot_watch "$1"
+	return 0
+}
+
+poll=${WD_POLL:-}
+[ -n "$poll" ] || poll=$(uci_get poll_interval 2)
+case "$poll" in '' | *[!0-9]*) poll=2 ;; esac
+[ "$poll" -ge 1 ] || poll=1
+[ "$poll" -le 5 ] || poll=5
+# Three cycles plus a margin: a healthy controller stamps the file every cycle.
+grace=$((poll * 3 + 3))
+
+reboot_temp=${WD_REBOOT_TEMP:-}
+[ -n "$reboot_temp" ] || reboot_temp=$(uci_get watchdog_reboot_temp 0)
+case "$reboot_temp" in '' | *[!0-9]*) reboot_temp=0 ;; esac
+
+if [ "$ONESHOT" = 1 ]; then
+	check_once "$(date +%s)"
+	exit 0
+fi
+
+mkdir -p "${ALIVE%/*}" 2>/dev/null || true
+printf '%s\n' "$$" >"$PIDFILE" 2>/dev/null || true
+trap 'exit 0' INT TERM
+trap ':' HUP
+
+rescue_until=0
+while :; do
+	now=$(date +%s)
+	printf '%s\n' "$now" >"$ALIVE" 2>/dev/null || true
+	if [ "$now" -ge "$rescue_until" ]; then
+		if ! check_once "$now"; then
+			rescue_until=$((now + BACKOFF))
+		fi
+	fi
+	sleep "$poll"
+done

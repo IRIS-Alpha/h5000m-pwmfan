@@ -19,6 +19,10 @@ HISTORY_RANGE=5
 HISTORY_KEEP=600
 STATUS_FILE=$RUNDIR/status
 PID_FILE=$RUNDIR/pid
+# The watchdog instance writes these; a stale heartbeat means it hung.
+WATCHDOG_ALIVE=$RUNDIR/watchdog-alive
+WATCHDOG_PID=$RUNDIR/watchdog.pid
+WATCHDOG_GRACE=20
 HW_MON_DIR=${H5000M_SYS_CLASS_HWMON:-/sys/class/hwmon}
 THERMAL_DIR=${H5000M_SYS_CLASS_THERMAL:-/sys/class/thermal}
 MODEM_CACHE_FILE=${H5000M_MODEM_CACHE_FILE:-/tmp/5gmodem/tele.json}
@@ -652,6 +656,25 @@ cleanup() {
 	[ ! -f "$PID_FILE" ] || [ "$(cat "$PID_FILE" 2>/dev/null)" != "$$" ] || rm -f "$PID_FILE"
 }
 
+# The watchdog is a separate procd instance that pulls this process out of a
+# hang; here the favour is returned for a hung watchdog. Each side only reacts
+# to the other's silence, so two working processes never restart each other.
+watch_watchdog() {
+	[ -r "$WATCHDOG_ALIVE" ] || return 0
+	alive=
+	{ read -r alive <"$WATCHDOG_ALIVE"; } 2>/dev/null || alive=
+	case "$alive" in '' | *[!0-9]*) return 0 ;; esac
+	[ $((NOW - alive)) -le "$WATCHDOG_GRACE" ] && return 0
+	pid=
+	{ read -r pid <"$WATCHDOG_PID"; } 2>/dev/null || pid=
+	case "$pid" in '' | *[!0-9]*) return 0 ;; esac
+	comm=
+	{ read -r comm <"/proc/$pid/comm"; } 2>/dev/null || return 0
+	case "$comm" in h5000m-pwmfan-* | watchdog*) ;; *) return 0 ;; esac
+	logger -t h5000m-pwmfan "watchdog heartbeat is ${alive}, restarting it"
+	kill -TERM "$pid" 2>/dev/null || true
+}
+
 daemon() {
 	mkdir -p "$RUNDIR"
 	printf '%s\n' "$$" >"$PID_FILE"
@@ -674,6 +697,7 @@ daemon() {
 			logger -t h5000m-pwmfan "slow cycle ${cycle_elapsed}s"
 			printf '%s %s\n' "$(date +%T)" "$cycle_elapsed" >>"$RUNDIR/slow-cycles"
 		fi
+		watch_watchdog
 		sleep "${POLL_INTERVAL:-2}"
 	done
 }

@@ -256,6 +256,11 @@ return view.extend({
 		kick.datatype = 'range(0,5000)'; kick.default = '800'; kick.rmempty = false;
 		this.group(section, 'fault', _('Fault response'),
 			_('When a sensor reading is unusable or a PWM write fails, the controller asks for 100% output instead of guessing. This behaviour is fixed and has no switch; CPU throttling and the critical shutdown still belong to the kernel.'));
+		this.group(section, 'supervision', _('Supervision'),
+			_('A second process, restarted by procd on its own, checks the controller heartbeat. If it stays silent for three control cycles the fan is pushed to full duty, the kernel trip points are restored and the controller is restarted. The fan then stays at full duty until the controller writes it again.'));
+		var reboot = section.option(form.Value, 'watchdog_reboot_temp', _('Reboot above (°C)'));
+		reboot.datatype = 'range(0,110)'; reboot.default = '0'; reboot.rmempty = false;
+		reboot.description = _('0 turns the reboot fallback off. Above this value, held for 30 seconds while the fan already runs at full duty, the router reboots instead of waiting for the shutdown trip.');
 		this.group(section, 'curveview', _('Fan curve settings'),
 			_('How often the controller samples and which sensor feeds the fan curve.'));
 		var interval = section.option(form.Value, 'poll_interval', _('Control interval (seconds)'));
