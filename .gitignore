@@ -24,3 +24,6 @@ packaging/*private*.pem
 packaging/*.key
 keys/
 build/
+
+# Signed apk repository output
+repo/

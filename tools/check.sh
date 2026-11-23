@@ -28,7 +28,8 @@ run_shellcheck() {
 		tools/device-snapshot.sh \
 		tools/l1-release.sh \
 		tools/l1-poke.sh \
-		tools/build-apk.sh
+		tools/build-apk.sh \
+		tools/publish-apk-repo.sh
 }
 
 run_shfmt() {
@@ -45,7 +46,8 @@ run_shfmt() {
 		tools/device-snapshot.sh \
 		tools/l1-release.sh \
 		tools/l1-poke.sh \
-		tools/build-apk.sh
+		tools/build-apk.sh \
+		tools/publish-apk-repo.sh
 }
 
 require_tool shellcheck

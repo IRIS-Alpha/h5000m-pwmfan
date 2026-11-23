@@ -101,8 +101,8 @@ package. Pinning it in the binary SDK is also impossible: checkout plus rebuild 
 
 ## Open before publishing
 
-1. **Hosting.** Nothing is published yet. The user reviews the repository contents and the cleanup (no keys, no build
-   directories) before it goes live.
+1. **Hosting.** GitHub Pages, chosen 2026-11-24; the branch and the repository do not exist yet, and the user publishes
+   after reviewing the contents (no private keys, no build directories).
 2. **Version bumping.** `PKG_RELEASE` in `Makefile` and `RELEASE` in `tools/build-apk.sh` must move together; the
    translation package derives its version from the build clock instead.
 
@@ -132,8 +132,9 @@ every option below works on any firmware revision that ships LuCI.
    whole firmware and flash it. Needs the firmware sources for this exact device.
 2. **Imagebuilder image** — `immortalwrt-imagebuilder-mediatek-filogic.Linux-x86_64.tar.zst` from the snapshot server,
    add both packages to `PACKAGES`, get a sysupgrade image in roughly ten minutes. **Caveat:** the published
-   imagebuilder belongs to snapshot `r42542-e695009c15`, while this router runs the vendor snapshot `r0-a4ba824`.
-   Flashing that image replaces the entire system — kernel, drivers, the vendor patches — not just the fan plugin.
+   imagebuilder belongs to snapshot `r42542-e695009c15`, while this router runs the custom firmware
+   `H5000M-CI-Qmodem-OP` at `r0-a4ba824`. Flashing the public image replaces the whole system — kernel, QModem patches,
+   every local adjustment — not just the fan plugin.
 3. **Submit to the firmware feed** — a package maintained upstream. Long review cycle, and the audience is one board
    model, so the value is low.
 4. **Vendor integration** — the board vendor builds it in. Requires their source tree and packaging process, which is
@@ -141,10 +142,100 @@ every option below works on any firmware revision that ships LuCI.
 
 ### What this means here
 
-- Runtime install (option 2) is the only path that does not risk the running system, and it is the one already proven
-  end to end. What it needs from the user is a hosting decision.
-- Baking is only worth revisiting if the vendor supplies the matching buildroot or asks for the package; with the public
-  snapshot imagebuilder it would swap the firmware, not add a plugin.
+- The router runs a **custom firmware built by the user's own CI** (`H5000M-CI-Qmodem-OP`), not a vendor image. That
+  repository already knows how to pull an external package repository in as a feed, so both priorities are reachable
+  without changing how the firmware is produced:
+  1. **APK package feed** (chosen first) — GitHub Pages serves the signed index; the device adds one line and updates
+     with `apk upgrade`.
+  2. **Source feed** (chosen second) — the CI installs this repository as a feed and compiles it into the image, so a
+     freshly flashed router already has the menu entry.
+- Baking still costs a full firmware flash, so the package feed stays the day-to-day update path even after the source
+  feed exists.
+
+## Hosting on GitHub Pages
+
+Decision (2026-11-24): host the repository on GitHub. The layout below is served as plain static files.
+
+```
+repo/
+  aarch64_cortex-a53/packages.adb
+  aarch64_cortex-a53/luci-app-h5000m-pwmfan-0.1.0-r2.apk
+  aarch64_cortex-a53/luci-i18n-h5000m-pwmfan-zh-cn-<stamp>.apk
+  h5000m-apk.pem
+  index.html
+```
+
+`sh tools/publish-apk-repo.sh` assembles exactly that directory from the working tree: it clears stale artefacts, builds
+both packages with the repository key, signs them, writes `packages.adb` with `mkndx`, and copies the public key and a
+small index page. The local run printed `Index has 2 packages`.
+
+`sh tools/publish-apk-repo.sh --push` additionally commits the directory to a `gh-pages` branch through a detached
+worktree, so the working tree is never touched. It needs `origin` to point at the GitHub repository; **nothing has been
+pushed yet** — this checkout has no remote and no `gh-pages` branch.
+
+One-time GitHub setup (user, once the repository exists):
+
+1. Settings → Pages → Source: *Deploy from a branch*, branch `gh-pages`, folder `/`.
+2. The feed line for a device is then
+   `https://<owner>.github.io/<repo>/aarch64_cortex-a53/packages.adb`.
+3. The repository must be public — Pages for a private repository needs a paid plan, and the package content is public
+   anyway.
+
+Client side on the router (verified on the device against its own uhttpd; the same files over Pages differ only by TLS):
+
+```sh
+wget -O /etc/apk/keys/h5000m-apk.pem https://<owner>.github.io/<repo>/h5000m-apk.pem
+echo https://<owner>.github.io/<repo>/aarch64_cortex-a53/packages.adb >> /etc/apk/repositories.d/customfeeds.list
+apk update && apk add luci-app-h5000m-pwmfan
+```
+
+The device carries `ca-bundle` and `/etc/ssl/certs/ca-certificates.crt`, and `wget` against
+`https://downloads.immortalwrt.org/…` succeeds, so HTTPS hosting is reachable from the router.
+
+## Source feed for the custom firmware
+
+The firmware repository `H5000M-CI-Qmodem-OP` (`E:\WorkSpace\A20_Project\H5000M-CI-Qmodem-OP-git`) builds snapshots with
+GitHub Actions and already handles external packages:
+
+- `Scripts/Packages.sh` clones extra repositories and registers them as feeds with `src-link` plus
+  `./scripts/feeds update <name> && ./scripts/feeds install -a -p <name>`.
+- QModem and Model Pro use that path. The Model Pro block documents the single-package trap verbatim: a repository
+  whose `Makefile` sits at the tree root cannot be used as a feed directly, because `scripts/feeds` requires
+  `feed_dir/<pkg>/Makefile`, and the scan misreads the root Makefile (`target pattern contains no '%'`, later
+  `No feed for package`). The workaround is to copy the build inputs into `../<feed>-feed/<pkg>/` and register that
+  directory with `src-link`.
+
+This repository has the same single-package shape (root `Makefile`, `root/`, `htdocs/`, `po/`), and its `Makefile` is a
+plain luci.mk package (`include $(TOPDIR)/rules.mk` … `include $(TOPDIR)/feeds/luci/luci.mk`), so both routes work:
+
+**A. Copy like Model Pro (smallest change).** After
+`UPDATE_PACKAGE "h5000m-pwmfan" "<owner>/h5000m-pwmfan" "main"`, copy `Makefile`, `root`, `htdocs`, `po` into
+`../h5000m-feed/luci-app-h5000m-pwmfan/`, move the clone out of `package/`, append `src-link h5000m <abs path>` to
+`feeds.conf`/`feeds.conf.default` (feed names allow only `[A-Za-z0-9_]`), then
+`./scripts/feeds update h5000m && ./scripts/feeds install -a -p h5000m`. Select
+`CONFIG_PACKAGE_luci-app-h5000m-pwmfan=y` and, for the translation,
+`CONFIG_PACKAGE_luci-i18n-h5000m-pwmfan-zh-cn=y`.
+
+**B. Publish a real feed repository.** A second repository whose root contains `luci-app-h5000m-pwmfan/` can be used as
+`src-git h5000m https://github.com/<owner>/h5000m-feed.git` without the copy step. It costs a sync workflow and a second
+repository, so it is only worth it when more than one firmware tree consumes the package.
+
+Either way the firmware build compiles the package from source — the same code path the previous fan controller used,
+since `/rom/lib/apk/db/installed` records `o:feeds/base/luci-app-h5000m-fancontrol`. That build has the full source
+tree, so it needs no SDK.
+
+## The SDK question
+
+- The downloadable binary SDK (`immortalwrt-sdk-mediatek-filogic_gcc-14.4.0_musl`, `r42542-e695009c15`) is finished as a
+  *build host for this package*: the attempt to pin LuCI removed the `ucode` staging marks and the archive does not
+  carry them either, while `package/libs` sources are absent, so `make package/…/compile` cannot run again.
+- It is not needed. This package ships files only (`root/`, `htdocs/`, `po/`); `tools/build-apk.sh` produces a payload
+  that matches the SDK-built package file for file, and the firmware build compiles the same package from source.
+- A *matching* SDK is still obtainable if it is ever wanted: build it from the same tree (`CONFIG_SDK=y`, then `make`;
+  artefact under `bin/targets/`) instead of downloading one. That costs a full toolchain build; nothing in the current
+  plan requires it.
+- `luci.mk` is identical between the SDK's `ebc4118b71` and the device's `ad75cde`, so the revision difference never
+  mattered for this package.
 
 ## Update path
 
