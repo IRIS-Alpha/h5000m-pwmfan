@@ -10,18 +10,6 @@ msgstr ""
 "Language: zh_CN\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-msgid "H5000M PWM Fan"
-msgstr "H5000M PWM 风扇"
-
-msgid "OWT2510 · Hiveton H5000M"
-msgstr "OWT2510 · Hiveton H5000M"
-
-msgid "Quick dispatch"
-msgstr "快速调度"
-
-msgid "Select a ready-to-use policy"
-msgstr "选择控制模式"
-
 msgid "Quiet mode"
 msgstr "安静"
 
@@ -34,197 +22,26 @@ msgstr "性能"
 msgid "Custom curve"
 msgstr "自定义曲线"
 
-msgid "Manual PWM"
-msgstr "手动 PWM"
-
-msgid "Kernel only"
-msgstr "仅内核保护"
-
-msgid "Off"
-msgstr "关闭"
-
-msgid "Temperature array"
-msgstr "温度阵列"
-
-msgid "Safety monitors all available sources"
-msgstr "安全保护持续监控全部可用温度源"
-
-msgid "Curve preview"
-msgstr "温控曲线"
-
-msgid "Control temperature"
-msgstr "控制温度"
-
-msgid "Safety maximum"
-msgstr "安全监控最高温"
-
-msgid "Requested PWM"
-msgstr "请求 PWM"
-
-msgid "Effective PWM"
-msgstr "实际 PWM"
-
-msgid "Controller target"
-msgstr "控制器目标值"
-
-msgid "Hardware read-back"
-msgstr "硬件回读值"
-
-msgid "No source"
-msgstr "无来源"
-
-msgid "Monitoring every source"
-msgstr "监控全部来源"
-
 msgid "Unavailable"
 msgstr "不可用"
 
 msgid "Waiting for sensor readings…"
 msgstr "等待温度读数…"
 
-msgid "Curve and safety"
-msgstr "曲线控制与安全监控"
-
-msgid "Safety monitoring"
-msgstr "安全监控"
-
-msgid "Enable fan controller"
-msgstr "启用风扇控制"
-
-msgid "Disabled is read-only: status remains visible and PWM is not written."
-msgstr "关闭时仅读取状态，不写入 PWM。"
-
-msgid "Dispatch mode"
-msgstr "调度模式"
-
-msgid "Curve sensor"
-msgstr "曲线温度来源"
-
-msgid "Hottest valid sensor"
-msgstr "最高有效温度"
-
-msgid "Unselected valid sensors still participate in the high-temperature safety override."
-msgstr "未选作曲线来源的有效传感器仍参与高温保护。"
-
-msgid "Manual PWM (0–255)"
-msgstr "手动 PWM（0–255）"
-
-msgid "%s curve (°C:PWM)"
-msgstr "%s 曲线（°C:PWM）"
-
-msgid "The chart previews this curve. Temperature points must ascend."
-msgstr "图表预览当前曲线，温度点必须递增。"
-
-msgid "Minimum PWM"
-msgstr "最低 PWM"
-
-msgid "Maximum curve PWM"
-msgstr "曲线最高 PWM"
-
-msgid "Full-speed safety temperature (°C)"
-msgstr "全速保护温度（°C）"
-
-msgid "Startup boost PWM"
-msgstr "启动助推 PWM"
-
-msgid "Startup boost duration (ms)"
-msgstr "启动助推时长（毫秒）"
-
-msgid "Downshift hysteresis (°C)"
-msgstr "降速回差（°C）"
-
-msgid "Downshift delay (s)"
-msgstr "降速延迟（秒）"
-
-msgid "Sampling interval (s)"
-msgstr "采样间隔（秒）"
-
-msgid "Failure response"
-msgstr "故障保护"
-
-msgid "Request full PWM (255). CPU passive, hot and critical protection remains enabled."
-msgstr "请求全速 PWM（255）。CPU 被动、hot 和 critical 热保护保持启用。"
-
-msgid "Fan policy"
-msgstr "风扇策略"
-
-msgid "Fan policy applied."
-msgstr "风扇策略已应用。"
-
 msgid "Could not apply policy: %s"
 msgstr "无法应用策略：%s"
-
-msgid "Could not apply fan policy: %s"
-msgstr "无法应用风扇策略：%s"
-
-msgid "Language"
-msgstr "语言"
-
-msgid "English"
-msgstr "English"
-
-msgid "简体中文"
-msgstr "简体中文"
 
 msgid "Could not change language: %s"
 msgstr "无法切换语言：%s"
 
-msgid "Request full PWM"
-msgstr "请求全速 PWM"
-
-msgid "Controller reason: %s"
-msgstr "控制原因：%s"
-
-msgid "Waiting for status"
-msgstr "等待状态"
-
-msgid "Starting controller"
-msgstr "控制器启动中"
-
 msgid "Status unavailable"
 msgstr "状态不可用"
-
-msgid "%.1f °C"
-msgstr "%.1f °C"
 
 msgid "Temperature (°C)"
 msgstr "温度（°C）"
 
-msgid "Temperatures must ascend from 0–150 °C and PWM must stay between 0–255."
-msgstr "温度点须在 0–150 °C 内递增，PWM 须在 0–255 之间。"
-
-msgid "Enter at least two comma-separated temperature:PWM points."
-msgstr "至少输入两个以逗号分隔的温度:PWM 点。"
-
-msgid "Missing"
-msgstr "缺失"
-
-msgid "Invalid reading"
-msgstr "读数无效"
-
-msgid "Stale reading"
-msgstr "读数已过期"
-
-msgid "Unsupported"
-msgstr "不支持"
-
-msgid "Current mode: Off"
-msgstr "当前模式：关闭"
-
-msgid "Current mode: %s"
-msgstr "当前模式：%s"
-
 msgid "Unknown"
 msgstr "未知"
-
-msgid "Manual"
-msgstr "手动"
-
-msgid "Kernel"
-msgstr "内核"
-
-msgid "Fan output array"
-msgstr "风扇输出阵列"
 
 msgid "CPU"
 msgstr "CPU"
@@ -232,23 +49,8 @@ msgstr "CPU"
 msgid "Radio"
 msgstr "射频"
 
-msgid "5G module"
-msgstr "5G 模组"
-
 msgid "PHY"
 msgstr "PHY"
-
-msgid "Processor"
-msgstr "处理器"
-
-msgid "Wireless"
-msgstr "无线"
-
-msgid "Modem"
-msgstr "模组"
-
-msgid "Ethernet"
-msgstr "以太网"
 
 msgid "Requested output"
 msgstr "请求输出"
@@ -256,104 +58,14 @@ msgstr "请求输出"
 msgid "Actual output"
 msgstr "实际输出"
 
-msgid "Protected output"
-msgstr "保护输出"
-
-msgid "Duty cycle"
-msgstr "占空比"
-
-msgid "Fan output indicator"
-msgstr "风扇输出状态指示"
-
-msgid "No RPM feedback"
-msgstr "无 RPM 反馈"
-
-msgid "Kernel floor unavailable"
-msgstr "内核保护下限不可用"
-
 msgid "Fan curve"
 msgstr "风扇曲线"
 
 msgid "Apply curve"
 msgstr "应用曲线"
 
-msgid "Advanced settings"
-msgstr "高级设置"
-
 msgid "Temperature monitor"
 msgstr "温度监控"
-
-msgid "Live readings held in browser memory"
-msgstr "实时读数保存在浏览器内存中"
-
-msgid "Sensor"
-msgstr "传感器"
-
-msgid "Automatic sensor"
-msgstr "自动选择"
-
-msgid "No available sensor"
-msgstr "无可用传感器"
-
-msgid "Window"
-msgstr "滚动范围"
-
-msgid "Read every"
-msgstr "读取间隔"
-
-msgid "Chart"
-msgstr "图表"
-
-msgid "Enabled"
-msgstr "启用"
-
-msgid "Chart disabled"
-msgstr "图表已关闭"
-
-msgid "Now"
-msgstr "现在"
-
-msgid "%s min"
-msgstr "%s 分钟"
-
-msgid "%s hr"
-msgstr "%s 小时"
-
-msgid "%s s"
-msgstr "%s 秒"
-
-msgid "Fan curve applied."
-msgstr "风扇曲线已应用。"
-
-msgid "Could not apply fan curve: %s"
-msgstr "无法应用风扇曲线：%s"
-
-msgid "Back to dashboard"
-msgstr "返回控制主页"
-
-msgid "Fan policy grouped by behavior"
-msgstr "按控制行为分类的风扇策略"
-
-msgid "Advanced fan settings"
-msgstr "风扇高级设置"
-
-msgid "Protection"
-msgstr "保护策略"
-
-msgid "Kernel thermal protection stays enabled. This package does not change CPU passive, hot, or critical trips."
-msgstr "内核温控保护保持启用。本包不会修改 CPU passive、hot 或 critical 温度阈值。"
-
-msgid "Enable fan control"
-msgstr "启用风扇控制"
-
-msgid "When disabled, the controller releases PWM ownership and keeps status visible."
-msgstr "关闭后控制器释放 PWM 控制权，状态仍保持可见。"
-
-msgid "Minimum fan output"
-msgstr "风扇最低输出"
-
-msgid "Maximum curve output"
-msgstr "曲线最高输出"
 
 msgid "Full-speed temperature threshold (°C)"
 msgstr "全速保护温度阈值（°C）"
@@ -376,32 +88,11 @@ msgstr "启动助推"
 msgid "Briefly raise output when the fan starts, then return to the selected curve."
 msgstr "风扇启动时短暂提高输出，随后恢复所选曲线。"
 
-msgid "Startup boost output"
-msgstr "启动助推输出"
-
 msgid "Startup boost duration (milliseconds)"
 msgstr "启动助推时长（毫秒）"
 
-msgid "A sensor or controller fault requests 100% output; kernel thermal safeguards stay active."
-msgstr "传感器或控制器故障时请求全速输出；内核温控保护保持生效。"
-
 msgid "Fault response"
 msgstr "故障响应"
-
-msgid "Invalid temperature data or a failed PWM write requests full output."
-msgstr "温度数据无效或 PWM 写入失败时请求全速输出。"
-
-msgid "Sensor or controller fault"
-msgstr "传感器或控制器故障"
-
-msgid "Request 100% output; kernel thermal safeguards remain active."
-msgstr "请求 100% 输出；内核温控保护保持生效。"
-
-msgid "Sampling and source"
-msgstr "采样与温度来源"
-
-msgid "The controller reads one sensor snapshot per control cycle. Sensors not selected for curve control still participate in the safety maximum."
-msgstr "控制器每个控制周期读取一次传感器快照。未选作曲线来源的传感器仍参与安全最高温判断。"
 
 msgid "Control interval (seconds)"
 msgstr "控制周期（秒）"
@@ -409,51 +100,14 @@ msgstr "控制周期（秒）"
 msgid "Curve sensor source"
 msgstr "曲线温度来源"
 
-msgid "Advanced fan settings applied."
-msgstr "风扇高级设置已应用。"
-
-msgid "Could not apply fan settings: %s"
-msgstr "无法应用风扇设置：%s"
-
-msgid "Advanced Settings"
-msgstr "高级设置"
-
-msgid "Other parameters"
-msgstr "其他参数"
-
-msgid "Fan output (%)"
-msgstr "风扇输出（%）"
-
-msgid "Remove"
-msgstr "移除"
-
-msgid "Add point"
-msgstr "添加曲线点"
-
-msgid "Manual · not applied"
-msgstr "手动 · 尚未应用"
-
-msgid "Waiting for history…"
-msgstr "等待历史数据…"
-
 msgid "Running"
 msgstr "运行中"
 
 msgid "Fault"
 msgstr "故障"
 
-msgid "Stopped"
-msgstr "已停止"
-
-msgid "Controller owner unavailable"
-msgstr "控制权状态不可用"
-
 msgid "Kernel protection"
 msgstr "内核保护"
-
-msgid "Selected curve"
-msgstr "当前曲线"
-
 
 msgid "Target drive"
 msgstr "目标驱动"
@@ -461,23 +115,11 @@ msgstr "目标驱动"
 msgid "5G modem"
 msgstr "5G 模组"
 
-msgid "Automatic"
-msgstr "自动"
-
-msgid "Manual duty request"
-msgstr "手动占空比请求"
-
 msgid "Curve preset"
 msgstr "曲线预设"
 
-msgid "Control method"
-msgstr "生效方式"
-
 msgid "Requested duty"
 msgstr "请求占空比"
-
-msgid "Off requests 0% output. Temperature protection can raise the output."
-msgstr "关闭模式请求 0% 输出，温度保护仍可提高输出。"
 
 msgid "Use a target at or below the protection threshold and a response interval of 15 °C up to the target."
 msgstr "目标温度不得高于保护阈值，响应区间须在 15 °C 至目标温度之间。"
@@ -503,9 +145,6 @@ msgstr "曲线有未应用的修改。"
 msgid "Saved curve is invalid. Restore six default points to edit."
 msgstr "已保存的曲线无效，请恢复六个默认点后编辑。"
 
-msgid "Select Manual to edit the six curve points."
-msgstr "选择手动后可编辑六个曲线点。"
-
 msgid "Select Custom curve to edit the six curve points."
 msgstr "选择「自定义曲线」后可编辑六个曲线点。"
 
@@ -530,26 +169,8 @@ msgstr "保护响应"
 msgid "Not in control"
 msgstr "未接管"
 
-msgid "Plugin"
-msgstr "插件"
-
 msgid "Temperature protection"
 msgstr "温度保护"
-
-msgid "Kernel or driver"
-msgstr "内核或驱动"
-
-msgid "Kernel or driver override"
-msgstr "内核或驱动覆盖"
-
-msgid "Control source"
-msgstr "控制来源"
-
-msgid "Protection output"
-msgstr "保护输出"
-
-msgid "Fan speed"
-msgstr "风扇转速"
 
 msgid "Curve request"
 msgstr "曲线请求"
@@ -559,9 +180,6 @@ msgstr "当前温度"
 
 msgid "Curve parameters"
 msgstr "曲线参数"
-
-msgid "Takeover applies to fan control between −20 °C and 100 °C. Kernel thermal control above 100 °C remains active."
-msgstr "接管内核在 −20 °C 到 100 °C 的风扇控制。高于 100 °C 的内核热区控制始终开启。"
 
 msgid "Take over fan control"
 msgstr "接管风扇控制"
@@ -584,33 +202,6 @@ msgstr "提前区间（°C）"
 msgid "Release hysteresis (°C)"
 msgstr "解除回差（°C）"
 
-msgid "Protection history"
-msgstr "温度保护记录"
-
-msgid "Last 24 hours"
-msgstr "近 24 小时"
-
-msgid "Total this boot"
-msgstr "本次开机累计"
-
-msgid "Latest trigger"
-msgstr "最近触发"
-
-msgid "Cycle peak"
-msgstr "周期峰值"
-
-msgid "Fan output"
-msgstr "输出阵列"
-
-msgid "Simulated data"
-msgstr "模拟数据"
-
-msgid "Light"
-msgstr "浅色"
-
-msgid "Dark"
-msgstr "深色"
-
 msgid "Settings applied."
 msgstr "已应用设置。"
 
@@ -623,9 +214,6 @@ msgstr "已选"
 msgid "Not selected"
 msgstr "未选"
 
-msgid "Stop fan"
-msgstr "停转"
-
 msgid "Target drive parameters"
 msgstr "定温驱动参数"
 
@@ -635,26 +223,11 @@ msgstr "等待温度读数"
 msgid "Live temperature readings"
 msgstr "温度读数中"
 
-msgid "Controller sampling and curve source"
-msgstr "控制采样与曲线来源"
-
-msgid "The controller reads one sensor snapshot per control cycle. This is separate from the dashboard history sampling interval. Sensors not selected for curve control still participate in the safety maximum."
-msgstr "控制器每个控制周期读取一次传感器快照，与主页历史图表的采样间隔相互独立。未选作曲线控制来源的传感器仍参与安全最高温仲裁。"
-
 msgid "Drives the fan from the plugin; not verified yet, so it stays off."
 msgstr "由插件驱动风扇；尚未核验，暂不可启用。"
 
 msgid "Drives the fan from the plugin; the kernel keeps throttling and the critical shutdown."
 msgstr "由插件驱动风扇；内核仍负责降频与临界关机。"
-
-msgid "Handover verification"
-msgstr "交棒核验"
-
-msgid "Verified"
-msgstr "已核验"
-
-msgid "Not verified yet"
-msgstr "尚未核验"
 
 msgid "Fan control"
 msgstr "风扇控制"
@@ -698,9 +271,6 @@ msgstr "亮色"
 msgid "Dark theme"
 msgstr "暗色"
 
-msgid "Auto"
-msgstr "自动"
-
 msgid "Switch to English"
 msgstr "切换到英文"
 
@@ -736,17 +306,8 @@ msgstr "无读数"
 msgid "thermal zone"
 msgstr "温区"
 
-msgid "Live readings"
-msgstr "实时读数"
-
-msgid "Customize"
-msgstr "自定义"
-
 msgid "When a sensor reading is unusable or a PWM write fails, the controller asks for 100% output instead of guessing. This behaviour is fixed and has no switch; CPU throttling and the critical shutdown still belong to the kernel."
 msgstr "传感器读数不可用或 PWM 写入失败时，控制器直接请求 100% 输出，不做猜测。该行为固定、不提供开关；CPU 降频与临界关机仍由内核负责。"
-
-msgid "The controller takes one sensor snapshot per cycle, independent of the sampling interval used by the history chart."
-msgstr "控制器每个控制周期读取一次传感器快照，与主页历史图表的采样间隔相互独立。"
 
 msgid "A reading counts as valid when the sensor file is readable and the value is within −40…150 °C; sensors without a valid reading are skipped. The fan curve above — the temperature-to-output curve, not the history chart — follows this sensor, or the highest valid one when “All sensors” is selected. Sensors outside the choice still count toward the safety maximum."
 msgstr "传感器文件可读且数值在 −40…150 °C 内才算有效，无有效读数的传感器会被跳过。上方风扇曲线（温度到输出的那条曲线，不是温度监控图表）跟随所选传感器；选“全部传感器”时取其中最高有效值。未选中的传感器仍参与安全最高温仲裁。"
