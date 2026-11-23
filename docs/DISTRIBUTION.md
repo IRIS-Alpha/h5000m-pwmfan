@@ -54,8 +54,17 @@ echo 'https://<host>/apk/aarch64_cortex-a53/packages.adb' >> /etc/apk/repositori
 apk update && apk add luci-app-h5000m-pwmfan
 ```
 
-The line in `customfeeds.list` must point at **the index file itself**. A directory is accepted by the parser but apk
-then probes `<dir>/aarch64_cortex-a53/APKINDEX.tar.gz` (the v2 layout) and fails with `1 unavailable`.
+The line in `customfeeds.list` must point at **the index file itself**. A bare directory is accepted by the parser,
+but apk 3.0.5 then treats the feed as a v2 repository: it appends `<dir>/aarch64_cortex-a53/APKINDEX.tar.gz`, which
+does not exist on a v3 feed, and the source shows up as unavailable. Renaming our index to `Packages.adb` does not
+change that — only a full URL to `packages.adb` works.
+
+`packages.adb` is also the name the upstream feeds use, at any revision: both
+`downloads.immortalwrt.org/snapshots/packages/aarch64_cortex-a53/base/packages.adb` and the OpenWrt equivalent answer
+`206` to a range request, while `APKINDEX.adb` and `APKINDEX.tar.gz` answer `404`. The device's own
+`distfeeds.list` names `packages.adb` on all seven lines. `APKINDEX.adb` never existed: the v2 index was
+`APKINDEX.tar.gz`, which the apk binary still carries as a legacy string. So the name is a property of apk v3, not of
+which SDK built the package.
 
 ## Tooling, verified end to end
 
