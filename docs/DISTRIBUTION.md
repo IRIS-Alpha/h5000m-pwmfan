@@ -106,6 +106,46 @@ package. Pinning it in the binary SDK is also impossible: checkout plus rebuild 
 2. **Version bumping.** `PKG_RELEASE` in `Makefile` and `RELEASE` in `tools/build-apk.sh` must move together; the
    translation package derives its version from the build clock instead.
 
+## Ways to deliver the plugin (discussion, not yet decided)
+
+Three different questions get mixed together; keeping them apart makes the choices obvious.
+
+| Question | Answer |
+|---|---|
+| Where does the package live? | **Hosting** — a web location that stays reachable (GitHub Pages, object storage, our own server, or the router's own `/www` for a LAN-only test) |
+| Is it published? | **Release** — signed index and packages uploaded, public key distributed, one feed line or one `wget` in the install instructions |
+| Is it inside the firmware? | **Baking** — the package is part of the image, so a freshly flashed router already has the menu entry |
+
+Publishing does not require baking, and baking does not require publishing. The plugin is shell and JavaScript only, so
+every option below works on any firmware revision that ships LuCI.
+
+### Runtime install (no firmware build)
+
+1. **Manual copy** — `scp` the APK and `apk add --allow-untrusted`. What the router runs today. Zero infrastructure,
+   manual steps on every device and every update.
+2. **Signed APK repository** — the option verified in this document. The device keeps one feed line and updates with
+   `apk upgrade`; no reflash, configuration untouched. Hosting is the only open decision.
+
+### Baking into the firmware (needs a build of the firmware itself)
+
+1. **Package inside a full buildroot tree** — put this repository under `package/` or point a feed at it, then build the
+   whole firmware and flash it. Needs the firmware sources for this exact device.
+2. **Imagebuilder image** — `immortalwrt-imagebuilder-mediatek-filogic.Linux-x86_64.tar.zst` from the snapshot server,
+   add both packages to `PACKAGES`, get a sysupgrade image in roughly ten minutes. **Caveat:** the published
+   imagebuilder belongs to snapshot `r42542-e695009c15`, while this router runs the vendor snapshot `r0-a4ba824`.
+   Flashing that image replaces the entire system — kernel, drivers, the vendor patches — not just the fan plugin.
+3. **Submit to the firmware feed** — a package maintained upstream. Long review cycle, and the audience is one board
+   model, so the value is low.
+4. **Vendor integration** — the board vendor builds it in. Requires their source tree and packaging process, which is
+   exactly what we do not have.
+
+### What this means here
+
+- Runtime install (option 2) is the only path that does not risk the running system, and it is the one already proven
+  end to end. What it needs from the user is a hosting decision.
+- Baking is only worth revisiting if the vendor supplies the matching buildroot or asks for the package; with the public
+  snapshot imagebuilder it would swap the firmware, not add a plugin.
+
 ## Update path
 
 The manual loop stays until the repository is published: `sh tools/build-apk.sh` → `scp build/*.apk` → `apk add
