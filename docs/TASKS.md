@@ -373,7 +373,7 @@
 - 2026-11-23: 控制周期区间由 1–30 秒收窄到 1–10 秒（默认 2），守护进程改为钳制；理由是它同时决定温度历史分辨率与保护斜坡的可采样性。
 - 2026-11-23: 控制周期区间由 1–10 秒进一步收到 1–5 秒（默认 2）；依据是旧插件 `h5000m-fancontrol` 的 `interval` 默认 5 秒、下限 2 秒（代码与本机旧 uci 一致），60 秒上限从未被合理使用。
 
-## Active: unattended cleanup (planned 2026-11-23)
+## Completed: unattended cleanup (2026-11-23)
 
 Constraints for this block: only work that needs no human decision. The router is read-only (no `uci set`, no PWM or
 thermal-zone writes). Every item ends with `STRICT=1 sh tools/check.sh`, a look at the preview, and its own commit. A
@@ -434,6 +434,13 @@ Brief log: 2026-11-23 — G closed. The canvas had a `keydown` handler since the
 `[aria-pressed=true]`; the idle → hover transition is `rgb(214, 218, 222)` → `rgb(74, 81, 90)`. `touch-action:
 manipulation` reached two control classes and now reaches all of them. `tests/preview.mjs` also gained the right
 default URL (the dashboard page), because the old default 404'd and the run timed out on `.pf-page`.
+
+All eight items closed without touching the router. What the pass changed: a preview regression test that actually
+covers the current DOM (and fails when the drawing breaks), an i18n guard in `tools/check.sh`, a catalogue cut from
+245 to 123 live strings, direct bats cases for the three numeric predicates, a real high-DPR drawing bug fixed, a
+keyboard-reachable chart, and eleven requirement bullets that had drifted away from the shipped interface. Nothing has
+been installed on the device: the three UI commits (`60848ee`, `6a4a723`, `a410450`) are in the working tree for the
+next round that is allowed to deploy.
 
 Not in scope (needs a person): the five externally blocked items, any change to live device behaviour, signing and feed
 decisions.
