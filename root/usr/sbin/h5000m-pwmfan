@@ -306,12 +306,13 @@ load_settings() {
 	DOWN_DELAY=$(cfg_number "$raw" 0 600) || return 1
 	config_get raw "$SECTION" poll_interval 2
 	is_uint "$raw" || return 1
-	if [ "${#raw}" -gt 2 ]; then raw=10; fi
+	if [ "${#raw}" -gt 1 ]; then raw=5; fi
 	POLL_INTERVAL=$raw
 	[ "$POLL_INTERVAL" -ge 1 ] || POLL_INTERVAL=1
 	# The control period is also the resolution of the temperature history, so
 	# a long period would both delay the protection ramp and flatten the chart.
-	[ "$POLL_INTERVAL" -le 10 ] || POLL_INTERVAL=10
+	# The ceiling matches the plugin this one replaces, which defaulted to 5 s.
+	[ "$POLL_INTERVAL" -le 5 ] || POLL_INTERVAL=5
 	config_get DRIVE "$SECTION" drive curve
 	case "$DRIVE" in curve | duty) ;; *) return 1 ;; esac
 	config_get raw "$SECTION" protection_temp 90

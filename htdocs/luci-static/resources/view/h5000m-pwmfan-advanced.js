@@ -259,7 +259,7 @@ return view.extend({
 		this.group(section, 'curveview', _('Fan curve settings'),
 			_('How often the controller samples and which sensor feeds the fan curve.'));
 		var interval = section.option(form.Value, 'poll_interval', _('Control interval (seconds)'));
-		interval.datatype = 'range(1,10)'; interval.default = '2'; interval.rmempty = false;
+		interval.datatype = 'range(1,5)'; interval.default = '2'; interval.rmempty = false;
 		var source = section.option(form.ListValue, 'sensor_sources', _('Curve sensor source'));
 		source.description = _('A reading counts as valid when the sensor file is readable and the value is within −40…150 °C; sensors without a valid reading are skipped. The fan curve above — the temperature-to-output curve, not the history chart — follows this sensor, or the highest valid one when “All sensors” is selected. Sensors outside the choice still count toward the safety maximum.');
 		source.width = '100%';

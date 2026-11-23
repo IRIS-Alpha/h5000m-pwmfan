@@ -515,10 +515,12 @@ if TEST_DUTY=40 TEST_MIN_PWM=51 TEST_MAX_PWM=high load_settings; then exit 1; fi
 # A number too long for test(1) is trimmed, not left to undefined behaviour.
 TEST_DUTY=40 TEST_MIN_PWM=51 TEST_MAX_PWM=999999999999999999999 load_settings || exit 1
 [ "$MAX_PWM" = 255 ] || exit 1
-# The control period is clamped to 1-10 seconds: it is also the history
+# The control period is clamped to 1-5 seconds: it is also the history
 # resolution, and a long one would delay the protection ramp.
 TEST_DUTY=40 TEST_POLL=30 load_settings || exit 1
-[ "$POLL_INTERVAL" = 10 ] || exit 1
+[ "$POLL_INTERVAL" = 5 ] || exit 1
+TEST_DUTY=40 TEST_POLL=6 load_settings || exit 1
+[ "$POLL_INTERVAL" = 5 ] || exit 1
 TEST_DUTY=40 TEST_POLL=0 load_settings || exit 1
 [ "$POLL_INTERVAL" = 1 ] || exit 1
 TEST_DUTY=40 TEST_POLL=4 load_settings || exit 1
