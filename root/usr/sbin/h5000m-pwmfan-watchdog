@@ -25,6 +25,11 @@ PROC=${WD_PROC:-/proc}
 LOGGER=${WD_LOGGER:-logger}
 ONESHOT=${WD_ONESHOT:-0}
 BACKOFF=${WD_BACKOFF:-30}
+# How long the temperature must stay at the threshold before acting.
+HOLD=${WD_HOLD:-30}
+# The shutdown trip the early reboot stays below, and the margin it keeps.
+SHUTDOWN_TEMP=${WD_SHUTDOWN_TEMP:-125}
+EARLY_LEAD=${WD_EARLY_LEAD:-15}
 
 # Full duty, the same value the controller uses as its failsafe
 # (root/usr/sbin/h5000m-pwmfan:26).
@@ -107,11 +112,22 @@ hot_since() (
 	printf '%s' "$value"
 )
 
+# Reboot before the shutdown trip rather than after it. The threshold is derived
+# from the protection threshold, not configured on its own: protection + lead,
+# and never closer than the lead to the shutdown trip.
+early_reboot_temp() (
+	[ "$early_reboot" -eq 1 ] || exit 1
+	threshold=$((protection_temp + EARLY_LEAD))
+	[ "$threshold" -le $((SHUTDOWN_TEMP - EARLY_LEAD)) ] ||
+		threshold=$((SHUTDOWN_TEMP - EARLY_LEAD))
+	printf '%s' "$threshold"
+)
+
 reboot_watch() {
-	[ "$reboot_temp" -gt 0 ] || return 0
+	threshold=$(early_reboot_temp) || return 0
 	temp=$(read_one "$THERMAL/thermal_zone0/temp")
 	case "$temp" in '' | *[!0-9]*) return 0 ;; esac
-	if [ "$temp" -lt $((reboot_temp * 1000)) ]; then
+	if [ "$temp" -lt $((threshold * 1000)) ]; then
 		rm -f "$HOT_MARK"
 		return 0
 	fi
@@ -119,8 +135,8 @@ reboot_watch() {
 		printf '%s\n' "$1" >"$HOT_MARK" 2>/dev/null || true
 		return 0
 	fi
-	[ $(($1 - since)) -ge 30 ] || return 0
-	"$LOGGER" -t h5000m-pwmfan "watchdog: ${temp}mc for 30s with the fan already at full duty, rebooting"
+	[ $(($1 - since)) -ge "$HOLD" ] || return 0
+	"$LOGGER" -t h5000m-pwmfan "watchdog: ${temp}mc for ${HOLD}s, ${EARLY_LEAD}C below the shutdown trip, rebooting"
 	"$REBOOT_CMD"
 }
 
@@ -154,6 +170,7 @@ check_once() {
 	age=$(($1 - stamp))
 	if [ "$age" -gt "$grace" ]; then
 		rescue
+		reboot_watch "$1"
 		return 1
 	fi
 	reboot_watch "$1"
@@ -168,9 +185,15 @@ case "$poll" in '' | *[!0-9]*) poll=2 ;; esac
 # Three cycles plus a margin: a healthy controller stamps the file every cycle.
 grace=$((poll * 3 + 3))
 
-reboot_temp=${WD_REBOOT_TEMP:-}
-[ -n "$reboot_temp" ] || reboot_temp=$(uci_get watchdog_reboot_temp 0)
-case "$reboot_temp" in '' | *[!0-9]*) reboot_temp=0 ;; esac
+early_reboot=${WD_EARLY_REBOOT:-}
+[ -n "$early_reboot" ] || early_reboot=$(uci_get early_reboot 0)
+case "$early_reboot" in 1) ;; *) early_reboot=0 ;; esac
+
+protection_temp=${WD_PROTECTION_TEMP:-}
+[ -n "$protection_temp" ] || protection_temp=$(uci_get protection_temp 90)
+case "$protection_temp" in '' | *[!0-9]*) protection_temp=90 ;; esac
+[ "$protection_temp" -ge 40 ] || protection_temp=40
+[ "$protection_temp" -le 110 ] || protection_temp=110
 
 if [ "$ONESHOT" = 1 ]; then
 	check_once "$(date +%s)"

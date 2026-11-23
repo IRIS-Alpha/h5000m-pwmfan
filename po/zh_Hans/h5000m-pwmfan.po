@@ -387,8 +387,8 @@ msgstr "监督"
 msgid "A second process, restarted by procd on its own, checks the controller heartbeat. If it stays silent for three control cycles the fan is pushed to full duty, the kernel trip points are restored and the controller is restarted. The fan then stays at full duty until the controller writes it again."
 msgstr "由一个独立的第二进程检查控制器心跳，procd 会单独重启它。若控制器连续三个控制周期没有心跳，则把风扇推到全速、恢复内核触点并重启控制器。之后风扇保持全速，直到控制器重新写入。"
 
-msgid "Reboot above (°C)"
-msgstr "超过则重启（°C）"
+msgid "Reboot before thermal shutdown"
+msgstr "关机前重启"
 
-msgid "0 turns the reboot fallback off. Above this value, held for 30 seconds while the fan already runs at full duty, the router reboots instead of waiting for the shutdown trip."
-msgstr "0 表示关闭重启兜底。温度高于此值并持续 30 秒、且风扇已在全速时，路由器会直接重启，而不是等临界关机触点。"
+msgid "Reboots when the temperature stays 15 °C above the protection threshold — %s now — for 30 seconds, still %s below the 125 °C shutdown trip. Off by default: the router may hold unsaved data."
+msgstr "温度持续停在保护阈值以上 15 °C（当前 %s）满 30 秒就重启，仍比 125 °C 的关机触点低 %s。默认关闭：路由器上可能有未保存的数据。"

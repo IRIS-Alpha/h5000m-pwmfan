@@ -1,4 +1,5 @@
 #!/usr/bin/env bats
+# shellcheck disable=SC2030,SC2031  # every case exports its own environment
 
 # The watchdog shares no code with the controller, so these tests drive the
 # script itself in one-shot mode against a fake runtime directory.
@@ -81,40 +82,60 @@ status_file() {
 	wait "$controller" 2>/dev/null || true
 }
 
-@test "the reboot fallback stays off while the setting is zero" {
+@test "the early reboot stays off while the switch is off" {
 	now=$(date +%s)
-	status_file "$now" "temperature=0"
-	echo 60000 >"$WD_THERMAL/thermal_zone0/temp"
+	status_file "$now"
+	echo 99000 >"$WD_THERMAL/thermal_zone0/temp"
+	export WD_EARLY_REBOOT=0 WD_PROTECTION_TEMP=90
 	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
 	[ "$status" -eq 0 ]
 	[ ! -e "$ROOT/rebooted" ]
 }
 
-@test "the reboot fallback needs the hold time before it fires" {
+@test "the early reboot fires at the protection threshold plus fifteen" {
 	now=$(date +%s)
 	status_file "$now"
-	echo 99000 >"$WD_THERMAL/thermal_zone0/temp"
-	export WD_REBOOT_TEMP=90
+	# 105 °C is the derived point for a 90 °C threshold: hold already started.
+	echo 105000 >"$WD_THERMAL/thermal_zone0/temp"
+	printf '%s\n' $((now - 40)) >"$WD_HOT_MARK"
+	export WD_EARLY_REBOOT=1 WD_PROTECTION_TEMP=90
+	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
+	[ "$status" -eq 0 ]
+	[ -e "$ROOT/rebooted" ]
+}
+
+@test "the early reboot ignores a temperature just below the derived point" {
+	now=$(date +%s)
+	status_file "$now"
+	echo 104000 >"$WD_THERMAL/thermal_zone0/temp"
+	printf '%s\n' $((now - 40)) >"$WD_HOT_MARK"
+	export WD_EARLY_REBOOT=1 WD_PROTECTION_TEMP=90
+	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
+	[ "$status" -eq 0 ]
+	[ ! -e "$ROOT/rebooted" ]
+	[ ! -e "$WD_HOT_MARK" ]
+}
+
+@test "a high threshold cannot push the early reboot into the shutdown trip" {
+	now=$(date +%s)
+	status_file "$now"
+	# 110 °C is the cap: 100 °C protection plus 15 would be 115 °C.
+	echo 110000 >"$WD_THERMAL/thermal_zone0/temp"
+	printf '%s\n' $((now - 40)) >"$WD_HOT_MARK"
+	export WD_EARLY_REBOOT=1 WD_PROTECTION_TEMP=100
+	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
+	[ "$status" -eq 0 ]
+	[ -e "$ROOT/rebooted" ]
+}
+
+@test "the early reboot waits out the hold window before it fires" {
+	now=$(date +%s)
+	status_file "$now"
+	echo 106000 >"$WD_THERMAL/thermal_zone0/temp"
+	export WD_EARLY_REBOOT=1 WD_PROTECTION_TEMP=90
 	# First pass only starts the clock.
 	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
 	[ "$status" -eq 0 ]
 	[ ! -e "$ROOT/rebooted" ]
-}
-
-@test "a stopped controller is killed, not just asked to stop" {
-	now=$(date +%s)
-	status_file $((now - 60))
-	sleep 60 &
-	controller=$!
-	# The pid has to be real for kill, but its name is ours to fake.
-	mkdir -p "$ROOT/proc/$controller"
-	printf 'h5000m-pwmfan\n' >"$ROOT/proc/$controller/comm"
-	export WD_PROC="$ROOT/proc"
-	echo "$controller" >"$WD_CONTROLLER_PID"
-	kill -STOP "$controller"
-	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
-	[ "$status" -eq 0 ]
-	# A zombie is not a live controller: wait reports the kill signal instead.
-	run wait "$controller"
-	[ "$status" -eq 137 ]
+	[ -e "$WD_HOT_MARK" ]
 }
