@@ -188,6 +188,36 @@ duty it last wrote.
 Covered by `tests/watchdog.bats` (six cases: fresh, stale, missing status file,
 foreign pid, reboot off, reboot hold).
 
+## Mutual restart (measured 2026-11-24)
+
+Both directions were triggered on the router with `kill -STOP`, which is the case
+procd cannot see.
+
+Controller stopped (owner of the fan):
+
+```
+t=0s   pwm1=96   trips=114000/1000  controller pid 623 (SIGSTOPped)
+t=12s  pwm1=255  trips=85000/40000   watchdog acted after its 9s grace
+t=15s  controller pid 623 gone       SIGTERM was queued, SIGKILL after 4s
+t=21s  pwm1=93   trips=114000/1000   new controller (pid 2740) re-pinned and resumed
+```
+
+Log: `watchdog: controller silent for 11s, fan set to 255 and the controller restarted`.
+
+Watchdog stopped:
+
+```
+t=0s    watchdog pid 752 (SIGSTOPped)
+t=20s   "watchdog heartbeat is …, restarting it"   controller sent SIGTERM
+t=25s   "watchdog ignored SIGTERM, killing 752"    controller sent SIGKILL
+t=35s   watchdog pid 2240                          procd respawned it
+```
+
+Two lessons that only show up when the silence is simulated with `SIGSTOP` rather
+than a real crash: a stopped process cannot act on `SIGTERM`, so both sides
+schedule a `SIGKILL` a few seconds later; and procd stops respawning an instance
+after five crashes, so both instances use `respawn 3600 5 0` (unlimited).
+
 ## Still open
 
 - **Cold boot.** Deferred by the user on 2026-11-24.
