@@ -22,7 +22,8 @@ run_shellcheck() {
 		root/usr/sbin/h5000m-pwmfan-status \
 		root/usr/sbin/h5000m-pwmfan-language \
 		tests/controller-lib.bats \
-		tools/check.sh
+		tools/check.sh \
+		tools/device-snapshot.sh
 }
 
 run_shfmt() {
@@ -33,7 +34,8 @@ run_shfmt() {
 		root/usr/sbin/h5000m-pwmfan-status \
 		root/usr/sbin/h5000m-pwmfan-language \
 		tests/controller-lib.bats \
-		tools/check.sh
+		tools/check.sh \
+		tools/device-snapshot.sh
 }
 
 require_tool shellcheck

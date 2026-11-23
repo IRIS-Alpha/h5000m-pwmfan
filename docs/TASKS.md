@@ -496,3 +496,5 @@ nine `cat` calls are gone without an awk pass):
   - **高 DPR 下图表会变空**（手机常见 2–3 倍像素比）：第 106 轮为了让重复刷新不重画，改成“尺寸没变就不给 `canvas.width` 赋值”，可这个赋值同时是**画布变换的重置**。于是每次重绘都再 `ctx.scale(scale, scale)` 一次，DPR 3 上叠加三次后整幅图被推到画布外——实测温度监控画布 `painted=0` 且此后一直为 0。改成 `setTransform(1,0,0,1,0,0)` → `clearRect(0,0,canvas.width,canvas.height)` → `setTransform(scale,0,0,scale,0,0)`，DPR 1/2/3 着色像素数回到 5686 / 17206 / 37436，`tests/preview.mjs` 新增一条高 DPR 断言（回退修复时它会报 `[["history",0]]`）。
   - **卡片标题的可点击高度只有 23px**（`<summary>`），低于 24px 的最小触控目标；`min-height: 32px` 后矩阵里不再出现小目标。
 - 2026-11-23: 两个“看着不对但不能替用户拍板”的问题写进 `Awaiting decision`（曲线卡片默认收起、手机上的斜排时间轴）。
+
+- 2026-11-24: Rollback runbook started: `docs/ROLLBACK.md` now defines five levels (release control, unpin the trips by hand, uninstall, restore the legacy controller, reboot), the exact trip values to write back, abort criteria for a live test, and what a rollback does not restore. `tools/device-snapshot.sh` captures the device read-only and is now in `tools/check.sh`; verified against the router (uptime 382199 s, pid 6735, `v1 5 40000 4 85000`).
