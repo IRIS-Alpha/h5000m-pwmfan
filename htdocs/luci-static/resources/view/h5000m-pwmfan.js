@@ -98,7 +98,8 @@ return view.extend({
 			this.historyBytes = result && result.stdout ? result.stdout.length : 0;
 			if (result.code || !result.stdout) {
 				this.historyFailed = (result && String(result.stderr || '').trim()) || ('rpc code ' + (result && result.code));
-				this.drawChart(this.tempChart);
+				/* Keep the frame that is already on screen: a failed read is not a
+				   reason to blank the chart the user is watching. */
 				return;
 			}
 			this.historyFailed = '';
@@ -114,7 +115,10 @@ return view.extend({
 				return list;
 			}, []);
 			var newer = this.history.filter(function(sample) { return sample.time > last; });
-			if (rows.length) this.history = rows.concat(newer);
+			if (rows.length) {
+				this.history = rows.concat(newer);
+				this.tempChart.rev = (this.tempChart.rev || 0) + 1;
+			}
 			this.drawChart(this.tempChart);
 		}, this)).catch(L.bind(function(error) {
 			this.historyFailed = String((error && error.message) || error);
@@ -711,12 +715,22 @@ return view.extend({
 		this.badge.title = data.reason === 'takeover_pending' ? _('Hardware verification is pending.') : label;
 		if (this.historyState) this.historyState.textContent = values.fresh && values.temps.some(function(value) { return value !== null; }) ? _('Live temperature readings') : _('Waiting for temperature readings');
 		var now = Date.now(), time = values.fresh ? values.stamp * 1000 : now, last = this.history[this.history.length - 1];
-		if (!last || time - last.time >= this.interval * 1000) {
+		var readable = values.temps.some(function(value) { return value !== null; });
+		/* A poll that carries no usable reading is not a data point: recording it
+		   would punch a hole in the chart for a gap that never happened. */
+		if (readable && (!last || time - last.time >= this.interval * 1000)) {
 			this.history.push({ time: time, temps: values.temps });
 			this.history = this.history.filter(function(sample) { return sample.time >= now - HISTORY_LIMIT; });
+			this.tempChart.rev = (this.tempChart.rev || 0) + 1;
 		}
 		this.updateWarnings();
-		this.drawVersion = (this.drawVersion || 0) + 1;
+		/* The page may poll faster than the controller writes. Repainting pixels
+		   that did not change is what makes a chart flash between samples. */
+		var signature = [ values.stamp, values.output.join(','), values.floor ? 1 : 0, readable ? 1 : 0 ].join('|');
+		if (signature !== this.signature) {
+			this.signature = signature;
+			this.curveChart.rev = (this.curveChart.rev || 0) + 1;
+		}
 		this.drawCharts();
 	},
 
@@ -846,20 +860,23 @@ return view.extend({
 		/* Resize observers fire on every card reflow; repainting identical pixels
 		   is wasted work, so only redraw when the box, the data or the cursor
 		   actually moved. */
-		var paintKey = [ width, height, this.drawVersion || 0, chart.cursor == null ? '' : Math.round(chart.cursor) ].join(':');
-		if (chart.paintKey === paintKey && canvas.width === Math.round(width * (window.devicePixelRatio || 1))) {
+		var scale = window.devicePixelRatio || 1, wantWidth = Math.round(width * scale), wantHeight = Math.round(height * scale);
+		var paintKey = [ wantWidth, wantHeight, chart.rev || 0, chart.cursor == null ? '' : Math.round(chart.cursor) ].join(':');
+		if (chart.paintKey === paintKey && canvas.width === wantWidth && canvas.height === wantHeight) {
 			this.paintChartTable(chart);
 			return;
 		}
 		chart.paintKey = paintKey;
-		var scale = window.devicePixelRatio || 1;
-		canvas.width = Math.round(width * scale);
-		canvas.height = Math.round(height * scale);
+		/* Assigning width or height clears the bitmap, so do it only when the
+		   size really changed; the paint below redraws every pixel anyway. */
+		if (canvas.width !== wantWidth) canvas.width = wantWidth;
+		if (canvas.height !== wantHeight) canvas.height = wantHeight;
 		var ctx = canvas.getContext('2d'), vars = getComputedStyle(this.root);
 		var color = function(name) {
 			var value = vars.getPropertyValue(name).trim();
 			return value.startsWith('light-dark(') ? value.slice(11, -1).split(',')[vars.colorScheme === 'dark' ? 1 : 0].trim() : value;
 		};
+		ctx.clearRect(0, 0, width, height);
 		ctx.scale(scale, scale);
 		var left = 37, top = 12, right = width - 17, bottom = height - 26;
 		var now = Date.now(), start = chart.history ? now - this.range * 60000 : 0, end = chart.history ? now : 100;
@@ -1019,8 +1036,10 @@ return view.extend({
 		this.history = [];
 		var storedRange = Number(setting('history_range', 5));
 		var storedInterval = Number(setting('history_interval', 2));
+		var storedPoll = Number(setting('poll_interval', 2));
 		this.range = Number.isInteger(storedRange) && storedRange >= 5 && storedRange <= 360 ? storedRange : 5;
-		this.interval = Number.isInteger(storedInterval) && storedInterval >= 1 && storedInterval <= 60 ? storedInterval : 2;
+		this.interval = Number.isInteger(storedInterval) && storedInterval >= 1 && storedInterval <= 5 ? storedInterval : 2;
+		this.pollSeconds = Number.isInteger(storedPoll) && storedPoll >= 1 && storedPoll <= 5 ? storedPoll : 2;
 		this.badgeText = E('span', {}, _('Status unavailable'));
 		this.badge = E('span', { 'class': 'pf-live', role: 'status', 'data-state': 'idle' }, [ E('i', { 'aria-hidden': 'true' }), this.badgeText ]);
 		var modeButton = function(mode) {
@@ -1075,6 +1094,13 @@ return view.extend({
 		this.refreshPolicy();
 		this.update(data);
 		this.loadTemperatureHistory();
+		/* One setting, one refresh: the monitor interval paces both the file
+		   re-read and the live append, so two refreshes never show the same
+		   sample twice or an empty slot in between. */
+		this.historyTimer = window.setInterval(function() {
+			if (!document.hidden) self.loadTemperatureHistory();
+		}, this.interval * 1000);
+		window.addEventListener('pagehide', function() { window.clearInterval(self.historyTimer); });
 		temps.addEventListener('toggle', this.drawCharts.bind(this));
 		var observer = new ResizeObserver(function() { if (self.root.isConnected) self.drawCharts(); });
 		observer.observe(this.root);
@@ -1085,7 +1111,7 @@ return view.extend({
 			   visible tick is complete again. */
 			if (document.hidden) return Promise.resolve();
 			return self.fetchStatus().then(self.update.bind(self));
-		}, 1);
+		}, this.pollSeconds);
 		self.drawCharts();
 		window.setTimeout(function() { self.drawCharts(); }, 0);
 		return this.root;

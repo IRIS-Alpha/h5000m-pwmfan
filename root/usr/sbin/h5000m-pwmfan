@@ -15,6 +15,8 @@ TAKEOVER_TRIED=0
 HISTORY_FILE=$RUNDIR/protection-history
 TEMP_HISTORY_FILE=$RUNDIR/temperature-history
 NEXT_HISTORY_PRUNE=0
+HISTORY_RANGE=5
+HISTORY_KEEP=600
 STATUS_FILE=$RUNDIR/status
 PID_FILE=$RUNDIR/pid
 HW_MON_DIR=${H5000M_SYS_CLASS_HWMON:-/sys/class/hwmon}
@@ -152,7 +154,7 @@ write_status() {
 	stamp=$(date +%s)
 	if [ "$stamp" -ge "$NEXT_HISTORY_PRUNE" ] && [ -f "$TEMP_HISTORY_FILE" ]; then
 		history_tmp="$TEMP_HISTORY_FILE.$$"
-		temperature_history_read "$TEMP_HISTORY_FILE" "$stamp" >"$history_tmp" && mv "$history_tmp" "$TEMP_HISTORY_FILE"
+		temperature_history_read "$TEMP_HISTORY_FILE" "$stamp" "$HISTORY_KEEP" >"$history_tmp" && mv "$history_tmp" "$TEMP_HISTORY_FILE"
 	fi
 	if [ "$stamp" -ge "$NEXT_HISTORY_PRUNE" ]; then NEXT_HISTORY_PRUNE=$((stamp + 300)); fi
 	temperature_history_record "$TEMP_HISTORY_FILE" "$stamp" "$SENSOR_STATUS" || true
@@ -313,6 +315,16 @@ load_settings() {
 	# a long period would both delay the protection ramp and flatten the chart.
 	# The ceiling matches the plugin this one replaces, which defaulted to 5 s.
 	[ "$POLL_INTERVAL" -le 5 ] || POLL_INTERVAL=5
+	# The monitor window also bounds what the history file keeps, so a five
+	# minute chart does not pay for a six hour tail on every prune and page load.
+	config_get raw "$SECTION" history_range 5
+	# A view-only setting is not worth rejecting the whole configuration for.
+	if ! is_uint "$raw"; then raw=5; fi
+	if [ "${#raw}" -gt 3 ]; then raw=360; fi
+	HISTORY_RANGE=$raw
+	[ "$HISTORY_RANGE" -ge 5 ] || HISTORY_RANGE=5
+	[ "$HISTORY_RANGE" -le 360 ] || HISTORY_RANGE=360
+	HISTORY_KEEP=$(temperature_history_keep "$HISTORY_RANGE")
 	config_get DRIVE "$SECTION" drive curve
 	case "$DRIVE" in curve | duty) ;; *) return 1 ;; esac
 	config_get raw "$SECTION" protection_temp 90

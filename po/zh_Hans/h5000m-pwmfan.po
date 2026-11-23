@@ -766,8 +766,8 @@ msgstr "温度监控图表向前覆盖的时间范围。"
 msgid "Monitor interval (seconds)"
 msgstr "监控间隔（秒）"
 
-msgid "How often the temperature monitor chart takes a new sample."
-msgstr "温度监控图表多久取一次新的温度采样。"
+msgid "How often the monitor refreshes. The same interval paces the samples it records, so no refresh lands between two readings."
+msgstr "监控多久刷新一次。同一间隔也决定记录样本的疏密，因此不会有某次刷新落在两次读数之间的空档。"
 
 msgid "Temperature monitor settings"
 msgstr "温度监控设置"

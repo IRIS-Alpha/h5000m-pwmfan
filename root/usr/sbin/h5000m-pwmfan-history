@@ -5,9 +5,8 @@
 # The LuCI file RPC on this firmware rejects `exec` calls that carry arguments,
 # so this helper takes none: it reads the window from the saved configuration
 # instead of from the caller.
-[ -r /usr/lib/h5000m-pwmfan/controller-lib.sh ] && . /usr/lib/h5000m-pwmfan/controller-lib.sh
-
 runtime_dir=/var/run/h5000m-pwmfan
+file=$runtime_dir/temperature-history
 
 range=$(uci -q get h5000m_pwmfan.main.history_range 2>/dev/null)
 case "$range" in
@@ -19,5 +18,6 @@ esac
 now=$(date +%s)
 cutoff=$((now - range * 60))
 
-temperature_history_read "$runtime_dir/temperature-history" "$now" |
-	awk -F '|' -v cutoff="$cutoff" 'NF == 5 && $1 + 0 >= cutoff'
+# One pass over the file: the controller already keeps it trimmed to twice the
+# window, so a second awk in the pipeline would only cost another fork.
+awk -F '|' -v cutoff="$cutoff" 'NF == 5 && $1 + 0 >= cutoff { print }' "$file" 2>/dev/null

@@ -703,10 +703,21 @@ temperature_history_record() (
 	' >>"$file"
 )
 
+# The file keeps twice the window the dashboard draws. A longer tail is never
+# read, and every extra line is paid for twice: once when the controller prunes
+# the file, and once more on every page load that parses it.
+temperature_history_keep() {
+	keep_range=${1:-5}
+	is_uint "$keep_range" || keep_range=5
+	[ "$keep_range" -ge 5 ] || keep_range=5
+	[ "$keep_range" -le 360 ] || keep_range=360
+	printf '%s\n' "$((keep_range * 120))"
+}
+
 temperature_history_read() {
 	[ ! -L "$1" ] && [ -f "$1" ] || return 1
-	awk -F '|' -v now="$2" '
-		NF == 5 && $1 ~ /^[0-9]+$/ && $1 + 0 > now - 21600 && $1 + 0 <= now && $1 + 0 > last {
+	awk -F '|' -v now="$2" -v keep="${3:-21600}" '
+		NF == 5 && $1 ~ /^[0-9]+$/ && $1 + 0 > now - keep && $1 + 0 <= now && $1 + 0 > last {
 			print
 			last = $1 + 0
 		}' "$1"

@@ -274,8 +274,8 @@ return view.extend({
 		window.datatype = 'range(5,360)'; window.default = '5'; window.rmempty = false;
 		window.description = _('How far back the temperature monitor chart reaches.');
 		var read = section.option(form.Value, 'history_interval', _('Monitor interval (seconds)'));
-		read.datatype = 'range(1,60)'; read.default = '2'; read.rmempty = false;
-		read.description = _('How often the temperature monitor chart takes a new sample.');
+		read.datatype = 'range(1,5)'; read.default = '2'; read.rmempty = false;
+		read.description = _('How often the monitor refreshes. The same interval paces the samples it records, so no refresh lands between two readings.');
 		return map;
 	},
 

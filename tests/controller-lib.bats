@@ -436,6 +436,7 @@ config_get() {
 	fixed_duty) setting=$TEST_DUTY ;;
 	min_pwm) setting=${TEST_MIN_PWM:-51} ;;
 	poll_interval) setting=${TEST_POLL:-2} ;;
+	history_range) setting=${TEST_RANGE:-5} ;;
 	max_pwm) setting=${TEST_MAX_PWM:-255} ;;
 	kick_ms) setting=0 ;;
 	hysteresis) setting=${TEST_HYST:-0} ;;
@@ -526,6 +527,16 @@ TEST_DUTY=40 TEST_POLL=0 load_settings || exit 1
 TEST_DUTY=40 TEST_POLL=4 load_settings || exit 1
 [ "$POLL_INTERVAL" = 4 ] || exit 1
 if TEST_DUTY=40 TEST_POLL=slow load_settings; then exit 1; fi
+# The monitor window bounds the history file: twice the window, and a
+# view-only value never rejects the configuration.
+TEST_DUTY=40 TEST_RANGE=30 load_settings || exit 1
+[ "$HISTORY_KEEP" = 3600 ] || exit 1
+TEST_DUTY=40 TEST_RANGE=400 load_settings || exit 1
+[ "$HISTORY_KEEP" = 43200 ] || exit 1
+TEST_DUTY=40 TEST_RANGE=abc load_settings || exit 1
+[ "$HISTORY_KEEP" = 600 ] || exit 1
+[ "$(temperature_history_keep 5)" = 600 ] || exit 1
+[ "$(temperature_history_keep 400)" = 43200 ] || exit 1
 # A stale drive left in the config must not send fixed mode down the curve path.
 MODE=fixed DRIVE=curve FIXED_DUTY=50 MIN_PWM=51 MAX_PWM=255
 [ "$(requested_pwm)" = '128 128' ] || exit 1

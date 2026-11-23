@@ -27,12 +27,17 @@ def settings():
 
 def demo_status(mode):
     now = int(time.time())
+    # The real controller writes one snapshot per control period, so a page that
+    # polls faster sees the same stamp twice. Rounding here keeps the preview
+    # honest about that instead of handing out a fresh stamp on every request.
+    period = 2
+    stamp = now - now % period
     samples = [('cpu', 'cpu-thermal', 52400), ('rf', 'mt7996_phy0.0_temp1', 38200),
                ('modem', 'modem', 46200), ('phy', 'mdio_bus:01_temp1', 42300)]
-    values = [(key, label, temp + (now // 2 % 12) * 65) for key, label, temp in samples]
+    values = [(key, label, temp + (stamp // 2 % 12) * 65) for key, label, temp in samples]
     requested = {'quiet': 60, 'performance': 192, 'off': 0, 'target': 51}.get(mode, 128)
     rows = ';'.join(f'{key}|{label}|{temp}|ok' for key, label, temp in values)
-    return (f'state=running\nowner=userspace\nreason={mode}\nupdated_at={now}\n'
+    return (f'state=running\nowner=userspace\nreason={mode}\nupdated_at={stamp}\n'
             f'temperature_mc={values[0][2]}\nmode_pwm={requested}\n'
             f'requested_pwm={requested}\neffective_pwm={requested}\n'
             f'protection_pwm=0\nlanguage_zh_available=1\nsensors={rows}\n'

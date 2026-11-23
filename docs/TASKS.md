@@ -389,6 +389,8 @@ and is verified with the same gate (`sh -n`, `shellcheck`, `shfmt`, 37 bats case
 4. Reuse a single `date +%s` per cycle (status stamp, modem age) and time the cycle from
    `/proc/uptime` instead of two extra `date` calls (~4 forks).
 
+- 2026-11-23: 监控间隔改为 1…5 秒并同时驱动刷新（实测 `history_interval=1` 下 10 秒 10 次历史读取、5 次状态读取）；状态轮询跟随 `poll_interval`；画布仅在数据变化时重绘、且尺寸不变不再重设 `canvas.width`（消除空白帧）；历史文件保留两倍窗口，helper 改单遍 awk。
+
 Expected: ~29 -> ~4 forks, 137 -> ~40 ms per cycle (2 % of one core). Re-measure with the same
 `/proc/<pid>/stat` window method before and after; `sleep` costs only 1.5 ms per cycle and is not
 worth changing.
