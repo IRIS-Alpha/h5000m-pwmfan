@@ -486,7 +486,8 @@ return view.extend({
 	warningRow: function() {
 		this.warnCurve = E('span', { 'class': 'pf-warn pf-warn-low', hidden: true }, _('Curve too low in the hot zone'));
 		this.warnStop = E('span', { 'class': 'pf-warn pf-warn-stop', hidden: true }, _('Fan stopped'));
-		this.warnRow = E('div', { 'class': 'pf-warnings', hidden: true, 'aria-live': 'polite' }, [ this.warnCurve, this.warnStop ]);
+		this.warnStale = E('span', { 'class': 'pf-warn pf-warn-stale', hidden: true }, _('Temperature reading expired'));
+		this.warnRow = E('div', { 'class': 'pf-warnings', hidden: true, 'aria-live': 'polite' }, [ this.warnCurve, this.warnStop, this.warnStale ]);
 		this.warnNote = E('p', { 'class': 'pf-warn-note', hidden: true }, _('Excessive temperature may shorten the hardware life'));
 		return this.warnRow;
 	},
@@ -498,10 +499,12 @@ return view.extend({
 		var forced = !!window.PWMFAN_PREVIEW;
 		var stop = forced || (output[0] === 0 && output[1] === 0);
 		var low = forced || this.curveTooLow();
+		var stale = !!(this.readings && this.readings.stale);
 		this.pulseWarning(this.warnStop, !stop);
 		this.pulseWarning(this.warnCurve, !low);
+		this.pulseWarning(this.warnStale, !stale);
 		this.warnNote.hidden = !(stop || low);
-		this.warnRow.hidden = !(stop || low);
+		this.warnRow.hidden = !(stop || low || stale);
 	},
 
 	pulseWarning: function(node, hide) {
@@ -660,6 +663,9 @@ return view.extend({
 		});
 		return { fresh: fresh, temps: temps, stamp: stamp,
 			floor: fresh && String(data.floor_limited) === '1',
+			/* The controller held the last reading because this one was
+			   unreadable; the numbers above are one control period old. */
+			stale: fresh && String(data.stale_temperature) === '1',
 			/* "Curve request" is what the selected policy asks for at this
 			   temperature; "actual output" is what the hardware really runs, so
 			   the downshift hold, the PID correction, the protection ramp and the

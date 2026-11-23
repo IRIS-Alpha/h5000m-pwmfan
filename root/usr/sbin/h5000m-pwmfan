@@ -48,6 +48,22 @@ PROTECTION_COUNT=0
 HISTORY_READY=0
 PROTECTION_PWM=--
 MODE_PWM=--
+NOW=
+PWM_FILE=
+STALE_TEMPERATURE=0
+STALE_LIMIT=4
+LAST_VALID_TEMP_MC=
+LAST_VALID_TEMP_AT=0
+
+# One clock read per cycle. H5000M_EPOCH lets the test suite pin time
+# instead of sleeping through a grace window.
+epoch_now() {
+	if [ -n "${H5000M_EPOCH:-}" ]; then
+		printf '%s\n' "$H5000M_EPOCH"
+		return 0
+	fi
+	date +%s
+}
 
 cfg_number() {
 	value=$1
@@ -62,7 +78,9 @@ cfg_number() {
 find_fan() {
 	for hwmon in "$HW_MON_DIR"/hwmon*; do
 		[ -r "$hwmon/name" ] || continue
-		[ "$(cat "$hwmon/name" 2>/dev/null)" = pwmfan ] || continue
+		name=
+		{ read -r name <"$hwmon/name"; } 2>/dev/null || true
+		[ "$name" = pwmfan ] || continue
 		[ -w "$hwmon/pwm1" ] || continue
 		printf '%s\n' "$hwmon/pwm1"
 		return 0
@@ -77,7 +95,9 @@ add_sensor() {
 	value=
 	state=missing
 	if [ -r "$file" ]; then
-		value=$(cat "$file" 2>/dev/null) || value=
+		# read is a shell builtin: reading a sensor must not fork a cat.
+		value=
+		{ read -r value <"$file"; } 2>/dev/null || true
 		if valid_temp_mc "$value"; then state=ok; else state=invalid; fi
 	fi
 	record_sensor "$id" "$label" "$value" "$state"
@@ -89,7 +109,7 @@ add_modem_sensor() {
 	MODEM_MIN_PWM=0
 	if [ -r "$MODEM_CACHE_FILE" ] && command -v jsonfilter >/dev/null 2>&1; then
 		mtime=$(stat -c %Y "$MODEM_CACHE_FILE" 2>/dev/null) || mtime=
-		now=$(date +%s)
+		now=${NOW:-$(date +%s)}
 		case "$mtime" in '' | *[!0-9]*) state=invalid ;; *)
 			age=$((now - mtime))
 			if [ "$age" -lt 0 ] || [ "$age" -gt 90 ]; then
@@ -122,15 +142,31 @@ collect_sensors() {
 	for zone in "$THERMAL_DIR"/thermal_zone*; do
 		[ -r "$zone/temp" ] || continue
 		zone_id=${zone##*/}
-		zone_type=$(cat "$zone/type" 2>/dev/null) || zone_type=$zone_id
-		zone_label=$(printf '%s' "$zone_type" | tr ' |;=' '____')
+		zone_type=
+		{ read -r zone_type <"$zone/type"; } 2>/dev/null || true
+		[ -n "$zone_type" ] || zone_type=$zone_id
+		# A sysfs name never contains a field separator, so only pay for
+		# the sanitising fork when one actually does.
+		zone_label=$zone_type
+		case "$zone_label" in
+		*" "* | *"|"* | *";"* | *"="*)
+			zone_label=$(printf '%s' "$zone_label" | tr ' |;=' '____')
+			;;
+		esac
 		add_sensor "tz_${zone_id}" "$zone_label" "$zone/temp"
 	done
 	for hwmon in "$HW_MON_DIR"/hwmon*; do
 		[ -r "$hwmon/name" ] || continue
 		hwmon_id=${hwmon##*/}
-		hwmon_name=$(cat "$hwmon/name" 2>/dev/null) || hwmon_name=$hwmon_id
-		hwmon_label=$(printf '%s' "$hwmon_name" | tr ' |;=' '____')
+		hwmon_name=
+		{ read -r hwmon_name <"$hwmon/name"; } 2>/dev/null || true
+		[ -n "$hwmon_name" ] || hwmon_name=$hwmon_id
+		hwmon_label=$hwmon_name
+		case "$hwmon_label" in
+		*" "* | *"|"* | *";"* | *"="*)
+			hwmon_label=$(printf '%s' "$hwmon_label" | tr ' |;=' '____')
+			;;
+		esac
 		for input in "$hwmon"/temp*_input; do
 			[ -r "$input" ] || continue
 			input_id=${input##*/}
@@ -151,7 +187,8 @@ write_status() {
 	source=${CONTROL_SOURCE:---}
 	safety_temperature=${SAFETY_TEMP_MC:---}
 	safety_source=${SAFETY_SOURCE:---}
-	stamp=$(date +%s)
+	stamp=${NOW:-}
+	[ -n "$stamp" ] || stamp=$(date +%s)
 	if [ "$stamp" -ge "$NEXT_HISTORY_PRUNE" ] && [ -f "$TEMP_HISTORY_FILE" ]; then
 		history_tmp="$TEMP_HISTORY_FILE.$$"
 		temperature_history_read "$TEMP_HISTORY_FILE" "$stamp" "$HISTORY_KEEP" >"$history_tmp" && mv "$history_tmp" "$TEMP_HISTORY_FILE"
@@ -174,6 +211,7 @@ write_status() {
 		printf 'mode_pwm=%s\n' "$MODE_PWM"
 		printf 'floor_pwm=%s\n' "$MIN_PWM"
 		printf 'floor_limited=%s\n' "${FLOOR_LIMITED:-0}"
+		printf 'stale_temperature=%s\n' "${STALE_TEMPERATURE:-0}"
 		printf 'writes_total=%s\n' "$PWM_WRITES"
 		printf 'sensors=%s\n' "$SENSOR_STATUS"
 		printf 'updated_at=%s\n' "$stamp"
@@ -183,13 +221,16 @@ write_status() {
 set_pwm() {
 	requested=$1
 	[ -n "$PWM_FILE" ] && [ -w "$PWM_FILE" ] || return 1
-	previous=$(cat "$PWM_FILE" 2>/dev/null) || previous=unknown
+	previous=unknown
+	{ read -r previous <"$PWM_FILE"; } 2>/dev/null || true
 	if [ "$previous" != "$requested" ]; then
 		logger -t h5000m-pwmfan "pwm $previous -> $requested"
 	fi
 	printf '%s\n' "$requested" >"$PWM_FILE" 2>/dev/null || return 1
 	PWM_WRITES=$((PWM_WRITES + 1))
-	effective=$(cat "$PWM_FILE" 2>/dev/null) || return 1
+	effective=
+	{ read -r effective <"$PWM_FILE"; } 2>/dev/null || true
+	[ -n "$effective" ] || return 1
 	in_range "$effective" 0 255 || return 1
 	ACTIVE_OWNER=1
 	OWNER=userspace
@@ -203,7 +244,8 @@ set_pwm() {
 set_pwm_if_changed() {
 	requested=$1
 	[ -n "$PWM_FILE" ] && [ -w "$PWM_FILE" ] || return 1
-	current=$(cat "$PWM_FILE" 2>/dev/null) || current=
+	current=
+	{ read -r current <"$PWM_FILE"; } 2>/dev/null || true
 	if [ "$current" = "$requested" ]; then
 		effective=$current
 		ACTIVE_OWNER=1
@@ -315,6 +357,8 @@ load_settings() {
 	# a long period would both delay the protection ramp and flatten the chart.
 	# The ceiling matches the plugin this one replaces, which defaulted to 5 s.
 	[ "$POLL_INTERVAL" -le 5 ] || POLL_INTERVAL=5
+	# Two control periods of grace before a missing reading counts as a fault.
+	STALE_LIMIT=$((POLL_INTERVAL * 2))
 	# The monitor window also bounds what the history file keeps, so a five
 	# minute chart does not pay for a six hour tail on every prune and page load.
 	config_get raw "$SECTION" history_range 5
@@ -455,7 +499,9 @@ hold_down_allowed() {
 }
 
 apply_cycle() {
-	PROTECTION_PWM=-- MODE_PWM=-- FLOOR_LIMITED=0
+	PROTECTION_PWM=-- MODE_PWM=-- FLOOR_LIMITED=0 STALE_TEMPERATURE=0
+	# One clock read serves the status stamp, the modem age and the stale grace.
+	NOW=$(epoch_now)
 	if ! load_settings; then
 		MODE=invalid
 		OWNER=none
@@ -478,7 +524,9 @@ apply_cycle() {
 		fi
 		return
 	fi
-	PWM_FILE=$(find_fan) || PWM_FILE=
+	# Cache the fan path: it only moves on a re-enumeration, so the scan runs
+	# once and again only when the cached path stops accepting writes.
+	if [ -z "$PWM_FILE" ] || [ ! -w "$PWM_FILE" ]; then PWM_FILE=$(find_fan) || PWM_FILE=; fi
 	if [ -z "$PWM_FILE" ]; then
 		write_status fault pwmfan_not_found "$FAILSAFE_PWM" --
 		return
@@ -499,12 +547,25 @@ apply_cycle() {
 		fi
 	fi
 	if ! valid_temp_mc "$CONTROL_TEMP_MC" || ! valid_temp_mc "$SAFETY_TEMP_MC"; then
-		failsafe no_valid_temperature
-		return
+		# One unreadable sample is not a dead sensor. Hold the last reading for
+		# two control periods so a single glitch does not pin the fan at 100 %,
+		# then treat the reading as gone and let the failsafe take over.
+		if [ "$STALE_LIMIT" -gt 0 ] && valid_temp_mc "$LAST_VALID_TEMP_MC" &&
+			[ $((NOW - LAST_VALID_TEMP_AT)) -le "$STALE_LIMIT" ]; then
+			CONTROL_TEMP_MC=$LAST_VALID_TEMP_MC
+			SAFETY_TEMP_MC=$LAST_VALID_TEMP_MC
+			STALE_TEMPERATURE=1
+		else
+			failsafe no_valid_temperature
+			return
+		fi
+	else
+		LAST_VALID_TEMP_MC=$CONTROL_TEMP_MC
+		LAST_VALID_TEMP_AT=$NOW
 	fi
 	CONTROL_TEMP_C=$((CONTROL_TEMP_MC / 1000))
 	SAFETY_TEMP_C=$((SAFETY_TEMP_MC / 1000))
-	now=$(date +%s)
+	now=$NOW
 	read -r uptime _ </proc/uptime || uptime=0
 	CYCLE_ELAPSED=${POLL_INTERVAL:-2}
 	sample=${uptime%%.*}
@@ -604,9 +665,11 @@ daemon() {
 			RELOAD_REQUESTED=0
 			load_settings || logger -t h5000m-pwmfan "kept the previous settings"
 		fi
-		cycle_start=$(date +%s)
+		read -r cycle_start _ </proc/uptime || cycle_start=0
 		apply_cycle
-		cycle_elapsed=$(($(date +%s) - cycle_start))
+		read -r cycle_end _ </proc/uptime || cycle_end=$cycle_start
+		cycle_start=${cycle_start%%.*}
+		cycle_elapsed=$((${cycle_end%%.*} - cycle_start))
 		if [ "$cycle_elapsed" -gt 5 ]; then
 			logger -t h5000m-pwmfan "slow cycle ${cycle_elapsed}s"
 			printf '%s %s\n' "$(date +%T)" "$cycle_elapsed" >>"$RUNDIR/slow-cycles"

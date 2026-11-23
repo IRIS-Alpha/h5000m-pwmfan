@@ -373,7 +373,7 @@
 - 2026-11-23: 控制周期区间由 1–30 秒收窄到 1–10 秒（默认 2），守护进程改为钳制；理由是它同时决定温度历史分辨率与保护斜坡的可采样性。
 - 2026-11-23: 控制周期区间由 1–10 秒进一步收到 1–5 秒（默认 2）；依据是旧插件 `h5000m-fancontrol` 的 `interval` 默认 5 秒、下限 2 秒（代码与本机旧 uci 一致），60 秒上限从未被合理使用。
 
-## Parked: shell daemon micro-optimisations (2026-11-23)
+## Done: shell daemon micro-optimisations (2026-11-23)
 
 Measured baseline on 192.168.10.1 (4x Cortex-A73, `poll_interval=2`): one daemon cycle costs
 **137 ms of CPU** (27.5 ms in the shell itself, 109.5 ms in child processes), i.e. 6.8 % of one
@@ -394,3 +394,18 @@ and is verified with the same gate (`sh -n`, `shellcheck`, `shfmt`, 37 bats case
 Expected: ~29 -> ~4 forks, 137 -> ~40 ms per cycle (2 % of one core). Re-measure with the same
 `/proc/<pid>/stat` window method before and after; `sleep` costs only 1.5 ms per cycle and is not
 worth changing.
+
+Implemented 2026-11-23 (items 1, 2 and 4; item 3 became redundant because `read` is a builtin, so the
+nine `cat` calls are gone without an awk pass):
+
+- `read -r` now reads the PWM readback, PWM name, thermal zone type and hwmon name; `${x//...}`
+  label sanitising was replaced by a `case` guard so the `tr` fork only happens for a name that
+  actually contains a separator (dash rejects `*[|;=]*)`, hence the quoted-character patterns).
+- The fan path is cached and rescanned only when the cached path stops being writable.
+- One `epoch_now` per cycle feeds the status stamp and the modem cache age; the cycle length comes
+  from `/proc/uptime`. `H5000M_EPOCH` pins time in tests.
+- Measured after the change (same window method, `poll_interval=2`, 40 s = 20 cycles):
+  **58.5 ms per cycle** (19 ms shell + 39.5 ms children), about **2.9 % of one core**; was 137 ms
+  (6.8 %).
+
+- 2026-11-23: 温度宽限：单次无效读数沿用上一有效值两个控制周期（`STALE_LIMIT = poll_interval * 2`），并在状态里写 `stale_temperature=1`，仪表盘显示「温度过期」芯片；超过宽限仍走 `failsafe no_valid_temperature`。bats 用例用 `H5000M_EPOCH` 钉住三个时刻（宽限内沿用、宽限后全速）。

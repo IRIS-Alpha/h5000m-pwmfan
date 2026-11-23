@@ -813,3 +813,6 @@ msgstr "非零请求下限不能高于曲线输出上限。"
 
 msgid "The curve output ceiling must not be below the non-zero request floor."
 msgstr "曲线输出上限不能低于非零请求下限。"
+
+msgid "Temperature reading expired"
+msgstr "温度过期"

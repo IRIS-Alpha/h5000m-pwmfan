@@ -152,8 +152,10 @@ html[data-darkmode=true] .pf-status { --pf-glow: 255, 194, 109; }
 	border-color: rgba(var(--pf-glow), .58); }
 .pf-warn-low { --pf-glow: 169, 92, 0; color: var(--pf-amber); background: color-mix(in srgb, var(--pf-amber) 16%, var(--pf-surface)); }
 .pf-warn-stop { --pf-glow: 182, 43, 66; color: var(--pf-red); background: color-mix(in srgb, var(--pf-red) 16%, var(--pf-surface)); }
+.pf-warn-stale { --pf-glow: 0, 94, 184; color: var(--pf-blue); background: color-mix(in srgb, var(--pf-blue) 16%, var(--pf-surface)); }
 html[data-darkmode=true] .pf-warn-low { --pf-glow: 255, 194, 109; }
 html[data-darkmode=true] .pf-warn-stop { --pf-glow: 255, 138, 155; }
+html[data-darkmode=true] .pf-warn-stale { --pf-glow: 122, 190, 255; }
 
 /* Two soft pulses when a chip appears, then silence: the halo fades in and out instead of cutting. */
 @keyframes pf-warn-pulse {

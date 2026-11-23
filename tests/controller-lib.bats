@@ -467,10 +467,20 @@ grep -Fxq 'v1|1|1' "$HISTORY_FILE"
 TEST_TEMP=84000
 apply_cycle
 grep -Fxq 'v1|0|1' "$HISTORY_FILE"
+# A single unreadable sample holds the last reading for two control periods
+# instead of pinning the fan at full speed.
+TEST_TEMP=85000
+H5000M_EPOCH=1000 apply_cycle
 TEST_TEMP=missing
-apply_cycle
+H5000M_EPOCH=1002 apply_cycle
+[ "$(cat "$fixture/pwm")" != 255 ]
+grep -Fxq 'stale_temperature=1' "$STATUS_FILE"
+! grep -Fxq 'reason=no_valid_temperature' "$STATUS_FILE"
+# Once the grace window is over the reading counts as gone and the failsafe wins.
+H5000M_EPOCH=1006 apply_cycle
 [ "$(cat "$fixture/pwm")" = 255 ]
 grep -Fxq 'reason=no_valid_temperature' "$STATUS_FILE"
+grep -Fxq 'stale_temperature=0' "$STATUS_FILE"
 TEST_MODE=target TEST_TEMP=65000
 set_pwm() { effective=128; ACTIVE_OWNER=1; OWNER=userspace; }
 apply_cycle
