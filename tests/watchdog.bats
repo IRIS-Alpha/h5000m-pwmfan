@@ -100,3 +100,21 @@ status_file() {
 	[ "$status" -eq 0 ]
 	[ ! -e "$ROOT/rebooted" ]
 }
+
+@test "a stopped controller is killed, not just asked to stop" {
+	now=$(date +%s)
+	status_file $((now - 60))
+	sleep 60 &
+	controller=$!
+	# The pid has to be real for kill, but its name is ours to fake.
+	mkdir -p "$ROOT/proc/$controller"
+	printf 'h5000m-pwmfan\n' >"$ROOT/proc/$controller/comm"
+	export WD_PROC="$ROOT/proc"
+	echo "$controller" >"$WD_CONTROLLER_PID"
+	kill -STOP "$controller"
+	run sh "$BATS_TEST_DIRNAME/../root/usr/sbin/h5000m-pwmfan-watchdog"
+	[ "$status" -eq 0 ]
+	# A zombie is not a live controller: wait reports the kill signal instead.
+	run wait "$controller"
+	[ "$status" -eq 137 ]
+}

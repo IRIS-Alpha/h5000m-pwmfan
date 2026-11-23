@@ -21,6 +21,7 @@ THERMAL=${WD_THERMAL:-/sys/class/thermal}
 REBOOT_CMD=${WD_REBOOT_CMD:-/sbin/reboot}
 PWM=${WD_PWM:-}
 HOT_MARK=${WD_HOT_MARK:-/var/run/h5000m-pwmfan/watchdog-hot}
+PROC=${WD_PROC:-/proc}
 LOGGER=${WD_LOGGER:-logger}
 ONESHOT=${WD_ONESHOT:-0}
 BACKOFF=${WD_BACKOFF:-30}
@@ -93,7 +94,7 @@ restore_trips() {
 controller_pid() (
 	pid=$(read_one "$CONTROLLER_PID")
 	case "$pid" in '' | *[!0-9]*) exit 1 ;; esac
-	comm=$(read_one "/proc/$pid/comm")
+	comm=$(read_one "$PROC/$pid/comm")
 	case "$comm" in h5000m-pwmfan*) ;; *) exit 1 ;; esac
 	printf '%s' "$pid"
 )
@@ -131,7 +132,15 @@ rescue() {
 	fi
 	restore_trips
 	if pid=$(controller_pid); then
+		# A hung process can be stopped in its tracks, and SIGTERM only queues
+		# until it runs again, so escalate to SIGKILL after a short grace.
 		kill -TERM "$pid" 2>/dev/null || true
+		waited=0
+		while [ "$waited" -lt 5 ] && kill -0 "$pid" 2>/dev/null; do
+			sleep 1
+			waited=$((waited + 1))
+		done
+		kill -KILL "$pid" 2>/dev/null || true
 		"$LOGGER" -t h5000m-pwmfan "watchdog: controller silent for ${age}s, fan set to ${FAILSAFE_PWM} and the controller restarted"
 	else
 		"$LOGGER" -t h5000m-pwmfan "watchdog: controller silent for ${age}s, fan set to ${FAILSAFE_PWM}"
