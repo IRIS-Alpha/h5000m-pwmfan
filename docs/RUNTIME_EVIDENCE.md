@@ -1,5 +1,7 @@
 # Runtime evidence
 
+中文版本：[`RUNTIME_EVIDENCE.zh-CN.md`](RUNTIME_EVIDENCE.zh-CN.md)（与本文逐节对应，若有出入以本文为准）。
+
 This file collects what has actually been measured about the package while it runs
 on the H5000M, so the "gate live PWM and thermal integration on reviewed runtime
 evidence" item in `docs/TASKS.md` has something to review. It separates three

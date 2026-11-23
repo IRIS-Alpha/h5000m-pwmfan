@@ -129,7 +129,7 @@
 - [x] Verify the protection history snapshot and status reader in isolation.
 - [x] Verify the daemon protection-history writer against an isolated PWM fixture.
 - [ ] Gate live PWM/thermal integration on reviewed runtime evidence and a device rollback procedure. Both artefacts exist as of 2026-11-24 (`docs/RUNTIME_EVIDENCE.md`, `docs/ROLLBACK.md`) and the natural-crossing observation is done; what is missing is a human read of the two documents.
-- [ ] Build and validate the firmware APK with the matching OWT2510 ImmortalWrt buildroot/SDK. The available October SDK produced compatibility APKs only; they are unsigned by the device trust key and its LuCI revision differs from the installed firmware.
+- [ ] Build the firmware APK from a source tree pinned to `a4ba824` (or justify staying on the October SDK). **No matching SDK is published**: the snapshot download directory carries one SDK, built 2026-10-21 from `r42542-e695009c15`, while the firmware is `r0-a4ba824` (2026-11-14). Options in `docs/DISTRIBUTION.md`; the recommended path is to keep the October SDK for packaging (this package has no compiled objects) and pin the LuCI feed to `ad75cde`, which is the revision the device runs.
 - [x] Recover the pinned source revision for firmware `r0-a4ba824` and identify the candidate CI run; the hash is the upstream ImmortalWrt commit `a4ba8240d8a1aaef7e8c6f2d65e841a9bfd2b8c5` (2026-11-14), not a commit of the firmware repository, and the build is run `43568494545` of `IRIS-Alpha/H5000M-CI-Qmodem-OP`. Byte-level provenance remains open because the repository publishes no releases and the run artifacts expired; details in `docs/FIRMWARE_PROVENANCE.md`.
 - [x] Implement one-page LuCI status/control view, ACL/menu, quick dispatch, UCI settings, and zh-Hans translation package.
 - [x] Verify the V3 views under Vantage light/dark/auto and at 320/390/1360px with Playwright and the local firmware assets.
@@ -148,9 +148,11 @@
 
 - 2026-11-24: Ran the approved L1 release observation twice. Release writes 255 and the kernel jumps `cur_state` to 3 the moment the trips are restored -- so the trip write really does wake the zone -- but it never takes over the duty: a hand-written 51 held for 20 s on the 40 °C trip, and the driver reset `cur_state` to 0 when that write landed. Both runs restored `enabled=1` and re-pinned the trips (114000 / 1000); the plugin came back at `state=running`. Conclusion written into `docs/RUNTIME_EVIDENCE.md` (new section with both tables) and `docs/ROLLBACK.md` (L1 now says a released fan sits at 255, and the abort list no longer treats that as a fault). Also recorded why `min_pwm` defaults to 20 %: 8 % is the factory data of a new fan, and the unstartable band only grows with variation and wear.
 
-## Deferred until the plugin is stable
+## Distribution
 
-- [ ] Decide whether to submit to an official feed or maintain a self-hosted APK repository; add index signing and device trust only if standalone package updates are still desired. Parked by the user on 2026-11-24 until the plugin is stable; the matching-SDK build below stays blocked on this decision.
+- 2026-11-24: 两份评审文档的中文版落地：`docs/RUNTIME_EVIDENCE.zh-CN.md` 与 `docs/ROLLBACK.zh-CN.md`（逐节对应，命令、路径与数字保持原样，篇首注明以英文原文为准），英文原文顶部加了互链。同日把分发决策写入下一节，并新增 `docs/DISTRIBUTION.md`：仓库布局、已验证的 `apk mkndx --allow-untrusted` / `apk adbsign --sign-key --reset-signatures --allow-untrusted`（不带 `--allow-untrusted` 会把 45,807 字节的包截成 1,970 字节且返回 0，已记为陷阱一次）、以及两个仍需在设备上确认的点——我们自建密钥的 key id 与 `apk verify` 对不上、索引文件名（`APKINDEX.adb` / `packages.adb`）未验证。
+
+- [x] Distribution path decided by the user on 2026-11-24: maintain a **self-hosted APK repository with a signed index** rather than submitting to an official feed. Plan, layout and the two open verification points are in `docs/DISTRIBUTION.md`; the signing round-trip (whether apk 3.0.5 accepts a key we generate) is the one thing that must be proven on the device before the repository is published.
 
 - 2026-11-21: Recorded and implemented five local-preview UI corrections: top-control spacing, fixed-request label/slider/stop alignment, Wake-style slider feedback, and history unit spacing. Verified all 10 mobile/desktop theme combinations with no horizontal overflow and confirmed 10% keyboard increments.
 

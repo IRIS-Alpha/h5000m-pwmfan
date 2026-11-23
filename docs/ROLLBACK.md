@@ -1,5 +1,7 @@
 # Rollback and recovery
 
+中文版本：[`ROLLBACK.zh-CN.md`](ROLLBACK.zh-CN.md)（与本文逐节对应，若有出入以本文为准）。
+
 What this document covers: how to put the router back the way it was when the fan
 plugin misbehaves, and how to prove that it is back. It is the procedure that
 `docs/TASKS.md` asks for before live PWM and thermal changes are reviewed — the
