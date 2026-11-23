@@ -175,7 +175,7 @@
 - Acceptance: each finding is fixed in the local preview with no behaviour change.
 - Status: complete for styling. Block B behaviour items (zero-duty semantics, apply timing, 3-second interval) stay queued and unimplemented.
 
-## Active task block: Block B — control semantics and status consolidation
+## Completed task block: Block B — control semantics and status consolidation
 
 - Goal: implement the confirmed control-semantics changes and keep the documentation aligned with them.
 - Confirmed decisions (user, 2026-11-22):
@@ -197,7 +197,7 @@
 - Status: started 2026-11-22; the apply model is settled, so the remaining work is implementation.
 
 - [x] `mode=off` 退场：先落了方案 A（别名映射 `fixed` + `fixed_duty=0`，删掉 `requested_pwm` 的 `off:*` 分支），只读核对路由器 `uci show h5000m_pwmfan` 确认只有 `mode='quiet'`、无 `off` 配置，随后升级到方案 B：白名单与别名一并删除，看板不再识别 `off`（2026-11-22）。
-- [ ] 固定请求滑块与模式切换共用 3 秒尾随合并器：拖动只更新读数、松手才提交、0% 绕过合并立即提交、标题行显示“应用中-Ns”；不做后端步进限幅（已定案，见 `REQUIREMENTS_V3.md` §16）。
+- [x] 固定请求滑块与模式切换共用 3 秒尾随合并器：拖动只更新读数、松手才提交、0% 绕过合并立即提交、标题行显示“应用中-Ns”；不做后端步进限幅（已定案，见 `REQUIREMENTS_V3.md` §16）。已实现并复核：`MERGE_DELAY = 3000`（`h5000m-pwmfan.js:27`）、`scheduleCommit()` 写 `pending.until` 并由 400ms ticker 刷新 `Applying in %s s`（`:218-229`、`:370`）、`Number(changes.fixed_duty) === 0` 立即 `flushPending()`（`:221`）。
 
 - 2026-11-22: Read-only probe of the V4 proposals (header row, breadcrumb naming, theme switcher source, warning row, fold parameters); findings and three header options recorded in `docs/UIUX_RECHECK_2026-11-22.md` §八.
 - 2026-11-22: Relocated the warning chips to the “模式选择” header row and the slogan to its own line, and added the explicit-commit model for target parameters and curve points; verified 320/360/390/500/651px with no horizontal overflow, states `已选` → `待应用` → `已选`.
@@ -218,7 +218,7 @@
 
 - 2026-11-22: Block B backend half landed: `fixed_duty` 0–100 in 1% steps, `off` mapped to a zero fixed request as a legacy alias, dead `off:*` branch removed, fixture updated; 33/33 checks pass.
 
-## Active task block: Block C — kernel fan handover (verified gate)
+## Completed task block: Block C — kernel fan handover (verified gate)
 
 目标：把“接管内核保护”改成语义正确的“接管风扇控制”，并让接管必须经过核验才生效。只改门禁与文案，本轮不改真机运行行为。
 
@@ -409,3 +409,5 @@ nine `cat` calls are gone without an awk pass):
   (6.8 %).
 
 - 2026-11-23: 温度宽限：单次无效读数沿用上一有效值两个控制周期（`STALE_LIMIT = poll_interval * 2`），并在状态里写 `stale_temperature=1`，仪表盘显示「温度过期」芯片；超过宽限仍走 `failsafe no_valid_temperature`。bats 用例用 `H5000M_EPOCH` 钉住三个时刻（宽限内沿用、宽限后全速）。
+
+- 2026-11-23: 任务跟踪核对（第 107 轮后）：Block B / Block C 的全部条目已勾完，标题由 “Active” 改为 “Completed”；3 秒合并器条目复核后勾选（`MERGE_DELAY=3000`、标题行倒计时、0% 立即提交）。仍未勾选的六项都属于“需要真机或官方工具链才能收尾”的前置项：自然触点交棒验证、真机 PWM/热区改动前的评审与回滚流程、匹配 OWT2510 的 SDK 构建与签名、硬件验证与回滚、可选的热区补丁、以及是否上架 feed 的决策。
