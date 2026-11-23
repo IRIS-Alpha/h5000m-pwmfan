@@ -23,6 +23,9 @@ PID_FILE=$RUNDIR/pid
 WATCHDOG_ALIVE=$RUNDIR/watchdog-alive
 WATCHDOG_PID=$RUNDIR/watchdog.pid
 WATCHDOG_GRACE=20
+# A stopped process cannot act on SIGTERM, so the second signal is scheduled.
+WATCHDOG_KILL_PID=
+WATCHDOG_KILL_AT=0
 HW_MON_DIR=${H5000M_SYS_CLASS_HWMON:-/sys/class/hwmon}
 THERMAL_DIR=${H5000M_SYS_CLASS_THERMAL:-/sys/class/thermal}
 MODEM_CACHE_FILE=${H5000M_MODEM_CACHE_FILE:-/tmp/5gmodem/tele.json}
@@ -664,15 +667,28 @@ watch_watchdog() {
 	alive=
 	{ read -r alive <"$WATCHDOG_ALIVE"; } 2>/dev/null || alive=
 	case "$alive" in '' | *[!0-9]*) return 0 ;; esac
-	[ $((NOW - alive)) -le "$WATCHDOG_GRACE" ] && return 0
+	if [ $((NOW - alive)) -le "$WATCHDOG_GRACE" ]; then
+		WATCHDOG_KILL_PID=
+		return 0
+	fi
 	pid=
 	{ read -r pid <"$WATCHDOG_PID"; } 2>/dev/null || pid=
 	case "$pid" in '' | *[!0-9]*) return 0 ;; esac
 	comm=
 	{ read -r comm <"/proc/$pid/comm"; } 2>/dev/null || return 0
 	case "$comm" in h5000m-pwmfan-* | watchdog*) ;; *) return 0 ;; esac
-	logger -t h5000m-pwmfan "watchdog heartbeat is ${alive}, restarting it"
-	kill -TERM "$pid" 2>/dev/null || true
+	if [ "$WATCHDOG_KILL_PID" = "$pid" ] && [ "$NOW" -ge "$WATCHDOG_KILL_AT" ]; then
+		logger -t h5000m-pwmfan "watchdog ignored SIGTERM, killing ${pid}"
+		kill -KILL "$pid" 2>/dev/null || true
+		WATCHDOG_KILL_PID=
+		return 0
+	fi
+	if [ "$WATCHDOG_KILL_PID" != "$pid" ]; then
+		logger -t h5000m-pwmfan "watchdog heartbeat is ${alive}, restarting it"
+		kill -TERM "$pid" 2>/dev/null || true
+		WATCHDOG_KILL_PID=$pid
+		WATCHDOG_KILL_AT=$((NOW + 4))
+	fi
 }
 
 daemon() {
