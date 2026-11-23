@@ -81,16 +81,30 @@ load order, not by package. `Quiet`/`Balanced` were shadowed by `base.zh-cn` and
 catalogue; the presets now use `Quiet mode`/`Balanced mode`/`Performance mode`. When adding strings, prefer msgids that
 are unlikely to exist elsewhere.
 
-## Known limitation after installing
+## Takeover gate after installing
 
-The plugin will not take over the fan: `root/usr/sbin/h5000m-pwmfan:352` defines
+`apply_cycle` takes the fan only when all of these hold, checked by
+`kernel_takeover_ready()` → `kernel_takeover_ready_dir()` (`root/usr/sbin/h5000m-pwmfan:487`):
 
-```sh
-kernel_takeover_ready() {
-	# The V3 preview does not verify an installed kernel handover mechanism.
-	return 1
-}
-```
+- `h5000m_pwmfan.main.enabled=1`;
+- `h5000m_pwmfan.main.kernel_takeover=1` **and** `takeover_verified=1` (a value this repository never writes itself);
+- a writable fan `pwm1` and a cooling device of type `pwm-fan` bound to a thermal zone.
 
-so `apply_cycle` always reports `state=disabled reason=takeover_pending` and releases the fan. That is deliberate until
-the kernel handover work is validated.
+Otherwise the daemon releases the fan and reports `state=disabled` with `reason=takeover_pending` (enabled but not
+verified), `reason=not_enabled` (fresh install), or `reason=released` right after releasing a fan it used to own. Check
+the live answer with `cat /var/run/h5000m-pwmfan/status`; `takeover_verified` is set by the person who verified the
+handover, not by the package.
+
+## Legacy fan controller
+
+The stock `luci-app-h5000m-fancontrol` (2.1.3-r1) was removed on 2026-11-23 to end the duplicate menu entry and its
+msgid shadowing. Its service had already been stopped and disabled. The snapshot feed is unreachable, so the removal
+could not be undone with `apk add`, and the files were archived first:
+
+- router: `/root/h5000m-backup/legacy-fancontrol-20261123.tgz`
+- workstation: `C:\Users\31190\ego-h5000m\device-backup\legacy-fancontrol-20261123.tgz`
+  (md5 `09ba65f4c580663e0585250a7dd5d087`)
+
+A manual restore means extracting that tarball over `/` and clearing `/tmp/luci-indexcache*`. `/etc/config/h5000m_fancontrol`
+survives the purge because apk keeps modified conffiles, so the old curves are still on the device if the package ever
+comes back.

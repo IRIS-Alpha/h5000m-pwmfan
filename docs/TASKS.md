@@ -411,3 +411,7 @@ nine `cat` calls are gone without an awk pass):
 - 2026-11-23: 温度宽限：单次无效读数沿用上一有效值两个控制周期（`STALE_LIMIT = poll_interval * 2`），并在状态里写 `stale_temperature=1`，仪表盘显示「温度过期」芯片；超过宽限仍走 `failsafe no_valid_temperature`。bats 用例用 `H5000M_EPOCH` 钉住三个时刻（宽限内沿用、宽限后全速）。
 
 - 2026-11-23: 任务跟踪核对（第 107 轮后）：Block B / Block C 的全部条目已勾完，标题由 “Active” 改为 “Completed”；3 秒合并器条目复核后勾选（`MERGE_DELAY=3000`、标题行倒计时、0% 立即提交）。仍未勾选的六项都属于“需要真机或官方工具链才能收尾”的前置项：自然触点交棒验证、真机 PWM/热区改动前的评审与回滚流程、匹配 OWT2510 的 SDK 构建与签名、硬件验证与回滚、可选的热区补丁、以及是否上架 feed 的决策。
+
+- 2026-11-23: 低风险清理。删除 `h5000m-pwmfan.js` 里 `REPORT_KEY`（读数卡片下线后遗留的死常量，全仓无引用），部署包从 42,999 字节降到 42,968。卸载设备上的旧包 `luci-app-h5000m-fancontrol-2.1.3-r1`：卸载前把 `/usr/sbin/h5000m-fancontrol`、status helper、init 脚本、menu/acl json、`h5000m/fancontrol.js`、`/etc/config/h5000m_fancontrol` 与旧 i18n 目录打成 `/root/h5000m-backup/legacy-fancontrol-20261123.tgz`（16,201 B，md5 `09ba65f4c580663e0585250a7dd5d087`，工作区另存一份），因为快照 feed 不可达、卸载无法用 `apk add` 回滚。卸载后 menu.d 只剩 netmode 与 pwmfan，旧页面文件消失，`/etc/config/h5000m_fancontrol` 作为 conffile 保留；本插件 `.lmo` 11,456 B、`state=running`、`effective_pwm=51` 未受影响。
+- 2026-11-23: 修正 `docs/BUILD_AND_INSTALL.md` 的过期段落：原文还写着 `kernel_takeover_ready() { return 1; }`（“装了也不会接管”），实际门禁早已是 `kernel_takeover_ready_dir`，要求 `enabled=1` + `kernel_takeover=1` + `takeover_verified=1` + 可写 `pwm1` + `pwm-fan` 冷却设备，并列出 `takeover_pending` / `not_enabled` / `released` 三种释放原因；同时补“旧控制器”一节记录备份位置与手工恢复方式。
+

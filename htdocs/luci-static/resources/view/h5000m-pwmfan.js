@@ -26,7 +26,6 @@ var CURVES = {
 var HISTORY_LIMIT = 360 * 60 * 1000;
 var MERGE_DELAY = 3000;
 var DETAILS_KEY = 'h5000m-pwmfan-details';
-var REPORT_KEY = 'pwmfan-report';
 
 function setting(key, fallback) {
 	var value = uci.get(CONFIG, SECTION, key);
