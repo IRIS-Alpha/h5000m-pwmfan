@@ -116,7 +116,7 @@
 - [x] Restore non-interactive WSL SSH access to H5000M.
 - [x] Observe CPU trips, governor, cooling-device state, PWM readback, and fan service status while the installed controller is running.
 - [x] Sample PWM and thermal state during a bounded pause of the installed fan controller, then verify service restoration.
-- [ ] Confirm the kernel request on a natural trip crossing after fan replacement and stock controller baseline verification. High-temperature handover remains unverified. The fan was replaced by 2026-11-24, so the replacement half is done; what is still missing is the observation itself (see `docs/ROLLBACK.md` for the release path and the abort criteria).
+- [ ] Confirm the kernel request on a natural trip crossing after fan replacement and stock controller baseline verification. The fan was replaced on 2026-11-24 and the runtime side is now documented in `docs/RUNTIME_EVIDENCE.md`; the only thing left is the observation itself: release control (L1 in `docs/ROLLBACK.md`) and watch whether `cooling_device0/cur_state` and `pwm1` move on their own. Pinning a trip does not leave a state to restore, so the wake-up depends on the trip write making the kernel re-evaluate the zone; that sentence is what the observation has to confirm or refute.
 - [x] Add project working agreement and reconcile V3 historical discussion with confirmed control decisions.
 - [x] Add deterministic pure helpers for target-drive interpolation/blending, bounded PI anti-windup, and global-protection transitions with offline boundary tests.
 - [x] Confirm and test target temperature, response interval, and transition-width limits, including zero-degree onset and automatic width compression.
@@ -128,7 +128,7 @@
 - [x] Compute protection history offline and verify the 24-hour window, cumulative count, latest trigger, cycle peak, and invalid history handling.
 - [x] Verify the protection history snapshot and status reader in isolation.
 - [x] Verify the daemon protection-history writer against an isolated PWM fixture.
-- [ ] Gate live PWM/thermal integration on reviewed runtime evidence and a device rollback procedure.
+- [ ] Gate live PWM/thermal integration on reviewed runtime evidence and a device rollback procedure. Both artefacts exist as of 2026-11-24 (`docs/RUNTIME_EVIDENCE.md`, `docs/ROLLBACK.md`); what is missing is a human read of them plus the natural-crossing observation.
 - [ ] Build and validate the firmware APK with the matching OWT2510 ImmortalWrt buildroot/SDK. The available October SDK produced compatibility APKs only; they are unsigned by the device trust key and its LuCI revision differs from the installed firmware.
 - [x] Recover the pinned source revision for firmware `r0-a4ba824` and identify the candidate CI run; the hash is the upstream ImmortalWrt commit `a4ba8240d8a1aaef7e8c6f2d65e841a9bfd2b8c5` (2026-11-14), not a commit of the firmware repository, and the build is run `43568494545` of `IRIS-Alpha/H5000M-CI-Qmodem-OP`. Byte-level provenance remains open because the repository publishes no releases and the run artifacts expired; details in `docs/FIRMWARE_PROVENANCE.md`.
 - [x] Implement one-page LuCI status/control view, ACL/menu, quick dispatch, UCI settings, and zh-Hans translation package.
@@ -142,7 +142,9 @@
 - [x] Implement the confirmed top-area, mode-selection, fixed-request, and warning redesign from the expanded V4 proposal set.
 - [x] Settle the two open proposal items: no advanced-settings “mode minimum apply interval” control (the merge window stays a dashboard constant) and no dashboard LuCI action bar (the dashboard commits directly, curve parameters commit explicitly) (2026-11-22).
 - [x] Curve-panel refinements: the six-point editor is a single-column table (header row `#`/温度/输出, one shared label set instead of twelve), capped at 460px, verified at 320/390/1360px (2026-11-22).
-- [ ] Hardware validation and rollback procedure.
+- [x] Hardware validation and rollback procedure. The rollback runbook is `docs/ROLLBACK.md` (five levels, abort criteria, what a rollback does *not* restore) and the read-only snapshot tool is `tools/device-snapshot.sh`. The three manual facts are confirmed by the user on 2026-11-24: a standstill fan starts through the kick and then holds; the lowest duty that keeps the new fan turning is 8 % (kick off, floor off, 1 % steps); the kick has been verified repeatedly. The device has no tachometer, so these stay reports rather than measurements. The natural-crossing observation is tracked as its own item above.
+
+- 2026-11-24: Wrote `docs/RUNTIME_EVIDENCE.md` for the live-PWM gate. It separates measured facts (one `cpu-thermal` zone, three fan trips all bound to `cooling_device0` with `max_state 3`, `cur_state 0` while the plugin owns the fan, `pwm1` 51, no tachometer, 58.5 ms per cycle = 2.9 % of one core, 1.6 MB RSS) from code-read facts (request pipeline at `root/usr/sbin/h5000m-pwmfan:430`, floor exception for 0 %, modem floor at 601, kick clamp at 616, release writing 255 at 269, takeover pin/restore at `controller-lib.sh:538`/`:570`) and from the user's own manual verifications (start from standstill via the kick, 8 % minimum spin, kick verified). Also recorded that `control_source` and `safety_source` can be different sensors (46.4 vs 51.3 under `auto`), and that the remaining open item is one observation of the kernel taking the fan back after an L1 release.
 
 ## Deferred until the plugin is stable
 
