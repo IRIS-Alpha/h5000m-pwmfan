@@ -372,3 +372,23 @@
 - 2026-11-23: 按评审意见修正——图表“曲线请求”改用 `mode_pwm`（与实际输出区分），历史窗口兜底改 5 分钟，交叉校验去掉魔法默认值，钳制结果写日志，补两条回归用例。
 - 2026-11-23: 控制周期区间由 1–30 秒收窄到 1–10 秒（默认 2），守护进程改为钳制；理由是它同时决定温度历史分辨率与保护斜坡的可采样性。
 - 2026-11-23: 控制周期区间由 1–10 秒进一步收到 1–5 秒（默认 2）；依据是旧插件 `h5000m-fancontrol` 的 `interval` 默认 5 秒、下限 2 秒（代码与本机旧 uci 一致），60 秒上限从未被合理使用。
+
+## Parked: shell daemon micro-optimisations (2026-11-23)
+
+Measured baseline on 192.168.10.1 (4x Cortex-A73, `poll_interval=2`): one daemon cycle costs
+**137 ms of CPU** (27.5 ms in the shell itself, 109.5 ms in child processes), i.e. 6.8 % of one
+core. About 29 fork/exec per cycle. These four changes are parked; each keeps behaviour identical
+and is verified with the same gate (`sh -n`, `shellcheck`, `shfmt`, 37 bats cases, `STRICT=1 tools/check.sh`).
+
+1. `$(cat file)` -> `read -r x <file` for sensor values, the PWM readback and hwmon names (~12 forks).
+   Risk: `read` strips leading/trailing IFS whitespace, so names that may contain spaces stay in awk.
+2. Cache the fan path and the hwmon/thermal names at startup instead of rescanning every cycle
+   (~13 forks; entry `find_fan()` re-runs only after a failed PWM write).
+3. One `awk` pass over `/sys/class/hwmon/hwmon*/*_input` and `/sys/class/thermal/thermal_zone*/temp`
+   instead of nine `cat` calls (~7 forks; keeps the existing `valid_temp_mc` checks in shell).
+4. Reuse a single `date +%s` per cycle (status stamp, modem age) and time the cycle from
+   `/proc/uptime` instead of two extra `date` calls (~4 forks).
+
+Expected: ~29 -> ~4 forks, 137 -> ~40 ms per cycle (2 % of one core). Re-measure with the same
+`/proc/<pid>/stat` window method before and after; `sleep` costs only 1.5 ms per cycle and is not
+worth changing.
