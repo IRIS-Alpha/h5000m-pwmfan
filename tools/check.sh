@@ -23,7 +23,9 @@ run_shellcheck() {
 		root/usr/sbin/h5000m-pwmfan-language \
 		tests/controller-lib.bats \
 		tools/check.sh \
-		tools/device-snapshot.sh
+		tools/device-snapshot.sh \
+		tools/l1-release.sh \
+		tools/l1-poke.sh
 }
 
 run_shfmt() {
@@ -35,7 +37,9 @@ run_shfmt() {
 		root/usr/sbin/h5000m-pwmfan-language \
 		tests/controller-lib.bats \
 		tools/check.sh \
-		tools/device-snapshot.sh
+		tools/device-snapshot.sh \
+		tools/l1-release.sh \
+		tools/l1-poke.sh
 }
 
 require_tool shellcheck

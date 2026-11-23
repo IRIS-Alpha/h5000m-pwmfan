@@ -49,11 +49,16 @@ cat /sys/class/thermal/thermal_zone0/trip_point_4_temp   # 85000
 ls /var/run/h5000m-pwmfan/thermal-takeover               # gone
 ```
 
-Release writes **255** into `pwm1` on purpose: a released fan runs at full duty
-for the moment before the kernel governor takes it back, which is the safe side
-of a hand-over. The governor then moves `pwm1` and
-`cooling_device0/cur_state` on its own; watch both for a few cycles if you need
-to see it happen.
+Release writes **255** into `pwm1` on purpose, so a released fan runs at full
+duty. Measured on 2026-11-24 (`docs/RUNTIME_EVIDENCE.md`): restoring the trips does
+make the kernel re-evaluate the zone and `cooling_device0/cur_state` jumps to its
+maximum (3) at that moment, **but the kernel does not then regulate the duty** --
+a manual write of 51 stayed at 51 for twenty seconds with the zone sitting on the
+lowest trip, and nothing pushed it back up.
+
+Expect a released fan to stay at 255 until the plugin is re-enabled or the router
+reboots. That is thermally safe (maximum cooling) and audibly obvious; it is not a
+modulated hand-over, so do not wait for the fan to slow down on its own.
 
 `kernel_takeover` does not need to change: it only gates taking control, and
 `enabled=0` already releases it.
@@ -127,7 +132,7 @@ Stop the test and run `L1` if any of these happen:
 
 - `state=fault` in the status file, or `logread | grep h5000m-pwmfan` shows a
   failsafe that does not clear within one cycle;
-- `pwm1` stays at 255 for more than two minutes while the CPU is below 50 °C;
+- `pwm1` **moves down on its own** and then the temperature climbs without the zone demanding it (a released fan holding 255 is expected, not a fault);
 - the trip temperatures do not return to 40000 / 85000 after a release;
 - the fan stops while `requested_pwm` is above 0 (the fan is the thing being
   protected; a silent fan is worse than a fast one).
@@ -139,6 +144,6 @@ Stop the test and run `L1` if any of these happen:
   `step_wise` is the only remaining owner of the fan, so that is also where a
   rollback wants to end up. Set it back to `user_space` by hand only if a
   replacement userspace controller is running.
-- `pwm1` is whatever the last writer left (usually 255 until the governor acts).
+- `pwm1` is whatever the last writer left. After a release that is 255, and it stays there until the plugin writes again or the router reboots.
 - The protection and temperature history files (they are runtime data).
 - `/etc/config/h5000m_pwmfan` unless you delete it.

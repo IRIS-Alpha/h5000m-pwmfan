@@ -71,6 +71,18 @@ So `min_pwm` is a floor for **requests**, not a guarantee that the fan turns: at
 `fixed_duty=5` the resolved duty is 51/255 = 20 %, and `floor_limited=1` reports
 that the request was raised.
 
+### Why the floor default is 20 %
+
+`min_pwm` defaults to 51/255, about 20 %: roughly 2.5x the 8 % that keeps this unit
+turning. That gap is deliberate. The user pointed out (2026-11-24) that the 8 %
+figure is the factory test data of a new fan, so the default leaves room for
+unit-to-unit variation and for wear. The band in which a fan cannot start only
+grows over time -- dust, bearing wear and a lower supply voltage all move it up --
+so a floor tuned to a fresh fan would begin stalling part-way through its life
+without reporting anything, because the board has no tachometer. Lowering the floor
+towards the measured 8 % is therefore a deliberate act rather than a fine-tuning
+step.
+
 ## Failure paths (read from code)
 
 | Situation | Behaviour | Where |
@@ -117,12 +129,47 @@ These three close the manual-testing questions that were open in the previous
 round. They are recorded here as reported facts with that caveat: the board has no
 tachometer, so they cannot be re-derived from the device.
 
+## Release and handover (measured 2026-11-24, user-approved L1 window)
+
+Two runs with the sampler in `tools/l1-release.sh` and `tools/l1-poke.sh`, one
+sample per second. Both ended with `enabled=1` restored and the pin back in place.
+
+Run 1 -- release and watch for 60 s (`mode=balanced`, 42.9 degC, `pwm1` 112,
+`cur_state` 0):
+
+| moment | pwm1 | cur_state | trip4 / trip5 | temperature | state |
+|---|---|---|---|---|---|
+| before | 112 | 0 | 114000 / 1000 | 42.9 | running |
+| at release | 255 | **3** | 85000 / 40000 | 42.9 | disabled |
+| +60 s | 255 | 3 | 85000 / 40000 | 39.9 | disabled |
+
+Run 2 -- release, then force `pwm1` to 51 by hand and watch for 20 s:
+
+| moment | pwm1 | cur_state | temperature |
+|---|---|---|---|
+| at release | 255 | 3 | 40.3 |
+| after writing 51 | 51 | **0** | 40.3 |
+| +20 s | 51 | 0 | 40.4 |
+
+What this settles:
+
+- The kernel **does** notice the fan on release: `cur_state` goes to max (3) the
+  moment the trips are restored. The trip write really does make it re-evaluate.
+- The kernel does **not** then regulate the duty. A manual write of 51 stayed at 51
+  for twenty seconds with the zone sitting on the lowest trip (40 degC), and the
+  driver reset `cur_state` to 0 when that write landed. Nothing pushed it back up.
+- So a release means "fan at 100 % until something else writes": thermally safe and
+  loud, not a modulated handover. `docs/ROLLBACK.md` L1 says the same from the
+  operator side.
+- The plugin writing `pwm1` directly is what keeps the governor at `cur_state` 0
+  during normal operation; the governor is not competing for the fan.
+
+Still untested: what the governor does above the remaining trip (85 degC). Seeing
+that needs the SoC heated past 85 degC, which is outside what this review will do.
+
 ## Still open
 
-- **Natural trip crossing after a release.** Everything above explains what
-  *should* happen; nobody has yet watched `cur_state` and `pwm1` move on their own
-  after `docs/ROLLBACK.md` L1. This is the last open item before the live gate can
-  be called reviewed.
 - **Cold boot.** Deferred by the user on 2026-11-24.
-- **Governor duty per level.** `max_state` is 3, so `step_wise` can ask for three
-  levels; which duty each level maps to has not been observed on the new fan.
+- **Governor duty per level.** `max_state` is 3; the only level observed on the
+  device is 3 (255) and 0 (whatever was last written), so the mapping for level 1
+  and 2 is still unknown.
