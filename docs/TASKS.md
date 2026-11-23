@@ -392,7 +392,7 @@ question that needs a person goes to "Awaiting decision" instead of being guesse
       `_('…')` in the views has no msgid.
 - [x] D. Dead CSS: `.pf-danger` and `.pf-segment` are no longer referenced by any view; remove and confirm the bundle size
       and the preview.
-- [ ] E. bats coverage: `in_range`, `is_signed_int` and `is_uint` have no direct cases.
+- [x] E. bats coverage: `in_range`, `is_signed_int` and `is_uint` have no direct cases.
 - [ ] F. Responsive × theme matrix: 320/360/390/430/651/736/880/992/1200/1360 × light/dark, with assertions (no
       horizontal overflow, chips never overlap, legend columns aligned, both canvases painted), and fix what it finds.
 - [ ] G. Web Interface Guidelines review on the four interface files, per `AGENTS.md`; fix the applicable findings
@@ -453,3 +453,5 @@ nine `cat` calls are gone without an awk pass):
 
 - 2026-11-23: 目录瘦身。守卫列出 146 条没有任何视图引用的 msgid（旧读数卡片、旧“交棒核验”行、旧分组标题、旧单位写法等），全部删除；`po` 从 245 条降到 123 条，`msgfmt --check` 通过，守卫复跑无缺口。删除前后用 `tools/snap-text.mjs` 抓两个页面在 390px 下的全部可见文本做对比，除演示数据的时间与温度跳动外**逐行一致**，证明删的确实是死条目。
 - 2026-11-23: 删除死样式：`.pf-page .pf-danger`、`.pf-page .pf-danger[aria-pressed=true]` 两条规则，以及 `.pf-segment` 与 `.pf-editor-actions` 共用选择器里的 `.pf-segment`（后者保留）。全仓再无 `pf-danger` / `pf-segment` 引用。
+
+- 2026-11-23: 补齐三个从前没有直接用例的谓词（`tests/controller-lib.bats` 现在 40 项）：`is_uint` 收 `0/007/51/999999`、拒 `''/-/+1/-1/1.0/' 1'/'1 '/12a/a12/0x10`；`is_signed_int` 收 `0/-1/-85000/0007`、拒 `''/-/--1/1-/+5/-1.5/' -1'/'1 '/-a`；`in_range` 覆盖边界命中（0、255）、越界（256、5<10）、负数与 **非数字/空上界要“静默失败”**（`[ -z "$output" ]`，因为 `in_range` 里的 `2>/dev/null` 就是为此存在）。循环里的断言写成 `if ! fn; then …; return 1; fi`，而不是 `run` 后接 `|| printf`——后者只打印不失败，等于没断言。

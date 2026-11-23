@@ -669,3 +669,57 @@ EOF_CYCLE
 	run sensor_selected tz_thermal_zone0 cpu-thermal
 	[ "$status" -ne 0 ]
 }
+
+@test "an unsigned integer rejects signs, spaces and fractions" {
+	for value in 0 7 51 007 255 999999; do
+		if ! is_uint "$value"; then
+			printf 'rejected a valid value: %s\n' "$value"
+			return 1
+		fi
+	done
+	for value in '' - +1 -1 1.0 ' 1' '1 ' 12a a12 0x10; do
+		if is_uint "$value"; then
+			printf 'accepted an invalid value: [%s]\n' "$value"
+			return 1
+		fi
+	done
+}
+
+@test "a signed integer takes a leading minus but nothing else" {
+	for value in 0 7 -1 -85000 85000 0007; do
+		if ! is_signed_int "$value"; then
+			printf 'rejected a valid value: %s\n' "$value"
+			return 1
+		fi
+	done
+	for value in '' - --1 1- +5 -1.5 ' -1' '1 ' -a; do
+		if is_signed_int "$value"; then
+			printf 'accepted an invalid value: [%s]\n' "$value"
+			return 1
+		fi
+	done
+}
+
+@test "a range check stays inside its bounds and refuses bad bounds" {
+	run in_range 51 0 255
+	[ "$status" -eq 0 ]
+	run in_range 0 0 255
+	[ "$status" -eq 0 ]
+	run in_range 255 0 255
+	[ "$status" -eq 0 ]
+
+	run in_range 256 0 255
+	[ "$status" -ne 0 ]
+	run in_range 5 10 20
+	[ "$status" -ne 0 ]
+	run in_range -1 0 255
+	[ "$status" -ne 0 ]
+
+	# A non-numeric or empty bound must fail quietly, not print a test error.
+	run in_range 5 abc 20
+	[ "$status" -ne 0 ]
+	[ -z "$output" ]
+	run in_range 5 0 ''
+	[ "$status" -ne 0 ]
+	[ -z "$output" ]
+}
