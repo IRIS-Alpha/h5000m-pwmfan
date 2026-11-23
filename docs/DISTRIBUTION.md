@@ -271,3 +271,16 @@ repository (a few hundred kilobytes). That is the whole compatibility cost.
 The manual loop stays until the repository is published: `sh tools/build-apk.sh` → `scp build/*.apk` → `apk add
 --allow-untrusted --force-overwrite` → clear LuCI caches. After publishing, the last step becomes `apk update && apk
 upgrade`.
+
+## Live on the device (2026-11-24)
+
+`/etc/apk/repositories.d/customfeeds.list` now carries the published feed, and the key sits in
+`/etc/apk/keys/h5000m-apk.pem` (sha256 `d8827e25…`). Verified on the router:
+
+- `apk verify` on the downloaded package -> `OK`
+- `apk update` lists the feed; `apk search h5000m` finds both packages
+- `apk del` + `apk add luci-i18n-h5000m-pwmfan-zh-cn` installed from the feed without `--allow-untrusted`
+- the installed `.lmo` still contains the newest strings (`重启温度`, `温度监控`, `关机前重启`)
+
+One pre-existing warning is unrelated to this feed: `.../qmodem/packages.adb` 404s, so `apk update`
+reports "1 unavailable".

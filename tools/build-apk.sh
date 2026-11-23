@@ -28,6 +28,7 @@ fi
 REPO=$(CDPATH="" cd -- "$(dirname -- "$0")/.." && pwd)
 APK_BIN=${APK:-apk}
 NAME=luci-app-h5000m-pwmfan
+PKG_URL=${PKG_URL:-https://github.com/IRIS-Alpha/h5000m-pwmfan}
 VERSION=0.1.0
 RELEASE=2
 OUT=${OUT:-$REPO/build}
@@ -114,9 +115,9 @@ apk_file=$OUT/$NAME-$VERSION-r$RELEASE.apk
 	--info "description:H5000M PWM fan control" \
 	--info "arch:noarch" \
 	--info "license:Apache-2.0" \
-	--info "origin:feeds/base/$NAME" \
+	--info "origin:$PKG_URL" \
 	--info "maintainer:H5000M PWM Fan contributors" \
-	--info "url:https://github.com/openwrt/luci" \
+	--info "url:$PKG_URL" \
 	--info "depends:libc kmod-hwmon-pwmfan" \
 	--files "$stage" \
 	--script "post-install:$work/post-install" \
@@ -151,7 +152,7 @@ apk_file=$OUT/$I18N_NAME-$i18n_version.apk
 	--info "description:Translation for $NAME - 简体中文 (Simplified Chinese)" \
 	--info "arch:noarch" \
 	--info "license:Apache-2.0" \
-	--info "origin:feeds/base/$NAME" \
+	--info "origin:$PKG_URL" \
 	--info "maintainer:H5000M PWM Fan contributors" \
 	--info "depends:libc $NAME" \
 	--info "provides:$I18N_NAME-any" \

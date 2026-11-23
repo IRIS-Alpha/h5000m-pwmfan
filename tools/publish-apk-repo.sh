@@ -107,5 +107,8 @@ cp -a "$OUT/." "$work/"
 git -C "$work" add -A
 git -C "$work" -c user.name="apk repo" -c user.email="apk-repo@localhost" \
 	commit --quiet -m "apk repository $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-git -C "$work" push --quiet origin gh-pages
+# Push the commit, not a branch name: the worktree is detached, so a plain
+# "push origin gh-pages" would push the stale local branch and drop the
+# commit we just made.
+git -C "$work" push --quiet origin HEAD:gh-pages
 echo "pushed gh-pages"
