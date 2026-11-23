@@ -177,15 +177,15 @@ One-time GitHub setup (user, once the repository exists):
 
 1. Settings → Pages → Source: *Deploy from a branch*, branch `gh-pages`, folder `/`.
 2. The feed line for a device is then
-   `https://<owner>.github.io/<repo>/aarch64_cortex-a53/packages.adb`.
+   `https://iris-alpha.github.io/h5000m-pwmfan/aarch64_cortex-a53/packages.adb`.
 3. The repository must be public — Pages for a private repository needs a paid plan, and the package content is public
    anyway.
 
 Client side on the router (verified on the device against its own uhttpd; the same files over Pages differ only by TLS):
 
 ```sh
-wget -O /etc/apk/keys/h5000m-apk.pem https://<owner>.github.io/<repo>/h5000m-apk.pem
-echo https://<owner>.github.io/<repo>/aarch64_cortex-a53/packages.adb >> /etc/apk/repositories.d/customfeeds.list
+wget -O /etc/apk/keys/h5000m-apk.pem https://iris-alpha.github.io/h5000m-pwmfan/h5000m-apk.pem
+echo https://iris-alpha.github.io/h5000m-pwmfan/aarch64_cortex-a53/packages.adb >> /etc/apk/repositories.d/customfeeds.list
 apk update && apk add luci-app-h5000m-pwmfan
 ```
 
@@ -208,7 +208,7 @@ Firmware side (`H5000M-CI-Qmodem-OP`), two lines that upstream never touches:
 
 ```sh
 # feeds.conf or feeds.conf.default
-src-git h5000m https://github.com/<owner>/h5000m-pwmfan.git
+src-git h5000m https://github.com/IRIS-Alpha/h5000m-pwmfan.git
 
 # Scripts/Packages.sh, after the existing feed handling
 ./scripts/feeds update h5000m && ./scripts/feeds install -a -p h5000m
