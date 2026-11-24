@@ -4,7 +4,8 @@
 
 ## 先读这些
 
-1. [`README.md`](../README.md) —— 这个包是什么、怎么装、仓库怎么摆。
+1. [`README.md`](../README.md) —— 这个包是什么、怎么装、仓库怎么摆（中文为默认版本，
+   英文见 [`README.en.md`](../README.en.md)，两页顶部可互跳）。
 2. [`REQUIREMENTS_V5.md`](REQUIREMENTS_V5.md) —— **唯一**的需求基线。冲突时以它为准。
 3. [`TASKS.md`](TASKS.md) —— 进度、验收块、待办与已定案的决策简报。
 4. [`RUNTIME_EVIDENCE.md`](RUNTIME_EVIDENCE.md)（中文版 [`RUNTIME_EVIDENCE.zh-CN.md`](RUNTIME_EVIDENCE.zh-CN.md)）—— 设备上实测到的行为，回答“凭什么说它会这样跑”。
