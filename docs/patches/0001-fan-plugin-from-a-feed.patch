@@ -1,7 +1,81 @@
+diff --git a/.github/workflows/WRT-CORE.yml b/.github/workflows/WRT-CORE.yml
+index e2402139c..6c151e0e5 100644
+--- a/.github/workflows/WRT-CORE.yml
++++ b/.github/workflows/WRT-CORE.yml
+@@ -853,6 +853,16 @@ jobs:
+           if [[ $WRT_TEST != 'true' ]]; then
+             echo "WRT_KVER=$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^kernel - \K[\d\.]+' {} \;)" >> $GITHUB_ENV
+             echo "WRT_LIST=$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^luci-(app|theme)[^ ]*' {} \; | tr '\n' ' ')" >> $GITHUB_ENV
++            # 符号在 defconfig 阶段被静默丢弃时固件照样编得出来，只有 manifest
++            # 能证明包真的进了镜像——必须赶在下面删 manifest 之前断言。
++            case "$WRT_CONFIG" in
++              *H5000M*)
++                if ! find ./bin/targets/ -type f -name "*.manifest" -exec grep -q '^luci-app-h5000m-pwmfan ' {} +; then
++                  echo "::error title=Fan plugin missing::manifest 中没有 luci-app-h5000m-pwmfan，固件将不含风扇控制插件（$WRT_CONFIG）"
++                  exit 1
++                fi
++                ;;
++            esac
+ 
+             find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
+ 
+diff --git a/Config/H5000M-modem-pro.txt b/Config/H5000M-modem-pro.txt
+index de6def4da..9cf1bdfeb 100644
+--- a/Config/H5000M-modem-pro.txt
++++ b/Config/H5000M-modem-pro.txt
+@@ -16,4 +16,7 @@ CONFIG_PACKAGE_nand-utils=y
+ CONFIG_PACKAGE_cpufreq=y
+ 
+ # H5000M 风扇控制
+-CONFIG_PACKAGE_luci-app-h5000m-fancontrol=y
++CONFIG_PACKAGE_luci-app-h5000m-fancontrol=n
++# 插件改由 h5000m-pwmfan feed 提供；旧 fancontrol 与它抢同一路 pwm1，必须二选一
++CONFIG_PACKAGE_luci-app-h5000m-pwmfan=y
++CONFIG_PACKAGE_luci-i18n-h5000m-pwmfan-zh-cn=y
+diff --git a/Config/H5000M-qmodem-next.txt b/Config/H5000M-qmodem-next.txt
+index a6ce92b3f..197261ab0 100644
+--- a/Config/H5000M-qmodem-next.txt
++++ b/Config/H5000M-qmodem-next.txt
+@@ -18,4 +18,7 @@ CONFIG_PACKAGE_nand-utils=y
+ CONFIG_PACKAGE_cpufreq=y
+ 
+ # H5000M 风扇控制
+-CONFIG_PACKAGE_luci-app-h5000m-fancontrol=y
++CONFIG_PACKAGE_luci-app-h5000m-fancontrol=n
++# 插件改由 h5000m-pwmfan feed 提供；旧 fancontrol 与它抢同一路 pwm1，必须二选一
++CONFIG_PACKAGE_luci-app-h5000m-pwmfan=y
++CONFIG_PACKAGE_luci-i18n-h5000m-pwmfan-zh-cn=y
+diff --git a/Config/H5000M-qmodem.txt b/Config/H5000M-qmodem.txt
+index a6ce92b3f..197261ab0 100644
+--- a/Config/H5000M-qmodem.txt
++++ b/Config/H5000M-qmodem.txt
+@@ -18,4 +18,7 @@ CONFIG_PACKAGE_nand-utils=y
+ CONFIG_PACKAGE_cpufreq=y
+ 
+ # H5000M 风扇控制
+-CONFIG_PACKAGE_luci-app-h5000m-fancontrol=y
++CONFIG_PACKAGE_luci-app-h5000m-fancontrol=n
++# 插件改由 h5000m-pwmfan feed 提供；旧 fancontrol 与它抢同一路 pwm1，必须二选一
++CONFIG_PACKAGE_luci-app-h5000m-pwmfan=y
++CONFIG_PACKAGE_luci-i18n-h5000m-pwmfan-zh-cn=y
+diff --git a/README.md b/README.md
+index 3a6b3bade..59dbb5be1 100644
+--- a/README.md
++++ b/README.md
+@@ -225,7 +225,7 @@ Rust 后端用**官方 Rust SDK**（rustup stable + `aarch64-unknown-linux-musl`
+ 
+ 
+ ### 2. 硬件风扇温控与多网切换
+-- **双温区联动风扇控制 (`luci-app-h5000m-fancontrol`)**：定时轮询 CPU 与模组硬件传感器，通过阶梯 PWM 曲线实现静音与强效散热平衡；
++- **双温区联动风扇控制 (`luci-app-h5000m-pwmfan`)**：以传感器为输入的自动曲线、目标温度驱动与固定占空比三种模式，接管期间仍保留内核热区保护；
+ - **多网络智能切换 (`luci-app-h5000m-netmode`)**：支持“纯 5G”、“纯 WAN 有线”及“主备热备 / 负载均衡”三档模式，配合 `mwan3` 探针实现毫秒级容灾切流；
+ - **AP3000M EEPROM 自动化射频恢复**：开机自启服务 `99-ap3000m-eeprom` 自动提取物理 MAC 并写入 factory 分区，激活 Wi-Fi 6 射频。
+ 
 diff --git a/Scripts/Packages.sh b/Scripts/Packages.sh
+index b5c42b5e0..358466ad8 100644
 --- a/Scripts/Packages.sh
 +++ b/Scripts/Packages.sh
-@@ -151,6 +151,29 @@
+@@ -151,6 +151,29 @@ REGISTER_QMODEM_FEED() {
  	echo "qmodem: 已注册为本地 feed 并安装到 package/feeds/qmodem/"
  }
  
@@ -31,73 +105,40 @@ diff --git a/Scripts/Packages.sh b/Scripts/Packages.sh
  # QModem 包共用 version.mk 的 QMODEM_VERSION。
  # OpenWrt 新版 apk 打包器不接受 `-rc.N` / `-rcN`：版本串被拼成 "3.4.0-rc.3-rN" 后，
  # apk mkpkg 报 "package version is invalid"（Error 99），阻断整个固件构建。
-@@ -185,6 +208,12 @@
- else
+@@ -186,6 +209,12 @@ else
  	echo "modem-pro: 跳过 QModem 克隆、feed 注册与 luci-app-qmodem-generic（隔离 QModem 依赖链）"
  fi
-+
+ 
 +# 风扇控制插件只对 H5000M 有意义（pwm-fan 在 H5000M 的 hwmon 上）；AP3000M、X86
 +# 等机型不注册，免得白白克隆仓库、污染包索引。
 +case "${WRT_CONFIG:-}" in
 +*H5000M*) REGISTER_H5000M_FEED ;;
 +esac
- 
++
  # ===== modem-pro-unified：单一包 modem-pro（H5000M / AP3000M 共用，替代 QModem 模组管理）=====
  # 仓库顶层即唯一 Makefile，包位于 feed 根目录。但 OpenWrt 的 scripts/feeds 扫描要求包
-diff --git a/Config/H5000M-qmodem-next.txt b/Config/H5000M-qmodem-next.txt
---- a/Config/H5000M-qmodem-next.txt
-+++ b/Config/H5000M-qmodem-next.txt
-@@ -18,4 +18,7 @@
- CONFIG_PACKAGE_cpufreq=y
+ # Makefile 位于 feed 的【子目录】下（feed_dir/<pkg>/Makefile）——直接用 src-link 指向
+@@ -271,8 +300,7 @@ FIX_SINGBOX_STALE_PATCH() {
+ }
+ FIX_SINGBOX_STALE_PATCH
  
- # H5000M 风扇控制
--CONFIG_PACKAGE_luci-app-h5000m-fancontrol=y
-+CONFIG_PACKAGE_luci-app-h5000m-fancontrol=n
-+# 插件改由 h5000m-pwmfan feed 提供；旧 fancontrol 与它抢同一路 pwm1，必须二选一
-+CONFIG_PACKAGE_luci-app-h5000m-pwmfan=y
-+CONFIG_PACKAGE_luci-i18n-h5000m-pwmfan-zh-cn=y
-diff --git a/Config/H5000M-qmodem.txt b/Config/H5000M-qmodem.txt
---- a/Config/H5000M-qmodem.txt
-+++ b/Config/H5000M-qmodem.txt
-@@ -18,4 +18,7 @@
- CONFIG_PACKAGE_cpufreq=y
- 
- # H5000M 风扇控制
--CONFIG_PACKAGE_luci-app-h5000m-fancontrol=y
-+CONFIG_PACKAGE_luci-app-h5000m-fancontrol=n
-+# 插件改由 h5000m-pwmfan feed 提供；旧 fancontrol 与它抢同一路 pwm1，必须二选一
-+CONFIG_PACKAGE_luci-app-h5000m-pwmfan=y
-+CONFIG_PACKAGE_luci-i18n-h5000m-pwmfan-zh-cn=y
-diff --git a/Config/H5000M-modem-pro.txt b/Config/H5000M-modem-pro.txt
---- a/Config/H5000M-modem-pro.txt
-+++ b/Config/H5000M-modem-pro.txt
-@@ -16,4 +16,7 @@
- CONFIG_PACKAGE_cpufreq=y
- 
- # H5000M 风扇控制
--CONFIG_PACKAGE_luci-app-h5000m-fancontrol=y
-+CONFIG_PACKAGE_luci-app-h5000m-fancontrol=n
-+# 插件改由 h5000m-pwmfan feed 提供；旧 fancontrol 与它抢同一路 pwm1，必须二选一
-+CONFIG_PACKAGE_luci-app-h5000m-pwmfan=y
-+CONFIG_PACKAGE_luci-i18n-h5000m-pwmfan-zh-cn=y
-diff --git a/.github/workflows/WRT-CORE.yml b/.github/workflows/WRT-CORE.yml
---- a/.github/workflows/WRT-CORE.yml
-+++ b/.github/workflows/WRT-CORE.yml
-@@ -236,6 +236,17 @@
-           echo "WRT_WIFI=wifi-yes" >> $GITHUB_ENV
-           echo "WRT_KVER=none" >> $GITHUB_ENV
-           echo "WRT_LIST=none" >> $GITHUB_ENV
-+
-+            # 只能用 manifest 证明包装进了镜像：符号在 defconfig 阶段被静默丢弃
-+            # 时固件照样编得出来，只有这里还能拦住。
-+            case "$WRT_CONFIG" in
-+            *H5000M*)
-+              if ! find ./bin/targets/ -type f -name "*.manifest" -exec grep -q '^luci-app-h5000m-pwmfan ' {} +; then
-+                echo "::error title=Fan plugin missing::manifest 中没有 luci-app-h5000m-pwmfan，固件将不含风扇控制插件"
-+                exit 1
-+              fi
-+              ;;
-+            esac
-           case "$WRT_CONFIG" in
-             *-modem-pro)
-               # 模组方案：modem-pro（独立本地 feed，取代 QModem）。
+-# FAN789 插件及其他专用硬件插件
+-UPDATE_PACKAGE "luci-app-h5000m-fancontrol" "FAN789/luci-app-h5000m-fancontrol" "main"
++# 其他专用硬件插件（H5000M 风扇控制已改为 h5000m-pwmfan feed，见 REGISTER_H5000M_FEED）
+ # AirPi AP3000M 专用（luci-app-airpi-fancontrol + airpi-gpio-fan 内核模块）：
+ # 仅 AP3000M 配置引入。该插件按 AP3000M 的 GPIO / PWM / 温度传感器适配，
+ # H5000M 与 X86 用不到，也不具备对应硬件依赖，无需拉取（省一次克隆与包扫描）
+diff --git a/Scripts/check_defconfig.py b/Scripts/check_defconfig.py
+index 6b5f82a48..990bcf441 100644
+--- a/Scripts/check_defconfig.py
++++ b/Scripts/check_defconfig.py
+@@ -155,7 +155,8 @@ class Checker:
+             )
+             self.require("CONFIG_PACKAGE_kmod-cryptodev", "H5000M 内核调整")
+             self.require("CONFIG_PACKAGE_kmod-tls", "H5000M 内核调整")
+-            self.require("CONFIG_PACKAGE_luci-app-h5000m-fancontrol", "H5000M 风扇控制")
++            self.require("CONFIG_PACKAGE_luci-app-h5000m-pwmfan", "H5000M 风扇控制")
++            self.require("CONFIG_PACKAGE_kmod-hwmon-pwmfan", "H5000M PWM 风扇内核模块")
+             self.require("CONFIG_PACKAGE_luci-app-h5000m-netmode", "H5000M 网络模式")
+         elif self.name.startswith("AP3000M-"):
+             self.require(

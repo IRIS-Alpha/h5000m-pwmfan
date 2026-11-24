@@ -531,3 +531,13 @@ feed succeeded (translation package, no `--allow-untrusted`). Firmware-side inte
 `docs/patches/0001-fan-plugin-from-a-feed.patch` (verified with `git apply --check`); see
 `docs/FIRMWARE_INTEGRATION.md`. Two packaging fixes rode along: the page's feed address is derived from
 `origin` (no placeholder), and the gh-pages push targets `HEAD:gh-pages` because the worktree is detached.
+
+- 2026-11-24（固件侧集成落地）：补丁应用到 `H5000M-CI-Qmodem-OP-git`，提交 `218e31e3f`（未推送，仓库里原有的未提交改动一行没碰）。
+  实际落地比草案多两处，都是应用时发现的真问题：① 旧插件不是只靠 `feeds/base` 躺着进来的——`Scripts/Packages.sh` 里有一行
+  `UPDATE_PACKAGE "luci-app-h5000m-fancontrol" "FAN789/luci-app-h5000m-fancontrol" "main"` 会先删同名目录再克隆进 `package/`，
+  这才是它的来源（设备记录的 `o:feeds/base/…` 是包 Makefile 写死的 origin 字符串）；补丁删掉这一行，`Config/*.txt` 里保留
+  `fancontrol=n` 作双保险。② manifest 守卫最初被放进 **Initialization Values** 步骤，那里 `bin/targets/` 还不存在，等于永不触发；
+  已移到 **Package Firmware** 步骤、`find … -exec rm` 删除 manifest 之前。另外 `Scripts/check_defconfig.py` 原本硬性要求旧包
+  `luci-app-h5000m-fancontrol=y`，不改就会和我们自己的 `=n` 打架，已换成 `luci-app-h5000m-pwmfan` + `kmod-hwmon-pwmfan`。
+  重生成补丁（7,740 B，7 个文件，`git apply -R --check` 在目标仓库干净通过）；`bash -n` 覆盖 Packages.sh 与四个受影响的 run 块，
+  `yaml.safe_load` 解析通过。`docs/FIRMWARE_INTEGRATION.md` 按实际改动重写（旧插件来源、三道守卫、恢复旧插件的做法）。
