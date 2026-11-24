@@ -150,6 +150,23 @@
 
 ## Distribution
 
+- 2026-11-25: Package version is **5.0.0-r1**, matching the V5 requirement baseline
+  (`PKG_VERSION` in `luci-app-h5000m-pwmfan/Makefile`, `VERSION`/`RELEASE` in
+  `tools/build-apk.sh`, and the four documents that quote a file name). The device
+  upgrades from the published feed, not from a local file:
+  `apk add --upgrade luci-app-h5000m-pwmfan luci-i18n-h5000m-pwmfan-zh-cn` moved
+  0.1.0-r2 → 5.0.0-r1 with `/etc/config/h5000m_pwmfan` untouched (`.apk-new` beside
+  it) and the controller back to `state=running`.
+- `tools/publish-apk-repo.sh` now rebases the gh-pages commit on `origin/gh-pages`
+  and force-pushes the generated branch. Building on the stale local `gh-pages` ref
+  made every publish a non-fast-forward, so earlier releases were silently rejected.
+- `deploy2.sh` installs through a throwaway local index
+  (`apk add --repository /tmp/h5000m-repo/<arch>/packages.adb <name>`) instead of a
+  `/tmp/*.apk` path. The path form wrote an absolute file name into
+  `/etc/apk/world`; once that file was cleaned up, the next upgrade died with
+  `no such package`. The world file now keeps the plain package names.
+
+
 - 2026-11-24: 预览事故与修复：重启预览前误用 `rsync -a --delete htdocs/ rootfs/www/`，把 `.h5000m-work/rootfs/www` 里的 LuCI 框架与 Vantage 主题删掉（该目录是设备的 `/www` 镜像，不是 `htdocs/` 的拷贝），页面因此空白（`.pf-page` 不存在）。已从设备 `scp` 回 `/www/luci-static/resources`（6.8 MB）与 `/www/luci-static/vantage`（244 KB）恢复，再用 `rsync -a`（不带 `--delete`）覆盖本仓库视图；复验 3 张卡片、两块画布着色 22194 / 7238 像素。教训写入 `tests/README.md`。
 
 - 2026-11-24: 两份评审文档的中文版落地：`docs/RUNTIME_EVIDENCE.zh-CN.md` 与 `docs/ROLLBACK.zh-CN.md`（逐节对应，命令、路径与数字保持原样，篇首注明以英文原文为准），英文原文顶部加了互链。同日把分发决策写入下一节，并新增 `docs/DISTRIBUTION.md`：仓库布局、已验证的 `apk mkndx --allow-untrusted` / `apk adbsign --sign-key --reset-signatures --allow-untrusted`（不带 `--allow-untrusted` 会把 45,807 字节的包截成 1,970 字节且返回 0，已记为陷阱一次）、以及两个仍需在设备上确认的点——我们自建密钥的 key id 与 `apk verify` 对不上、索引文件名（`APKINDEX.adb` / `packages.adb`）未验证。

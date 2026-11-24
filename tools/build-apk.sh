@@ -29,8 +29,8 @@ REPO=$(CDPATH="" cd -- "$(dirname -- "$0")/.." && pwd)
 APK_BIN=${APK:-apk}
 NAME=luci-app-h5000m-pwmfan
 PKG_URL=${PKG_URL:-https://github.com/IRIS-Alpha/h5000m-pwmfan}
-VERSION=0.1.0
-RELEASE=2
+VERSION=5.0.0
+RELEASE=1
 OUT=${OUT:-$REPO/build}
 SIGN_KEY=${APK_SIGN_KEY:-}
 I18N_NAME=luci-i18n-${NAME#luci-app-}-zh-cn

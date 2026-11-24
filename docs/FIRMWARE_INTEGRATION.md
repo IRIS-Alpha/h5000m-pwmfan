@@ -71,7 +71,7 @@ git apply -R     docs/patches/0001-fan-plugin-from-a-feed.patch    # 撤回
 
 - 构建日志出现 `h5000m: 已注册为 src-git feed 并安装到 package/feeds/h5000m/`；
 - `wrt/package/feeds/h5000m/luci-app-h5000m-pwmfan` 是符号链接（指向 `feeds/h5000m/…`）；
-- `bin/targets/*/*.manifest` 里有 `luci-app-h5000m-pwmfan - 0.1.0-r2`，且**没有** `luci-app-h5000m-fancontrol`；
+- `bin/targets/*/*.manifest` 里有 `luci-app-h5000m-pwmfan - 5.0.0-r1`，且**没有** `luci-app-h5000m-fancontrol`；
 - 刷机后 LuCI 出现「风扇」菜单，`/etc/config/h5000m_pwmfan` 带着默认值。
 
 ## 出了问题时

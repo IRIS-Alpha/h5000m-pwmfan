@@ -41,7 +41,7 @@ is therefore part of the install instructions, not an afterthought.
 repo/
   aarch64_cortex-a53/
     packages.adb                     # v3 index (this exact name; see below)
-    luci-app-h5000m-pwmfan-0.1.0-r2.apk
+    luci-app-h5000m-pwmfan-5.0.0-r1.apk
     luci-i18n-h5000m-pwmfan-zh-cn-<version>.apk
   h5000m-apk.pem                     # our public key, installed to /etc/apk/keys/
 ```
@@ -159,7 +159,7 @@ Decision (2026-11-24): host the repository on GitHub. The layout below is served
 ```
 repo/
   aarch64_cortex-a53/packages.adb
-  aarch64_cortex-a53/luci-app-h5000m-pwmfan-0.1.0-r2.apk
+  aarch64_cortex-a53/luci-app-h5000m-pwmfan-5.0.0-r1.apk
   aarch64_cortex-a53/luci-i18n-h5000m-pwmfan-zh-cn-<stamp>.apk
   h5000m-apk.pem
   index.html

@@ -95,7 +95,13 @@ fi
 # Publish without touching the working tree: a detached worktree of gh-pages.
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT INT TERM
-if git -C "$REPO" rev-parse --verify --quiet gh-pages >/dev/null; then
+# Base the new commit on what the remote already has: the local gh-pages ref is
+# never updated by these pushes, so building on it would make every publish a
+# non-fast-forward.
+if git -C "$REPO" fetch --quiet origin gh-pages 2>/dev/null &&
+	git -C "$REPO" rev-parse --verify --quiet origin/gh-pages >/dev/null; then
+	git -C "$REPO" worktree add --quiet --detach "$work" origin/gh-pages
+elif git -C "$REPO" rev-parse --verify --quiet gh-pages >/dev/null; then
 	git -C "$REPO" worktree add --quiet --detach "$work" gh-pages
 else
 	git -C "$REPO" worktree add --quiet --detach "$work"
@@ -110,5 +116,7 @@ git -C "$work" -c user.name="apk repo" -c user.email="apk-repo@localhost" \
 # Push the commit, not a branch name: the worktree is detached, so a plain
 # "push origin gh-pages" would push the stale local branch and drop the
 # commit we just made.
-git -C "$work" push --quiet origin HEAD:gh-pages
+# gh-pages is a generated branch: force the update so a lost local ref cannot
+# block a release.
+git -C "$work" push --quiet --force origin HEAD:gh-pages
 echo "pushed gh-pages"

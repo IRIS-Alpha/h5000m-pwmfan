@@ -40,7 +40,7 @@ The apk-tools 3 binary is the one the SDK already provides:
 
 The script produces two packages in `build/`:
 
-- `luci-app-h5000m-pwmfan-0.1.0-r2.apk` — about 52 KB. The SDK build was 45.8 KB because `luci.mk` minified the view
+- `luci-app-h5000m-pwmfan-5.0.0-r1.apk` — about 52 KB. The SDK build was 45.8 KB because `luci.mk` minified the view
   scripts with jsmin; the mkpkg build ships the readable sources. The file set is identical (17 files, verified by
   extracting both and diffing).
 - `luci-i18n-h5000m-pwmfan-zh-cn-<date>.<time>.apk` — about 4.3 KB, compiled from `luci-app-h5000m-pwmfan/po/zh_Hans/h5000m-pwmfan.po` with
