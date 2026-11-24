@@ -389,6 +389,10 @@
 - 2026-11-23: 控制周期区间由 1–30 秒收窄到 1–10 秒（默认 2），守护进程改为钳制；理由是它同时决定温度历史分辨率与保护斜坡的可采样性。
 - 2026-11-23: 控制周期区间由 1–10 秒进一步收到 1–5 秒（默认 2）；依据是旧插件 `h5000m-fancontrol` 的 `interval` 默认 5 秒、下限 2 秒（代码与本机旧 uci 一致），60 秒上限从未被合理使用。
 
+### 2026-11-25 — unit size follows the field size
+
+Vantage lifts field text to 16px inside `.vt-main` on touch and <=720px screens (`vantage.css:3549`); the preview page is not inside `.vt-main`, so it kept showing 13px and hid the mismatch. The advanced form now pins the same rule itself: fields and `.pf-unit` both go to 16px under `(pointer: coarse), (max-width: 720px)`, and the unit takes a 1px optical offset there. Measured ink bottoms: 390px touch 0px, 1200px 0px (was -1px and 0px with a 13px unit). `tests/preview.mjs` asserts `unit matches the field size`.
+
 ## Completed: unattended cleanup (2026-11-23)
 
 Constraints for this block: only work that needs no human decision. The router is read-only (no `uci set`, no PWM or

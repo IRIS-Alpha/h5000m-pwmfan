@@ -158,7 +158,7 @@ return view.extend({
 			'.pwmfan-advanced .pf-toggle input:disabled + .pf-track{opacity:.45}',
 			'.pwmfan-advanced .pf-toggle:has(input:disabled){cursor:not-allowed}',
 			'.pwmfan-advanced .pf-unit-host{display:flex;align-items:center;gap:6px}',
-			'.pwmfan-advanced .pf-unit-host > input{flex:1 1 auto;min-width:0;max-width:none;text-align:right;padding-right:10px}',
+			'.pwmfan-advanced .pf-unit-host > input{flex:1 1 auto;min-width:0;max-width:none;text-align:right;padding-right:10px;font-family:inherit;line-height:20px}',
 			'.pwmfan-advanced .pf-unit-host > select,.pwmfan-advanced .pf-unit-host > .cbi-dropdown{flex:1 1 0;min-width:0;width:auto;max-width:100%}',
 			/* LuCI's apply button is a flex dropdown; with align-items:stretch the theme's
 			   spinner lands in the top-left corner. The bar sits outside the view node, so
@@ -171,7 +171,15 @@ return view.extend({
 				+ 'background:color-mix(in srgb,var(--v-surface,var(--s1,light-dark(#ffffff,#1c2129))) 94%,transparent);'
 				+ '-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,.16)}',
 			'.pf-actions .pf-actions-hint{flex:1 1 auto;min-width:0;margin-right:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:18px;color:' + muted + '}',
-			'.pwmfan-advanced .pf-unit{flex:0 0 30px;width:30px;text-align:left;font-size:13px;line-height:1;color:' + muted + ';background:transparent;font-variant-numeric:tabular-nums}',
+			'.pwmfan-advanced .pf-unit{flex:0 0 30px;width:30px;text-align:left;font-family:inherit;font-size:13px;line-height:1;position:relative;top:0;color:' + muted + ';background:transparent;font-variant-numeric:tabular-nums}',
+			/* Vantage lifts field text to 16px on touch and narrow screens (to stop iOS
+			   zooming); the unit has to follow, otherwise it sits a size and a baseline
+			   below the number. The preview page is not inside .vt-main, so pin the
+			   fields here as well and the two stay in step wherever the page runs. */
+			'@media (pointer: coarse),(max-width: 720px){'
+				+ '.pwmfan-advanced .cbi-value-field input.cbi-input-text,'
+				+ '.pwmfan-advanced .cbi-value-field select,'
+				+ '.pwmfan-advanced .pf-unit{font-size:16px !important;top:1px}}',
 			'.pwmfan-advanced .cbi-value > .pf-wide-note{grid-column:1 / -1;margin:6px 0 0;max-width:78ch;font-size:12px;line-height:18px}',
 			'.pwmfan-advanced .cbi-value.pf-note-row{padding:8px 0;row-gap:4px}',
 			'.pwmfan-advanced .cbi-value.pf-note-row > .cbi-value-field{min-height:0;padding:0;line-height:1.5}',

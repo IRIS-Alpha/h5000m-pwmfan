@@ -281,6 +281,15 @@ async function advancedChecks() {
 	check('early reboot hint names both trigger points', /90 °C/.test(earlyHint) && /110 °C/.test(earlyHint) && /15 °C/.test(earlyHint), earlyHint);
 	const hosts = await page.locator('.pf-unit-host').count();
 	check('unit hosts', hosts >= 10, String(hosts));
+	// Vantage lifts field text to 16px on touch and narrow screens; the unit has to
+	// follow, otherwise it sits a size lower than the number it belongs to.
+	const fieldSizes = await page.evaluate(() => {
+		const row = document.querySelector('[data-name=protection_temp]');
+		const input = row.querySelector('input.cbi-input-text');
+		const unit = row.querySelector('.pf-unit');
+		return [ getComputedStyle(input).fontSize, getComputedStyle(unit).fontSize ];
+	});
+	check('unit matches the field size', fieldSizes[0] === fieldSizes[1], fieldSizes.join(' vs '));
 	// A row hidden by its switch has no height either; only visible rows count.
 	const folded = await page.evaluate(() => [ ...document.querySelectorAll('.cbi-value-description') ]
 		.filter((node) => node.closest('.cbi-value')?.offsetParent !== null && node.getBoundingClientRect().height < 1).length);
