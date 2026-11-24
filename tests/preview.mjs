@@ -250,11 +250,28 @@ async function advancedChecks() {
 	await page.waitForSelector('.pwmfan-advanced');
 
 	const groups = await page.locator('.pwmfan-advanced .pf-group').count();
-	check('eight behaviour cards', groups === 8, String(groups));
+	check('nine behaviour cards', groups === 9, String(groups));
 	// Two switches now: taking over the fan, and rebooting before the trip.
 	const toggles = await page.evaluate(() => [ ...document.querySelectorAll('.pf-toggle input[type=checkbox]') ]
 		.map((input) => input.closest('.cbi-value')?.dataset.name));
 	check('both switches are toggles', toggles.length === 2 && toggles.includes('enabled') && toggles.includes('early_reboot'), toggles.join(','));
+	const order = await page.evaluate(() => [ ...document.querySelectorAll('.pwmfan-advanced .cbi-value[data-name^=_group_]') ]
+		.map((row) => row.dataset.name));
+	const wantedOrder = [ '_group_kernel', '_group_temperature', '_group_output', '_group_downshift', '_group_boost',
+		'_group_curveview', '_group_histview', '_group_fault', '_group_supervision' ];
+	check('cards follow the agreed order', order.join(',') === wantedOrder.join(','), order.join(','));
+	// The reboot point only acts while its switch is on, so it travels with it.
+	const follows = await page.evaluate(() => {
+		const row = document.querySelector('[data-name=early_reboot_temp]');
+		const box = document.querySelector('[data-name=early_reboot] input[type=checkbox]');
+		if (!row || !box) return null;
+		const before = row.offsetParent !== null;
+		box.click();
+		const after = row.offsetParent !== null;
+		box.click();
+		return { before, after };
+	});
+	check('the reboot point follows its switch', follows && follows.before === false && follows.after === true, JSON.stringify(follows));
 	// The reboot point is derived from the threshold, and the hint says so.
 	const earlyHint = await page.evaluate(() => {
 		const row = document.querySelector('[data-name=early_reboot]');
@@ -264,8 +281,9 @@ async function advancedChecks() {
 	check('early reboot hint names both trigger points', /90 °C/.test(earlyHint) && /110 °C/.test(earlyHint) && /15 °C/.test(earlyHint), earlyHint);
 	const hosts = await page.locator('.pf-unit-host').count();
 	check('unit hosts', hosts >= 10, String(hosts));
+	// A row hidden by its switch has no height either; only visible rows count.
 	const folded = await page.evaluate(() => [ ...document.querySelectorAll('.cbi-value-description') ]
-		.filter((node) => node.getBoundingClientRect().height < 1).length);
+		.filter((node) => node.closest('.cbi-value')?.offsetParent !== null && node.getBoundingClientRect().height < 1).length);
 	check('no description collapsed', folded === 0, String(folded));
 
 	const sensorTexts = await page.evaluate(() => {

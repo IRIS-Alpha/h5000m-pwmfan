@@ -67,9 +67,6 @@ msgstr "应用曲线"
 msgid "Temperature monitor"
 msgstr "温度监控"
 
-msgid "Full-speed temperature threshold (°C)"
-msgstr "全速保护温度阈值（°C）"
-
 msgid "Downshift hysteresis"
 msgstr "降速迟滞"
 
@@ -105,9 +102,6 @@ msgstr "运行中"
 
 msgid "Fault"
 msgstr "故障"
-
-msgid "Kernel protection"
-msgstr "内核保护"
 
 msgid "Target drive"
 msgstr "目标驱动"
@@ -186,15 +180,6 @@ msgstr "接管风扇控制"
 
 msgid "Hardware verification is pending."
 msgstr "等待实机接管验证。"
-
-msgid "Protection ramps up before the threshold, locks at 100%, and releases below the threshold by the configured hysteresis."
-msgstr "温度保护在阈值前逐步提高输出，到阈值锁定 100%，降至阈值减回差后解除。"
-
-msgid "The protection threshold must be at or above the target."
-msgstr "保护阈值不得低于目标温度。"
-
-msgid "The early ramp window can reach at most 40 °C below the threshold."
-msgstr "提前区间最多可覆盖阈值以下 40 °C。"
 
 msgid "Early ramp window (°C)"
 msgstr "提前区间（°C）"
@@ -306,38 +291,25 @@ msgstr "无读数"
 msgid "thermal zone"
 msgstr "温区"
 
-msgid "When a sensor reading is unusable or a PWM write fails, the controller asks for 100% output instead of guessing. This behaviour is fixed and has no switch; CPU throttling and the critical shutdown still belong to the kernel."
-msgstr "传感器读数不可用或 PWM 写入失败时，控制器直接请求 100% 输出，不做猜测。该行为固定、不提供开关；CPU 降频与临界关机仍由内核负责。"
-
-msgid "A reading counts as valid when the sensor file is readable and the value is within −40…150 °C; sensors without a valid reading are skipped. The fan curve above — the temperature-to-output curve, not the history chart — follows this sensor, or the highest valid one when “All sensors” is selected. Sensors outside the choice still count toward the safety maximum."
-msgstr "传感器文件可读且数值在 −40…150 °C 内才算有效，无有效读数的传感器会被跳过。上方风扇曲线（温度到输出的那条曲线，不是温度监控图表）跟随所选传感器；选“全部传感器”时取其中最高有效值。未选中的传感器仍参与安全最高温仲裁。"
-
 msgid "No request, protection ramp or startup boost drives the fan above this value. Lowering it caps high-speed noise, including the whine a small fan makes near full duty, at the cost of the highest speed protection can still reach; a fault still asks for a full 100%."
 msgstr "任何请求、保护斜坡或启动助推都不会把风扇推到这个值以上。调低它可以压低高转速风噪，包括小风扇在接近满速时的啸叫；代价是保护能给出的最高转速也随之降低，故障时仍然按 100% 处理。"
 
 msgid "Fan curve settings"
 msgstr "风扇曲线设置"
 
-msgid "How often the controller samples and which sensor feeds the fan curve."
-msgstr "控制器多久采样一次，以及风扇曲线跟随哪个传感器。"
-
+#: view
 msgid "Monitor window (minutes)"
-msgstr "监控窗口（分钟）"
+msgstr "监控有效窗口（分钟）"
 
 msgid "How far back the temperature monitor chart reaches."
 msgstr "温度监控图表向前覆盖的时间范围。"
 
+#: view
 msgid "Monitor interval (seconds)"
-msgstr "监控间隔（秒）"
-
-msgid "How often the monitor refreshes. The same interval paces the samples it records, so no refresh lands between two readings."
-msgstr "监控多久刷新一次。同一间隔也决定记录样本的疏密，因此不会有某次刷新落在两次读数之间的空档。"
+msgstr "监控刷新间隔（秒）"
 
 msgid "Temperature monitor settings"
 msgstr "温度监控设置"
-
-msgid "How the temperature monitor chart is drawn."
-msgstr "温度监控图表如何绘制。"
 
 msgid "Temperature history unavailable"
 msgstr "温度历史读取失败"
@@ -381,20 +353,64 @@ msgstr "曲线输出上限不能低于非零请求下限。"
 msgid "Temperature reading expired"
 msgstr "温度过期"
 
-msgid "Supervision"
-msgstr "监督"
-
-msgid "A second process, restarted by procd on its own, checks the controller heartbeat. If it stays silent for three control cycles the fan is pushed to full duty, the kernel trip points are restored and the controller is restarted. The fan then stays at full duty until the controller writes it again."
-msgstr "由一个独立的第二进程检查控制器心跳，procd 会单独重启它。若控制器连续三个控制周期没有心跳，则把风扇推到全速、恢复内核触点并重启控制器。之后风扇保持全速，直到控制器重新写入。"
-
 msgid "Reboot before thermal shutdown"
 msgstr "关机前重启"
 
 msgid "Reboot temperature (°C)"
 msgstr "重启温度（°C）"
 
-msgid "When the temperature reaches this point the reboot starts at once. Keep it at least 15 °C below the 125 °C shutdown trip: the reboot takes a while and the CPU is still at full load while it runs."
-msgstr "温度到达这个点就立即开始重启。请让它比 125 °C 的关机触点至少低 15 °C：重启需要一段时间，而这段时间里 CPU 仍在满载。"
+#: view
+msgid "Kernel takeover"
+msgstr "内核保护接管"
 
-msgid "Reboots once the temperature stays above the protection threshold (%s) for 20 seconds, or immediately at %s — %s below the 125 °C shutdown trip. Off by default: the router may hold unsaved data."
-msgstr "温度停在保护阈值（%s）以上满 20 秒就重启；达到 %s 时立即重启——比 125 °C 的关机触点低 %s。默认关闭：路由器上可能有未保存的数据。"
+#: view
+msgid "The plugin drives the fan; the kernel still owns CPU throttling and the critical shutdown."
+msgstr "由本插件驱动风扇；内核仍负责 CPU 降频与临界关机。"
+
+#: view
+msgid "Protection anchor (°C)"
+msgstr "保护锚点（°C）"
+
+#: view
+msgid "The protection anchor must be at or above the target."
+msgstr "保护锚点不得低于目标温度。"
+
+#: view
+msgid "The early ramp window can reach at most 40 °C below the anchor."
+msgstr "提前区间最多可覆盖锚点以下 40 °C。"
+
+#: view
+msgid "Output ramps up over the early window below the anchor, reaches 100% at the anchor, and is released once the temperature falls below the anchor by the configured hysteresis."
+msgstr "输出在锚点下方的提前区间内逐步抬升，到锚点时达到 100%；温度回落到锚点以下并超过释放迟滞后解除。"
+
+#: view
+msgid "Fan output"
+msgstr "风扇输出设置"
+
+#: view
+msgid "The reboot is requested as soon as the temperature reaches this value. Keep it at least 15 °C below the 125 °C shutdown trip: the reboot takes time and the CPU stays at full load while it runs."
+msgstr "温度到达此值即请求重启。该值应至少比 125 °C 的关机触点低 15 °C：重启需要时间，期间 CPU 仍在满载。"
+
+#: view
+msgid "Reboots once the temperature stays above the protection anchor (%s) for 20 seconds, or immediately at %s — %s below the 125 °C shutdown trip. Off by default; the router may hold unsaved data."
+msgstr "温度持续高于保护锚点（%s）达 20 秒时重启；达到 %s 时立即重启——比 125 °C 的关机触点低 %s。默认关闭：路由器上可能存在未保存的数据。"
+
+#: view
+msgid "A reading counts as valid when the sensor file is readable and the value is within −40…150 °C. The fan curve follows the selected sensor, or the highest valid reading when “All sensors” is selected. Sensors outside the selection do not drive the curve but still feed the temperature protection, which follows the highest valid reading among all sensors."
+msgstr "传感器文件可读且数值在 −40…150 °C 内才算有效。风扇曲线跟随所选传感器；选“全部传感器”时取其中最高的有效读数。未选中的传感器不驱动曲线，但仍参与温度保护——保护按全部传感器中的最高有效读数计算。"
+
+#: view
+msgid "The temperature monitor samples and refreshes at this interval."
+msgstr "温度监控按此间隔采样并刷新。"
+
+#: view
+msgid "When a sensor reading is unusable or a PWM write fails, the controller requests 100% output."
+msgstr "传感器读数不可用或 PWM 写入失败时，控制器直接请求 100% 输出。"
+
+#: view
+msgid "Process guard"
+msgstr "进程守护"
+
+#: view
+msgid "An independent process, started by procd, watches the controller heartbeat. If the controller stays silent for three control cycles, it drives the fan to full duty, restores the kernel trip points and restarts the controller; the fan stays at full duty until the controller writes it again."
+msgstr "独立守护进程由 procd 拉起。控制器连续三个控制周期没有心跳时，它把风扇推到全速、恢复内核触点并重启控制器；此后风扇保持全速，直到控制器重新写入。"

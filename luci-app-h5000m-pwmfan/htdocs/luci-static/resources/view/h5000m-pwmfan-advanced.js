@@ -188,7 +188,7 @@ return view.extend({
 		var map = new form.Map(CONFIG);
 		var section = map.section(form.NamedSection, SECTION, 'settings');
 		section.anonymous = true;
-		this.group(section, 'kernel', _('Kernel protection'), '');
+		this.group(section, 'kernel', _('Kernel takeover'), _('The plugin drives the fan; the kernel still owns CPU throttling and the critical shutdown.'));
 		var takeover = section.option(form.Flag, 'enabled', _('Take over fan control'));
 		takeover.default = '0'; takeover.rmempty = false;
 		var verified = uci.get(CONFIG, SECTION, 'takeover_verified') === '1';
@@ -212,6 +212,28 @@ return view.extend({
 			uci.set(CONFIG, sectionId, 'kernel_takeover', on);
 			return on;
 		};
+		var early = section.option(form.Flag, 'early_reboot', _('Reboot before thermal shutdown'));
+		early.default = '0'; early.rmempty = false;
+		early.description = this.earlyHint(uci.get(CONFIG, SECTION, 'protection_temp') || '90', '110');
+		var point = section.option(form.Value, 'early_reboot_temp', _('Reboot temperature (°C)'));
+		point.datatype = 'range(100,120)'; point.default = '110'; point.rmempty = false;
+		// The point only acts while the switch is on; bindEarlyHint hides the row
+		// with the switch because LuCI's depends() cannot see a moved checkbox.
+		point.description = _('The reboot is requested as soon as the temperature reaches this value. Keep it at least 15 °C below the 125 °C shutdown trip: the reboot takes time and the CPU stays at full load while it runs.');
+		this.group(section, 'temperature', _('Temperature protection'), _('Output ramps up over the early window below the anchor, reaches 100% at the anchor, and is released once the temperature falls below the anchor by the configured hysteresis.'));
+		var safety = section.option(form.Value, 'protection_temp', _('Protection anchor (°C)'));
+		safety.datatype = 'range(80,100)'; safety.default = '90'; safety.rmempty = false;
+		safety.validate = function(sectionId, value) {
+			return uci.get(CONFIG, sectionId, 'mode') !== 'target' || Number(value) >= Number(uci.get(CONFIG, sectionId, 'target_temp') || 85) || _('The protection anchor must be at or above the target.');
+		};
+		var radius = section.option(form.Value, 'protection_radius', _('Early ramp window (°C)'));
+		radius.datatype = 'range(15,140)'; radius.default = '15'; radius.rmempty = false;
+		radius.validate = function(sectionId, value) {
+			return Number(value) <= Number(safety.formvalue(sectionId) || 90) + 40 || _('The early ramp window can reach at most 40 °C below the anchor.');
+		};
+		var release = section.option(form.Value, 'protection_release', _('Release hysteresis (°C)'));
+		release.datatype = 'range(2,100)'; release.default = '3'; release.rmempty = false;
+		this.group(section, 'output', _('Fan output'), '');
 		var floor = this.percentOption(section, 'min_pwm', _('Non-zero request floor (%)'), 20);
 		floor.description = _('Except for an explicit 0% stop request, no request drives the fan below this value. A higher floor keeps an aging or dusty fan turning at low duty.');
 		var ceiling = this.percentOption(section, 'max_pwm', _('Curve output ceiling (%)'), 100, 40, 100);
@@ -235,27 +257,6 @@ return view.extend({
 			return floorValue === null || Number(value) >= floorValue
 				|| _('The curve output ceiling must not be below the non-zero request floor.');
 		};
-		this.group(section, 'temperature', _('Temperature protection'), _('Protection ramps up before the threshold, locks at 100%, and releases below the threshold by the configured hysteresis.'));
-		var safety = section.option(form.Value, 'protection_temp', _('Full-speed temperature threshold (°C)'));
-		safety.datatype = 'range(80,100)'; safety.default = '90'; safety.rmempty = false;
-		safety.validate = function(sectionId, value) {
-			return uci.get(CONFIG, sectionId, 'mode') !== 'target' || Number(value) >= Number(uci.get(CONFIG, sectionId, 'target_temp') || 85) || _('The protection threshold must be at or above the target.');
-		};
-		var radius = section.option(form.Value, 'protection_radius', _('Early ramp window (°C)'));
-		radius.datatype = 'range(15,140)'; radius.default = '15'; radius.rmempty = false;
-		radius.validate = function(sectionId, value) {
-			return Number(value) <= Number(safety.formvalue(sectionId) || 90) + 40 || _('The early ramp window can reach at most 40 °C below the threshold.');
-		};
-		var release = section.option(form.Value, 'protection_release', _('Release hysteresis (°C)'));
-		release.datatype = 'range(2,100)'; release.default = '3'; release.rmempty = false;
-		// Two triggers: the protection threshold held for a while, and a point so
-		// close to the shutdown trip that there is no time to hold.
-		var early = section.option(form.Flag, 'early_reboot', _('Reboot before thermal shutdown'));
-		early.default = '0'; early.rmempty = false;
-		early.description = this.earlyHint(safety.cfgvalue(SECTION), '110');
-		var point = section.option(form.Value, 'early_reboot_temp', _('Reboot temperature (°C)'));
-		point.datatype = 'range(100,120)'; point.default = '110'; point.rmempty = false;
-		point.description = _('When the temperature reaches this point the reboot starts at once. Keep it at least 15 °C below the 125 °C shutdown trip: the reboot takes a while and the CPU is still at full load while it runs.');
 		this.group(section, 'downshift', _('Downshift hysteresis'), _('Avoid rapid fan-speed drops when temperature fluctuates near a curve point.'));
 		var hysteresis = section.option(form.Value, 'hysteresis', _('Temperature hysteresis (°C)'));
 		hysteresis.datatype = 'range(0,30)'; hysteresis.default = '2'; hysteresis.rmempty = false;
@@ -265,30 +266,26 @@ return view.extend({
 		this.percentOption(section, 'kick_pwm', _('Startup boost output (%)'), 80);
 		var kick = section.option(form.Value, 'kick_ms', _('Startup boost duration (milliseconds)'));
 		kick.datatype = 'range(0,5000)'; kick.default = '800'; kick.rmempty = false;
-		this.group(section, 'fault', _('Fault response'),
-			_('When a sensor reading is unusable or a PWM write fails, the controller asks for 100% output instead of guessing. This behaviour is fixed and has no switch; CPU throttling and the critical shutdown still belong to the kernel.'));
-		this.group(section, 'supervision', _('Supervision'),
-			_('A second process, restarted by procd on its own, checks the controller heartbeat. If it stays silent for three control cycles the fan is pushed to full duty, the kernel trip points are restored and the controller is restarted. The fan then stays at full duty until the controller writes it again.'));
-		this.group(section, 'curveview', _('Fan curve settings'),
-			_('How often the controller samples and which sensor feeds the fan curve.'));
+		this.group(section, 'curveview', _('Fan curve settings'), '');
 		var interval = section.option(form.Value, 'poll_interval', _('Control interval (seconds)'));
 		interval.datatype = 'range(1,5)'; interval.default = '2'; interval.rmempty = false;
 		var source = section.option(form.ListValue, 'sensor_sources', _('Curve sensor source'));
-		source.description = _('A reading counts as valid when the sensor file is readable and the value is within −40…150 °C; sensors without a valid reading are skipped. The fan curve above — the temperature-to-output curve, not the history chart — follows this sensor, or the highest valid one when “All sensors” is selected. Sensors outside the choice still count toward the safety maximum.');
+		source.description = _('A reading counts as valid when the sensor file is readable and the value is within −40…150 °C. The fan curve follows the selected sensor, or the highest valid reading when “All sensors” is selected. Sensors outside the selection do not drive the curve but still feed the temperature protection, which follows the highest valid reading among all sensors.');
 		source.width = '100%';
 		source.value('auto', _('All sensors (highest valid reading)'));
 		(this.sensors || []).forEach(function(sensor) {
 			source.value(sensor.label, sensor.title + (sensor.celsius !== null ? ' · ' + sensor.celsius + ' °C' : ' · ' + _('no reading')));
 		});
 		source.default = 'auto'; source.rmempty = false; source.optional = false;
-		this.group(section, 'histview', _('Temperature monitor settings'),
-			_('How the temperature monitor chart is drawn.'));
+		this.group(section, 'histview', _('Temperature monitor settings'), '');
 		var window = section.option(form.Value, 'history_range', _('Monitor window (minutes)'));
 		window.datatype = 'range(5,360)'; window.default = '5'; window.rmempty = false;
 		window.description = _('How far back the temperature monitor chart reaches.');
 		var read = section.option(form.Value, 'history_interval', _('Monitor interval (seconds)'));
 		read.datatype = 'range(1,5)'; read.default = '2'; read.rmempty = false;
-		read.description = _('How often the monitor refreshes. The same interval paces the samples it records, so no refresh lands between two readings.');
+		read.description = _('The temperature monitor samples and refreshes at this interval.');
+		this.group(section, 'fault', _('Fault response'), _('When a sensor reading is unusable or a PWM write fails, the controller requests 100% output.'));
+		this.group(section, 'supervision', _('Process guard'), _('An independent process, started by procd, watches the controller heartbeat. If the controller stays silent for three control cycles, it drives the fan to full duty, restores the kernel trip points and restarts the controller; the fan stays at full duty until the controller writes it again.'));
 		return map;
 	},
 
@@ -381,7 +378,7 @@ return view.extend({
 		if (!isFinite(threshold) || threshold <= 0) threshold = 90;
 		var trigger = Number(point);
 		if (!isFinite(trigger) || trigger <= 0) trigger = 110;
-		return _('Reboots once the temperature stays above the protection threshold (%s) for 20 seconds, or immediately at %s — %s below the 125 °C shutdown trip. Off by default: the router may hold unsaved data.')
+		return _('Reboots once the temperature stays above the protection anchor (%s) for 20 seconds, or immediately at %s — %s below the 125 °C shutdown trip. Off by default; the router may hold unsaved data.')
 			.format(threshold + ' °C', trigger + ' °C', (125 - trigger) + ' °C');
 	},
 
@@ -390,7 +387,13 @@ return view.extend({
 		var source = formNode.querySelector('[data-name="protection_temp"] input');
 		var point = formNode.querySelector('[data-name="early_reboot_temp"] input');
 		var row = formNode.querySelector('[data-name="early_reboot"]');
-		if (!source || !row || source.dataset.pfEarly === '1') return;
+		if (!source || !row) return;
+		var sync = function() {
+			var box = row.querySelector('input[type="checkbox"]');
+			var pointRow = formNode.querySelector('[data-name="early_reboot_temp"]');
+			if (pointRow) pointRow.style.display = box && box.checked ? '' : 'none';
+		};
+		if (source.dataset.pfEarly === '1') { sync(); return; }
 		var hint = row.querySelector('.cbi-value-description');
 		if (!hint) return;
 		source.dataset.pfEarly = '1';
@@ -399,6 +402,9 @@ return view.extend({
 		}, this);
 		source.addEventListener('input', update);
 		if (point) point.addEventListener('input', update);
+		var box = row.querySelector('input[type="checkbox"]');
+		if (box) box.addEventListener('change', sync);
+		sync();
 	},
 
 	decorateFlags: function(formNode) {
