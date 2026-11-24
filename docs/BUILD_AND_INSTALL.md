@@ -57,6 +57,26 @@ Things the script does that are easy to miss when packing by hand:
 - It reproduces the `post-install`/`pre-deinstall`/`post-upgrade` scripts `luci.mk` generates: enable and start the
   service, run `default_postinst`, and set `PKG_UPGRADE=1` on upgrade.
 
+## Reinstalling the same version
+
+`apk` treats an equal version as already installed, so editing a file and
+reinstalling `5.0.0-r1` over `5.0.0-r1` is a no-op — the router keeps the old
+file. Remove both packages first, then install them again:
+
+```sh
+apk del luci-i18n-h5000m-pwmfan-zh-cn luci-app-h5000m-pwmfan
+apk add luci-app-h5000m-pwmfan luci-i18n-h5000m-pwmfan-zh-cn
+```
+
+Both have to go in one transaction: the i18n package depends on the app, so
+`apk del luci-app-h5000m-pwmfan` on its own refuses with
+`luci-app-h5000m-pwmfan: luci-i18n-h5000m-pwmfan-zh-cn`. `/etc/config/h5000m_pwmfan`
+is a conffile, so the removal keeps it and the install drops the new defaults in
+`/etc/config/h5000m_pwmfan.apk-new` beside it.
+
+Bump `PKG_RELEASE` for a release instead of relying on this: the trap only
+exists because local builds reuse the version number.
+
 ## Install
 
 ```sh

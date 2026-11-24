@@ -150,6 +150,14 @@
 
 ## Distribution
 
+- 2026-11-25: A same-version reinstall is a no-op: `apk` sees `5.0.0-r1` installed
+  and installs nothing, so edited view files only reach the router after
+  `apk del luci-i18n-h5000m-pwmfan-zh-cn luci-app-h5000m-pwmfan` (both, because the
+  i18n package depends on the app) followed by a fresh install by name. Documented
+  in `docs/BUILD_AND_INSTALL.md`; the local deploy script does it automatically and
+  verifies `/etc/config/h5000m_pwmfan` keeps its md5.
+
+
 - 2026-11-25: Package version is **5.0.0-r1**, matching the V5 requirement baseline
   (`PKG_VERSION` in `luci-app-h5000m-pwmfan/Makefile`, `VERSION`/`RELEASE` in
   `tools/build-apk.sh`, and the four documents that quote a file name). The device
