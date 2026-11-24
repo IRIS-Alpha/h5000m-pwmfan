@@ -99,6 +99,13 @@ git tag -a v5.0.0-r2 -m "5.0.0-r2"
 sh tools/publish-apk-repo.sh --push
 ```
 
+If `apk update` trips over an unrelated feed (the firmware ships a `qmodem`
+repository that answers 404), refresh just what the upgrade needs instead:
+
+```sh
+apk add --force-refresh --upgrade luci-app-h5000m-pwmfan
+```
+
 ## Reinstalling the same version
 
 `apk` treats an equal version as already installed, so editing a file and
