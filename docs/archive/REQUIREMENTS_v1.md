@@ -1,3 +1,5 @@
+> **已归档。** 这是最早的 V1 需求草稿，结论已并入 [第五版需求基线](../REQUIREMENTS_V5.md)。本文仅保留决策来源，不再维护。
+
 # Requirements analysis
 
 This document records the requirements to settle before implementing the

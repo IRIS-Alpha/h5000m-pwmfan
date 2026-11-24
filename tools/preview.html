@@ -19,7 +19,8 @@ body { min-height: 100vh; background: var(--v-surface-2); color: var(--v-text); 
 <div id="view"></div>
 </main>
 <script>
-window.PWMFAN_PREVIEW = true;
+/* ?clean=1 drops the forced status chips, so docs can show a quiet running state. */
+window.PWMFAN_PREVIEW = !/[?&]clean\b/.test(location.search);
 /* Match the stored appearance before the view loads so the page does not flash light. */
 try {
 	var storedMode = localStorage.getItem('pwmfan-theme') || 'auto';

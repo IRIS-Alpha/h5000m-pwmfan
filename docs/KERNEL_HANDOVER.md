@@ -46,7 +46,7 @@ falls back to the userspace value within one poll interval. At 115 °C the gover
 
 ## Decision (2026-11-22)
 
-Option B, phrased as a **global fan takeover** (`docs/REQUIREMENTS_V3.md` §17):
+Option B, phrased as a **global fan takeover** (`docs/REQUIREMENTS_V5.md` §17):
 
 - While enabled, the plugin drives the fan at every temperature. The claim that the kernel thermal zone keeps the fan above 100 °C is dropped; CPU throttling and the 125 °C critical shutdown stay with the kernel.
 - Takeover now requires evidence: `kernel_takeover=1` **and** `takeover_verified=1`, a writable PWM channel, and a cooling device whose `type` is `pwm-fan`. Until then the daemon keeps reporting `state=disabled reason=takeover_pending` and leaves the fan released.

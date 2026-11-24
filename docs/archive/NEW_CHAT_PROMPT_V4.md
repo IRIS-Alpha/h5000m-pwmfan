@@ -1,8 +1,10 @@
+> **已归档。** V4 的开场提示词已被 [文档索引](../INDEX.md) 取代；新会话按索引读取基线即可。
+
 # 新对话续接提示（V4）
 
 请继续开发独立 LuCI 包 `luci-app-h5000m-pwmfan`。首要工作区是 WSL Ubuntu-26.04 中的 `/home/devcc/Projects/h5000m-pwmfan`，当前基线为 `main` 分支 `b5aaed7`。不要从 Windows 侧旧包工作区恢复或覆盖代码。
 
-开始前读取此仓库的 `AGENTS.md`、`docs/HANDOFF_V4.md`、`docs/TASKS.md`、`docs/REQUIREMENTS_V3.md`、`docs/UIUX_IMPROVEMENTS_2026-11.md` 和 `docs/UIUX_RECHECK_2026-11-22.md`，并先检查 Git 状态。以 WSL 包源码和本地构建预览为准；路由器上已安装 APK 只能作为设备部署检查，不能取代本地开发主线。
+开始前读取此仓库的 `AGENTS.md`、`docs/archive/HANDOFF_V4.md`、`docs/TASKS.md`、`docs/REQUIREMENTS_V5.md`、`docs/UIUX_IMPROVEMENTS_2026-11.md` 和 `docs/UIUX_RECHECK_2026-11-22.md`，并先检查 Git 状态。以 WSL 包源码和本地构建预览为准；路由器上已安装 APK 只能作为设备部署检查，不能取代本地开发主线。
 
 关联但独立的主固件仓库位于 `/mnt/e/WorkSpace/A20_Project/H5000M-CI-Qmodem-OP-git`（Windows：`E:\WorkSpace\A20_Project\H5000M-CI-Qmodem-OP-git`）。检查时该仓库已有未提交修改，必须保留。插件稳定前不要将其当作包工作区或擅自改动；之后仅在用户确认时将包作为 feature 接入。`/mnt/e/WorkSpace/A20_Project/H5000M-CI-Qmodem-OP-main` 不是 Git checkout，先核实再使用。SDK、解包 rootfs 与分析资料在 `/home/devcc/Projects/.h5000m-work`；其中 October SDK 不能证明与设备固件匹配。
 

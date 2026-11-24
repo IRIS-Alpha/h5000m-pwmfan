@@ -1,3 +1,5 @@
+> **已归档。** V4 续接包只用于跨会话交接，内容已并入 [第五版需求基线](../REQUIREMENTS_V5.md) 与 [文档索引](../INDEX.md)。本文仅保留历史线索，不再维护。
+
 # H5000M PWM Fan V4 Handoff
 
 Updated: 2026-11-22 (Asia/Shanghai)
@@ -27,7 +29,7 @@ Updated: 2026-11-22 (Asia/Shanghai)
 
 - The WSL package already contains the LuCI views, controller, translations,
   project-local frontend skills, Vantage-backed preview and `AGENTS.md`.
-- Visual baseline: `docs/REQUIREMENTS_V3.md`. Progress and acceptance blocks:
+- Visual baseline: `docs/REQUIREMENTS_V5.md`. Progress and acceptance blocks:
   `docs/TASKS.md`.
 - Current UI proposal and evidence records:
   `docs/UIUX_IMPROVEMENTS_2026-11.md` and
@@ -47,7 +49,7 @@ Updated: 2026-11-22 (Asia/Shanghai)
 ## Resume order
 
 1. Read `AGENTS.md`, the latest `docs/TASKS.md` entries,
-   `docs/REQUIREMENTS_V3.md`, `docs/UIUX_IMPROVEMENTS_2026-11.md`, and
+   `docs/REQUIREMENTS_V5.md`, `docs/UIUX_IMPROVEMENTS_2026-11.md`, and
    `docs/UIUX_RECHECK_2026-11-22.md`.
 2. Continue checking the remaining V4 proposals against the WSL source and
    preview. Record each as reproduced, not reproduced, or unresolved, with

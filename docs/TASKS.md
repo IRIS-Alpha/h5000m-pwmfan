@@ -15,7 +15,7 @@
 ## Completed task block: Fixed-request controls visual follow-up
 
 - Goal: incorporate five browser comments against the local development preview.
-- Expected changes: record the confirmed UI requirements in `docs/REQUIREMENTS_V3.md`; keep top status/language controls equal-sized with whitespace around them; keep the fixed-request label, wake-style slider, value and stop button aligned on one row; separate history units from number fields.
+- Expected changes: record the confirmed UI requirements in `docs/REQUIREMENTS_V5.md`; keep top status/language controls equal-sized with whitespace around them; keep the fixed-request label, wake-style slider, value and stop button aligned on one row; separate history units from number fields.
 - Progress:
   - [x] Keep status and language controls equal-sized with visible whitespace between them.
   - [x] Align request label, slider, value and stop action on one row across mobile widths.
@@ -198,7 +198,7 @@
   - Fixed request uses a 1% step over 0–100%; the separate stop action is removed and 0% is the stop request, with a visible warning that is not colour-only.
   - The protection statistics line leaves the dashboard; the control source moves into the running badge.
   - The language control keeps its three options until the mobile header layout is settled.
-- Confirmed apply model: per-control commits, drag-does-not-commit plus one shared 3-second trailing merge for modes and the fixed slider, no backend slew limit (`docs/REQUIREMENTS_V3.md` §16).
+- Confirmed apply model: per-control commits, drag-does-not-commit plus one shared 3-second trailing merge for modes and the fixed slider, no backend slew limit (`docs/REQUIREMENTS_V5.md` §16).
 - Expected changes:
   - [x] `root/usr/sbin/h5000m-pwmfan`: accept `fixed_duty` 0–100 in 1% steps; keep `requested_pwm` so a 0% request yields 0 and any non-zero request still respects `min_pwm`. Done 2026-11-22, together with the scheme-A `off` alias.
   - [x] `tests/controller-lib.bats`: replaced the 10%-step rejection with 0% and 1% acceptance plus an out-of-range rejection; asserts `requested_pwm=0` at 0% and the 51 floor at 1%. Done 2026-11-22.
@@ -213,7 +213,7 @@
 - Status: started 2026-11-22; the apply model is settled, so the remaining work is implementation.
 
 - [x] `mode=off` 退场：先落了方案 A（别名映射 `fixed` + `fixed_duty=0`，删掉 `requested_pwm` 的 `off:*` 分支），只读核对路由器 `uci show h5000m_pwmfan` 确认只有 `mode='quiet'`、无 `off` 配置，随后升级到方案 B：白名单与别名一并删除，看板不再识别 `off`（2026-11-22）。
-- [x] 固定请求滑块与模式切换共用 3 秒尾随合并器：拖动只更新读数、松手才提交、0% 绕过合并立即提交、标题行显示“应用中-Ns”；不做后端步进限幅（已定案，见 `REQUIREMENTS_V3.md` §16）。已实现并复核：`MERGE_DELAY = 3000`（`h5000m-pwmfan.js:27`）、`scheduleCommit()` 写 `pending.until` 并由 400ms ticker 刷新 `Applying in %s s`（`:218-229`、`:370`）、`Number(changes.fixed_duty) === 0` 立即 `flushPending()`（`:221`）。
+- [x] 固定请求滑块与模式切换共用 3 秒尾随合并器：拖动只更新读数、松手才提交、0% 绕过合并立即提交、标题行显示“应用中-Ns”；不做后端步进限幅（已定案，见 `REQUIREMENTS_V5.md` §16）。已实现并复核：`MERGE_DELAY = 3000`（`h5000m-pwmfan.js:27`）、`scheduleCommit()` 写 `pending.until` 并由 400ms ticker 刷新 `Applying in %s s`（`:218-229`、`:370`）、`Number(changes.fixed_duty) === 0` 立即 `flushPending()`（`:221`）。
 
 - 2026-11-22: Read-only probe of the V4 proposals (header row, breadcrumb naming, theme switcher source, warning row, fold parameters); findings and three header options recorded in `docs/UIUX_RECHECK_2026-11-22.md` §八.
 - 2026-11-22: Relocated the warning chips to the “模式选择” header row and the slogan to its own line, and added the explicit-commit model for target parameters and curve points; verified 320/360/390/500/651px with no horizontal overflow, states `已选` → `待应用` → `已选`.
@@ -292,12 +292,12 @@
 - 2026-11-22：内核交棒改为全局接管 + 核验门禁。`kernel_takeover_ready_dir` 要求 `kernel_takeover=1`、`takeover_verified=1`、PWM 可写且存在 `pwm-fan` 冷却设备；守护进程新增 `takeover_verified` 解析，配置默认 0；高级设置文案改为“接管风扇控制”；Bats 34/34。
 
 - 2026-11-22: Re-recorded `docs/UIUX_IMPROVEMENTS_2026-11.md` as the live backlog. The four existing findings stay open for visual acceptance; the new batch covers the one-row header with theme and language switchers, mode-container highlight, the three-row fixed-request block with 1% controls and a floating readout, the conditional warning row, dashboard LuCI actions, and a reusable advanced-settings module style. Noted that `vantage_theme` already owns the theme preference and that deleting `mode=off` would send legacy configs into the full-speed failsafe.
-- 2026-11-22: User settled the zero-duty question (1% step, no separate stop action, warning shown), asked for the control source to merge into the running badge, and accepted removing the statistics line; the language control stays three-way until the mobile header is settled. Recorded in `docs/REQUIREMENTS_V3.md` §13/§14/§15 and opened the Block B task block. The apply model and the 3-second interval remain a labelled proposal.
-- 2026-11-22: Re-checked project status against the newly added `docs/HANDOFF_V4.md` and `docs/NEW_CHAT_PROMPT_V4.md` (commit `45ebffa`). Code baseline stays `b5aaed7`; HEAD is `45ebffa` because the handoff documents sit on top of it. Preview responses match the worktree byte-for-byte, `STRICT=1 sh tools/check.sh` passes 33/33, and the firmware repository keeps its five pre-existing modifications untouched.
+- 2026-11-22: User settled the zero-duty question (1% step, no separate stop action, warning shown), asked for the control source to merge into the running badge, and accepted removing the statistics line; the language control stays three-way until the mobile header is settled. Recorded in `docs/REQUIREMENTS_V5.md` §13/§14/§15 and opened the Block B task block. The apply model and the 3-second interval remain a labelled proposal.
+- 2026-11-22: Re-checked project status against the newly added `docs/archive/HANDOFF_V4.md` and `docs/archive/NEW_CHAT_PROMPT_V4.md` (commit `45ebffa`). Code baseline stays `b5aaed7`; HEAD is `45ebffa` because the handoff documents sit on top of it. Preview responses match the worktree byte-for-byte, `STRICT=1 sh tools/check.sh` passes 33/33, and the firmware repository keeps its five pre-existing modifications untouched.
 - 2026-11-22: Fixed the four accepted visual findings in the local views: history-axis label thinning, docked advanced command bar, a single advanced heading with theme card tokens, and 3 + 2 preset/drive grouping. Header controls keep equal width and height with a 172px cap. `STRICT=1 sh tools/check.sh` 33/33; no behaviour change.
 - 2026-11-22: Recorded the fix evidence in `docs/UIUX_RECHECK_2026-11-22.md` section 7. Zero-duty semantics, apply timing, and the 3-second interval remain open for Block B.
 - 2026-11-22: Rechecked the four accepted UI findings and the nine new proposals in the local preview at 320/390/500/651/1360px in light and dark themes. Issues 1.1, 1.2, and 1.4 reproduce; 1.3 reproduces as duplicated page titles while the dark back-button colour did not reproduce. Recorded `docs/UIUX_RECHECK_2026-11-22.md`; no interface or controller code changed.
-- 2026-11-22: Removed a duplicated section 14 in `docs/REQUIREMENTS_V3.md`, clarified the finished UI-corrections block heading, and restored the blank line before the queued UI/UX verification block. Documentation only; no interface or controller change.
+- 2026-11-22: Removed a duplicated section 14 in `docs/REQUIREMENTS_V5.md`, clarified the finished UI-corrections block heading, and restored the blank line before the queued UI/UX verification block. Documentation only; no interface or controller change.
 - 2026-11-22: Logged the four accepted visual findings and the new UI proposals in `docs/UIUX_IMPROVEMENTS_2026-11.md`; scheduled preview rechecks and left apply timing, 0% semantics, and the 3-second interval unresolved. No UI code changed.
 - 2026-11-22: Added the three requested project-local UI skills, preserved available upstream license and notice files, pinned the source commits, and documented the design/iteration/final-review stages. Impeccable hooks remain disabled.
 - 2026-11-21: User selected Apache-2.0 for the independent package. Added the official license text and declared `PKG_LICENSE`/`PKG_LICENSE_FILES`. Confirmed current delivery remains firmware-integrated with local APK validation; runtime feed and signing setup are deferred until stabilization.
@@ -319,7 +319,7 @@
 - 2026-11-17: Read the live H5000M fan-control page in read-only mode and matched it to `luci-app-h5000m-fancontrol`; documented its sensor/PWM/thermal/modem inputs, current status fields, the thermal-floor versus applied-PWM inconsistency, and the new rolling temperature/output graph requirements.
 - 2026-11-17: Updated the UI requirements to split the default dashboard and Fan policy into Home and Advanced Settings pages; specified matching range/interval/enabled controls below both graphs, grouped advanced behavior by downshift hysteresis/start boost/fault full-speed, and deferred a configurable sensor catalog as a later enhancement. Fan animation is optional and must reflect known state; chart disable must not affect control or safety sampling.
 - 2026-11-17: Implemented the revised dashboard and Advanced Settings page, simplified Chinese strings, editable manual curves, output/temperature rolling charts, and percentage-based summaries. Offline Vantage demo replay passed desktop light and 390px mobile dark layout checks; synthetic samples appeared in both charts, curve point editing and advanced save completed without browser errors. Package checks passed before the last UI edits and were rerun for this revision.
-- 2026-11-19: Recorded V3 UI requirements in `docs/REQUIREMENTS_V3.md`, superseded conflicting earlier UI decisions, and documented protection/ownership/off semantics plus Vantage reference and source-license questions. Documentation only; no device or functional changes.
+- 2026-11-19: Recorded V3 UI requirements in `docs/REQUIREMENTS_V5.md`, superseded conflicting earlier UI decisions, and documented protection/ownership/off semantics plus Vantage reference and source-license questions. Documentation only; no device or functional changes.
 - 2026-11-19: Discussed kernel cooling ownership evidence, throughput-style visual reuse, and fixed curve nodes. Recommended read-only thermal mapping first, fixed six-point editing, and separate 0% stop zones from minimum stable running output.
 - 2026-11-19: User accepted the proposed kernel ownership and chart-style direction, and accepted fixed-node editing. Documented that control output is piecewise-linear between nodes, with integer PWM quantization and constant endpoint extension.
 - 2026-11-19: Compared smart/automatic control in the firmware `h5000m-fancontrol` and this package. Both have temperature-related protection, but neither adds 20 percentage points to curve output: the former combines curve output with kernel cooling and modem floors, while the latter requests 100% at its 85°C safety threshold and uses full-speed failsafes for sensor/config/write faults. Recorded “温度保护” as the temporary feature name; behavior remains open pending a definition.
@@ -393,6 +393,17 @@
 
 Vantage lifts field text to 16px inside `.vt-main` on touch and <=720px screens (`vantage.css:3549`); the preview page is not inside `.vt-main`, so it kept showing 13px and hid the mismatch. The advanced form now pins the same rule itself: fields and `.pf-unit` both go to 16px under `(pointer: coarse), (max-width: 720px)`, and the unit takes a 1px optical offset there. Measured ink bottoms: 390px touch 0px, 1200px 0px (was -1px and 0px with a 13px unit). `tests/preview.mjs` asserts `unit matches the field size`.
 
+### 2026-11-25 — documentation baseline V5, README rewrite
+
+Closed the two parked documentation items.
+
+- **Baseline V5**: `docs/REQUIREMENTS_V3.md` renamed to `docs/REQUIREMENTS_V5.md` with a header that says so; the V3 label had stopped tracking reality because the V4-delivered increments were appended to it without bumping the version. `REQUIREMENTS.md` (V1), `HANDOFF_V4.md` and `NEW_CHAT_PROMPT_V4.md` moved to `docs/archive/` with archive banners, and every cross-reference in the tree was repointed (7 files).
+- **`docs/INDEX.md`**: reading order, the V1/V3/V4/V5 crosswalk, and one table per area (requirements, runtime/safety, build/distribution) so a new session does not have to guess which file is current.
+- **`docs/BEHAVIOUR_CONTRACT.md`**: the old README behaviour section, refreshed to what ships today (release semantics, floor/ceiling, safety arbitration, stale grace, watchdog, conffile upgrade), plus a short list of statements that are no longer true.
+- **`README.md` rewritten**: what it is, two-width screenshots, features, hardware table, three install paths (signed APK feed, firmware feed, manual), repository layout, an ASCII run-time diagram, the uci key table, the development commands and a docs index.
+- **Preview harness**: `tools/preview.html` honours `?clean=1`, which drops the forced status chips so the screenshots show a quiet running state; `docs/images/{dashboard,advanced}-{1440,360}.png` were captured with it (device pixel ratio 2, cropped to content).
+- Removed the two one-off scripts `tools/doc125b.py` and `tools/subset-misans.py` (and `tools/__pycache__`); neither is referenced.
+
 ## Completed: unattended cleanup (2026-11-23)
 
 Constraints for this block: only work that needs no human decision. The router is read-only (no `uci set`, no PWM or
@@ -423,7 +434,7 @@ question that needs a person goes to "Awaiting decision" instead of being guesse
       truncates correctly, and the advanced page's native `<select>` inherits the theme colours in both schemes.
 - [x] H. Docs-versus-code sweep: grep `docs/*.md` for hard-coded constants, function names and behaviour claims; the
       `kernel_takeover_ready() { return 1; }` find shows how far a paragraph can drift. Result: eleven bullets in
-      `docs/REQUIREMENTS_V3.md` still described designs that no longer exist (the readings card with its “自定义” picker
+      `docs/REQUIREMENTS_V5.md` still described designs that no longer exist (the readings card with its “自定义” picker
       and `pwmfan-report` key, the MiSans subset, the legend without values, the 42% dimmed protection key, the
       `minmax(…, max-content)` legend columns, the five-minute-multiple window, the old panel names, the old preset
       names and the legend order actual-before-temperature). They now match the code, and the theme path no longer
