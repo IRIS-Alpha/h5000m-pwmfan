@@ -418,7 +418,7 @@ Closed the two parked documentation items.
 - **`docs/INDEX.md`**: reading order, the V1/V3/V4/V5 crosswalk, and one table per area (requirements, runtime/safety, build/distribution) so a new session does not have to guess which file is current.
 - **`docs/BEHAVIOUR_CONTRACT.md`**: the old README behaviour section, refreshed to what ships today (release semantics, floor/ceiling, safety arbitration, stale grace, watchdog, conffile upgrade), plus a short list of statements that are no longer true.
 - **`README.md` rewritten**: what it is, two-width screenshots, features, hardware table, three install paths (signed APK feed, firmware feed, manual), repository layout, an ASCII run-time diagram, the uci key table, the development commands and a docs index.
-- **Preview harness**: `tools/preview.html` honours `?clean=1`, which drops the forced status chips so the screenshots show a quiet running state; `docs/images/{dashboard,advanced}-{1440,360}.png` were captured with it (device pixel ratio 2, cropped to content).
+- **Preview harness**: `tools/preview.html` honours `?clean=1`, which drops the forced status chips so the screenshots show a quiet running state; `docs/images/{dashboard,advanced}-{1200,360}.png` were captured with it (device pixel ratio 2). The advanced shots scroll to the end of the form before the capture: its action bar is `position: sticky`, so shooting from the top left it stranded mid page.
 - Removed the two one-off scripts `tools/doc125b.py` and `tools/subset-misans.py` (and `tools/__pycache__`); neither is referenced.
 
 ## Completed: unattended cleanup (2026-11-23)

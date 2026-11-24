@@ -7,13 +7,13 @@ on top of the kernel's `pwm-fan` device. It replaces the stock fan plugin with a
 closed-loop controller, a fan-curve editor and a monitor that keeps working while the
 kernel thermal zones stay in charge of throttling and the critical shutdown.
 
-| Dashboard — 1440 px | Dashboard — 360 px |
+| Dashboard — 1200 px | Dashboard — 360 px |
 | --- | --- |
-| ![Dashboard at 1440 px](docs/images/dashboard-1440.png) | ![Dashboard at 360 px](docs/images/dashboard-360.png) |
+| ![Dashboard at 1200 px](docs/images/dashboard-1200.png) | ![Dashboard at 360 px](docs/images/dashboard-360.png) |
 
-| Advanced settings — 1440 px | Advanced settings — 360 px |
+| Advanced settings — 1200 px | Advanced settings — 360 px |
 | --- | --- |
-| ![Advanced settings at 1440 px](docs/images/advanced-1440.png) | ![Advanced settings at 360 px](docs/images/advanced-360.png) |
+| ![Advanced settings at 1200 px](docs/images/advanced-1200.png) | ![Advanced settings at 360 px](docs/images/advanced-360.png) |
 
 Screenshots come from the local preview harness (`tools/preview.py`) with demo data; the
 layout, labels and chart geometry are the ones the router renders in the Vantage theme.

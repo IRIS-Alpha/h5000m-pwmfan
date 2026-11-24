@@ -171,6 +171,10 @@ return view.extend({
 				+ 'background:color-mix(in srgb,var(--v-surface,var(--s1,light-dark(#ffffff,#1c2129))) 94%,transparent);'
 				+ '-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,.16)}',
 			'.pf-actions .pf-actions-hint{flex:1 1 auto;min-width:0;margin-right:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:18px;color:' + muted + '}',
+			/* On a phone the three buttons leave the pending hint about 35px wide, so
+			   "no unsaved changes" collapsed to an ellipsis. Give the hint its own
+			   line and let the buttons sit below it. */
+			'@media (max-width: 480px){.pf-actions{flex-wrap:wrap}.pf-actions .pf-actions-hint{flex:1 0 100%;white-space:normal;overflow:visible;text-overflow:clip}}',
 			'.pwmfan-advanced .pf-unit{flex:0 0 30px;width:30px;text-align:left;font-family:inherit;font-size:13px;line-height:1;position:relative;top:0;color:' + muted + ';background:transparent;font-variant-numeric:tabular-nums}',
 			/* Vantage lifts field text to 16px on touch and narrow screens (to stop iOS
 			   zooming); the unit has to follow, otherwise it sits a size and a baseline
