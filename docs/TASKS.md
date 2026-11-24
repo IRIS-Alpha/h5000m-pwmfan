@@ -542,3 +542,4 @@ feed succeeded (translation package, no `--allow-untrusted`). Firmware-side inte
   重生成补丁（7,740 B，7 个文件，`git apply -R --check` 在目标仓库干净通过）；`bash -n` 覆盖 Packages.sh 与四个受影响的 run 块，
   `yaml.safe_load` 解析通过。`docs/FIRMWARE_INTEGRATION.md` 按实际改动重写（旧插件来源、三道守卫、恢复旧插件的做法）。
 - 2026-11-24：高级设置按确认结构重排为九张卡片（内核保护接管 → 温度保护 → 风扇输出设置 → 降速迟滞 → 启动助推 → 风扇曲线设置 → 温度监控设置 → 故障响应 → 进程守护）。`protection_temp` 更名“保护锚点”，`min_pwm`/`max_pwm` 拆到“风扇输出设置”，`early_reboot`/`early_reboot_temp` 上移到“内核保护接管”，曲线/监控两组删除副标题，监控两个字段改名“监控有效窗口”“监控刷新间隔”，故障响应与进程守护移到末尾；重启温度随开关显示（自绑 checkbox，LuCI `depends()` 看不到移进开关的 input）。`tests/preview.mjs` 增卡片顺序与“重启温度随开关”两条断言。51 bats + 129 条翻译 + 预览检查全部通过。
+- 2026-11-24：高级设置的单位字号由 12px 调到 13px，与输入框、下拉框、标签同字号；单位仍是控件右侧 30px 的透明列、muted 色，数值右对齐。预览 390/1200 实测 `font-size` 全部 13px、单位与控件垂直中线偏差 0、页面与行内溢出 0；51 bats + 129 条翻译 + 预览检查通过。

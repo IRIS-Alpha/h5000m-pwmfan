@@ -171,7 +171,7 @@ return view.extend({
 				+ 'background:color-mix(in srgb,var(--v-surface,var(--s1,light-dark(#ffffff,#1c2129))) 94%,transparent);'
 				+ '-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,.16)}',
 			'.pf-actions .pf-actions-hint{flex:1 1 auto;min-width:0;margin-right:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:18px;color:' + muted + '}',
-			'.pwmfan-advanced .pf-unit{flex:0 0 30px;width:30px;text-align:left;font-size:12px;line-height:1;color:' + muted + ';background:transparent;font-variant-numeric:tabular-nums}',
+			'.pwmfan-advanced .pf-unit{flex:0 0 30px;width:30px;text-align:left;font-size:13px;line-height:1;color:' + muted + ';background:transparent;font-variant-numeric:tabular-nums}',
 			'.pwmfan-advanced .cbi-value > .pf-wide-note{grid-column:1 / -1;margin:6px 0 0;max-width:78ch;font-size:12px;line-height:18px}',
 			'.pwmfan-advanced .cbi-value.pf-note-row{padding:8px 0;row-gap:4px}',
 			'.pwmfan-advanced .cbi-value.pf-note-row > .cbi-value-field{min-height:0;padding:0;line-height:1.5}',
