@@ -33,7 +33,8 @@ run_shellcheck() {
 		tools/l1-release.sh \
 		tools/l1-poke.sh \
 		tools/build-apk.sh \
-		tools/publish-apk-repo.sh
+		tools/publish-apk-repo.sh \
+		tools/version.sh
 }
 
 run_shfmt() {
@@ -51,7 +52,8 @@ run_shfmt() {
 		tools/l1-release.sh \
 		tools/l1-poke.sh \
 		tools/build-apk.sh \
-		tools/publish-apk-repo.sh
+		tools/publish-apk-repo.sh \
+		tools/version.sh
 }
 
 require_tool shellcheck
@@ -60,6 +62,7 @@ require_tool bats
 require_tool node
 require_tool msgfmt
 
+sh tools/version.sh check
 if command -v shellcheck >/dev/null 2>&1; then run_shellcheck; fi
 if command -v shfmt >/dev/null 2>&1; then run_shfmt; fi
 if command -v bats >/dev/null 2>&1 && [ -d tests ]; then bats tests; fi

@@ -30,6 +30,14 @@ PUSH=${1:-}
 	exit 1
 }
 
+# A published package has to be reproducible from the repository, so refuse a
+# dirty tree: the file would otherwise exist nowhere else.
+if [ -n "$(git -C "$REPO" status --porcelain)" ] && [ "${ALLOW_DIRTY:-0}" != 1 ]; then
+	echo "publish-apk-repo: working tree is dirty; commit first (ALLOW_DIRTY=1 to override)" >&2
+	exit 1
+fi
+printf 'publishing %s\n' "$(sh "$REPO/tools/version.sh")"
+
 command -v "$APK_BIN" >/dev/null 2>&1 || {
 	echo "publish-apk-repo: $APK_BIN not found; set APK=/path/to/apk-tools-3" >&2
 	exit 1

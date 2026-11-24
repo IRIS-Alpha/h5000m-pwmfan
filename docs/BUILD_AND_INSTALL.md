@@ -57,6 +57,48 @@ Things the script does that are easy to miss when packing by hand:
 - It reproduces the `post-install`/`pre-deinstall`/`post-upgrade` scripts `luci.mk` generates: enable and start the
   service, run `default_postinst`, and set `PKG_UPGRADE=1` on upgrade.
 
+## Versioning
+
+`luci-app-h5000m-pwmfan/Makefile` holds the only copy of the number
+(`PKG_VERSION`, `PKG_RELEASE`). `tools/build-apk.sh` reads it from there, so the
+source tree, the package and the published feed cannot drift apart, and
+`tools/check.sh` fails if the build script ever hard-codes a version again.
+
+The number means the same thing it means for any package:
+
+| Field | Bump it when | Example |
+| --- | --- | --- |
+| `MAJOR` | the requirement baseline changes | V6 adopted → `6.0.0` |
+| `MINOR` | a user-visible behaviour change or a new setting | new guard option → `5.1.0` |
+| `PATCH` | a fix that adds no setting | chart stops drawing → `5.0.1` |
+| `RELEASE` | the same code is packaged again: dependency, translation, docs inside the package | `5.0.0-r2` |
+
+Bumping major, minor or patch resets `RELEASE` to 0. A translation or packaging
+change alone takes a `RELEASE` bump — it never carries a behaviour change with it.
+
+```sh
+sh tools/version.sh              # 5.0.0-r2
+sh tools/version.sh bump patch   # 5.0.1-r0
+sh tools/version.sh bump release # 5.0.1-r1, packaging only
+sh tools/version.sh check        # what tools/check.sh runs
+```
+
+Two rules follow from how `apk` compares versions:
+
+- A device only installs a **strictly higher** version, so every published build
+  gets a new number. Publishing the same version with different files is not an
+  update, it is a silent no-op.
+- The `luci-i18n-h5000m-pwmfan-zh-cn` package keeps its date version
+  (`0.<UTC date>.<UTC time>`), which rises on every build by construction.
+
+Publishing is from a tagged commit of a clean tree (`tools/publish-apk-repo.sh`
+refuses a dirty one):
+
+```sh
+git tag -a v5.0.0-r2 -m "5.0.0-r2"
+sh tools/publish-apk-repo.sh --push
+```
+
 ## Reinstalling the same version
 
 `apk` treats an equal version as already installed, so editing a file and

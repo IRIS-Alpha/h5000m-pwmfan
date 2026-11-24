@@ -150,6 +150,15 @@
 
 ## Distribution
 
+- 2026-11-25: Versioning rule settled. `Makefile` is the only copy of
+  `PKG_VERSION`/`PKG_RELEASE`; `tools/build-apk.sh` reads it, `tools/version.sh`
+  bumps it (`patch` / `minor` / `major` / `release`) and `tools/check.sh` asserts
+  the build script carries no second copy. Publishing refuses a dirty tree. The
+  current release is **5.0.0-r2** (footer hint wraps at 480 px, version tooling).
+  The early-reboot guard stays device-level and is recorded in
+  `docs/REQUIREMENTS_V5.md` §18a.
+
+
 - 2026-11-25: A same-version reinstall is a no-op: `apk` sees `5.0.0-r1` installed
   and installs nothing, so edited view files only reach the router after
   `apk del luci-i18n-h5000m-pwmfan-zh-cn luci-app-h5000m-pwmfan` (both, because the

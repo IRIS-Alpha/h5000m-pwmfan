@@ -29,8 +29,15 @@ REPO=$(CDPATH="" cd -- "$(dirname -- "$0")/.." && pwd)
 APK_BIN=${APK:-apk}
 NAME=luci-app-h5000m-pwmfan
 PKG_URL=${PKG_URL:-https://github.com/IRIS-Alpha/h5000m-pwmfan}
-VERSION=5.0.0
-RELEASE=1
+# The version lives in the package Makefile so the feed, the source and the
+# device cannot disagree; tools/version.sh is the only thing that edits it.
+version_file=$REPO/luci-app-h5000m-pwmfan/Makefile
+VERSION=$(sed -n 's/^PKG_VERSION:=//p' "$version_file")
+RELEASE=$(sed -n 's/^PKG_RELEASE:=//p' "$version_file")
+[ -n "$VERSION" ] && [ -n "$RELEASE" ] || {
+	echo "build-apk: no PKG_VERSION/PKG_RELEASE in $version_file" >&2
+	exit 1
+}
 OUT=${OUT:-$REPO/build}
 SIGN_KEY=${APK_SIGN_KEY:-}
 I18N_NAME=luci-i18n-${NAME#luci-app-}-zh-cn
