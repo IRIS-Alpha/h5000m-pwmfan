@@ -255,6 +255,11 @@ async function advancedChecks() {
 	const toggles = await page.evaluate(() => [ ...document.querySelectorAll('.pf-toggle input[type=checkbox]') ]
 		.map((input) => input.closest('.cbi-value')?.dataset.name));
 	check('both switches are toggles', toggles.length === 2 && toggles.includes('enabled') && toggles.includes('early_reboot'), toggles.join(','));
+	const flippable = await page.evaluate(() => {
+		const box = document.querySelector('.cbi-value[data-name="enabled"] input[type=checkbox]');
+		return box ? { disabled: box.disabled, attr: box.hasAttribute('disabled') } : null;
+	});
+	check('the takeover switch is never disabled', flippable && flippable.disabled === false && flippable.attr === false, JSON.stringify(flippable));
 	const order = await page.evaluate(() => [ ...document.querySelectorAll('.pwmfan-advanced .cbi-value[data-name^=_group_]') ]
 		.map((row) => row.dataset.name));
 	const wantedOrder = [ '_group_kernel', '_group_temperature', '_group_output', '_group_downshift', '_group_boost',

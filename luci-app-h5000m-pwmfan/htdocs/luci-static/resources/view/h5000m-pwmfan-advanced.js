@@ -426,6 +426,13 @@ return view.extend({
 			var input = box ? box.querySelector('input[type="checkbox"]') : null;
 			if (!input) return;
 			if (row.classList.contains('pf-flag-row') && row.querySelector('label.pf-toggle input')) return;
+			/* The daemon is the gate: it proves the channel and refuses to take the fan
+			 * over when it cannot. Leaving the box disabled here only makes the page a
+			 * dead end, which is what a fresh flash used to look like. */
+			if (input.disabled) {
+				input.disabled = false;
+				input.removeAttribute('disabled');
+			}
 			var title = row.querySelector('.cbi-value-title');
 			var desc = row.querySelector('.cbi-value-description');
 			var main = E('div', { 'class': 'pf-flag-main' }, desc ? [title, desc] : [title]);
@@ -469,15 +476,16 @@ return view.extend({
 	// apply control made it look like nothing happened: people flip the switch,
 	// the change waits, the page reloads and the switch is off again.
 	bindTakeoverApply: function(formNode) {
-		var row = formNode.querySelector('[data-name="enabled"]');
-		var box = row ? row.querySelector('input[type="checkbox"]') : null;
+		/* Taking the fan over is a decision, not a field to leave staged: this one
+		 * switch saves and applies itself. Everything else keeps the button. */
+		var row = formNode.querySelector('.cbi-value[data-name="enabled"]');
+		var box = row ? row.querySelector('input[type=checkbox]') : null;
+		var self = this;
 		if (!box || box.dataset.pfApply === '1') return;
 		box.dataset.pfApply = '1';
-		box.addEventListener('change', L.bind(function() {
-			window.setTimeout(L.bind(function() {
-				this.handleSaveApply(null, '0');
-			}, this), 0);
-		}, this));
+		box.addEventListener('change', function() {
+			window.setTimeout(function() { self.handleSaveApply(null, '0'); }, 0);
+		});
 	},
 
 	bindTakeoverCheck: function(formNode) {
