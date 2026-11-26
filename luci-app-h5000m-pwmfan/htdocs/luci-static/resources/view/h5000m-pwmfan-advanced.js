@@ -465,6 +465,21 @@ return view.extend({
 	// The takeover gate needs evidence that this board can be driven at all.
 	// Asking for an SSH session after every reflash was not a reasonable price,
 	// so one bounded self-test behind a button produces the same evidence.
+	// The takeover switch is one decisive action, and staging it behind the
+	// apply control made it look like nothing happened: people flip the switch,
+	// the change waits, the page reloads and the switch is off again.
+	bindTakeoverApply: function(formNode) {
+		var row = formNode.querySelector('[data-name="enabled"]');
+		var box = row ? row.querySelector('input[type="checkbox"]') : null;
+		if (!box || box.dataset.pfApply === '1') return;
+		box.dataset.pfApply = '1';
+		box.addEventListener('change', L.bind(function() {
+			window.setTimeout(L.bind(function() {
+				this.handleSaveApply(null, '0');
+			}, this), 0);
+		}, this));
+	},
+
 	bindTakeoverCheck: function(formNode) {
 		if (uci.get(CONFIG, SECTION, 'takeover_verified') === '1') return;
 		var row = formNode.querySelector('.cbi-value[data-name="enabled"]');
@@ -516,6 +531,7 @@ return view.extend({
 				self.decorateNotes(formNode);
 				self.decorateUnits(formNode);
 				self.bindTakeoverCheck(formNode);
+			self.bindTakeoverApply(formNode);
 				self.markActions();
 			}, 30);
 		});
@@ -572,6 +588,7 @@ return view.extend({
 			}.bind(this));
 			this.bindEarlyHint(formNode);
 			this.bindTakeoverCheck(formNode);
+			this.bindTakeoverApply(formNode);
 			this.watchForm(formNode);
 			shared.applyTheme(shared.themeMode());
 			this._sensorTimer = window.setInterval(L.bind(this.refreshSensorOptions, this), 5000);
