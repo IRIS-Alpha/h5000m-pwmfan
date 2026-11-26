@@ -760,8 +760,10 @@ EOF_CYCLE
 	[ "$status" -eq 0 ]
 	[ "$output" = kernel ]
 	[ "$(cat "$channel/pwm1_enable")" = 2 ]
-	# The temperature sits below the coldest fan trip, so the stale level drops.
+	# The temperature sits below the coldest fan trip, so the stale level drops
+	# and the leftover duty is cleared before the channel is handed over.
 	[ "$(cat "$thermal/cooling_device0/cur_state")" = 0 ]
+	[ "$(cat "$channel/pwm1")" = 0 ]
 }
 
 @test "leaves the cooling level alone while the fan is still needed" {
@@ -780,4 +782,50 @@ EOF_CYCLE
 	[ "$status" -eq 0 ]
 	[ "$(cat "$channel/pwm1_enable")" = 2 ]
 	[ "$(cat "$thermal/cooling_device0/cur_state")" = 3 ]
+}
+
+@test "a daemon start with the plugin off hands the channel back to the kernel" {
+	fixture=$BATS_TEST_TMPDIR
+	controller="$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan"
+	lib="$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/lib/h5000m-pwmfan/controller-lib.sh"
+	sed -e '/^\. \/lib\/functions.sh$/d' -e "s|^\. /usr/lib/h5000m-pwmfan/controller-lib.sh$|. '$lib'|" \
+		-e "s|^RUNDIR=/var/run/h5000m-pwmfan$|RUNDIR='$fixture'|" -e '/^case "${1:-status}" in/,$d' \
+		"$controller" >"$fixture/controller"
+	mkdir -p "$fixture/thermal/thermal_zone0" "$fixture/thermal/cooling_device0" "$fixture/fan"
+	printf '33000\n' >"$fixture/thermal/thermal_zone0/temp"
+	ln -s ../cooling_device0 "$fixture/thermal/thermal_zone0/cdev0"
+	printf 'pwm-fan\n' >"$fixture/thermal/cooling_device0/type"
+	printf '3\n' >"$fixture/thermal/cooling_device0/cur_state"
+	printf '3\n' >"$fixture/thermal/thermal_zone0/cdev0_trip_point"
+	printf '40000\n' >"$fixture/thermal/thermal_zone0/trip_point_3_temp"
+	# The failsafe write of a stopped service left manual mode at full duty.
+	printf '255\n' >"$fixture/fan/pwm1"
+	printf '1\n' >"$fixture/fan/pwm1_enable"
+	cat >"$fixture/check-off" <<'EOF_OFF'
+set -eu
+fixture=$1
+. "$fixture/controller"
+config_load() { return 0; }
+config_get() {
+	case "$3" in
+	enabled) setting=0 ;;
+	mode) setting=fixed ;;
+	poll_interval) setting=2 ;;
+	history_range) setting=5 ;;
+	*) setting=$4 ;;
+	esac
+	eval "$1=\$setting"
+}
+collect_sensors() { CONTROL_TEMP_MC=33000; SAFETY_TEMP_MC=33000; MODEM_MIN_PWM=0; }
+find_fan() { printf '%s\n' "$fixture/fan/pwm1"; }
+read_effective_pwm() { cat "$fixture/fan/pwm1"; }
+THERMAL_DIR=$fixture/thermal
+apply_cycle
+[ "$(cat "$fixture/fan/pwm1_enable")" = 2 ] || exit 1
+[ "$(cat "$fixture/fan/pwm1")" = 0 ] || exit 1
+[ "$(cat "$fixture/thermal/cooling_device0/cur_state")" = 0 ] || exit 1
+grep -Fxq 'reason=not_enabled' "$STATUS_FILE" || exit 1
+EOF_OFF
+	run sh "$fixture/check-off" "$fixture"
+	[ "$status" -eq 0 ]
 }

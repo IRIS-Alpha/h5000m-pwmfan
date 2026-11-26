@@ -770,26 +770,23 @@ thermal_hand_back() (
 	[ -n "$pwm_path" ] || exit 1
 	mode=$(pwm_mode_file "$pwm_path") || exit 1
 	zone=$(thermal_fan_zone "$thermal_dir") || exit 1
-	printf '2\n' >"$mode" || exit 1
-	read -r temperature <"$zone/temp" || exit 1
+	read -r temperature <"$zone/temp" || temperature=
 	cold=$(thermal_fan_trips "$zone" | sed -n 1p) || cold=
 	cold_temp=${cold% *}
-	case "$temperature" in '' | *[!0-9]*)
-		printf 'kernel\n'
-		exit 0
-		;;
-	esac
-	case "$cold_temp" in '' | *[!0-9]*)
-		printf 'kernel\n'
-		exit 0
-		;;
-	esac
-	if [ "$temperature" -lt "$cold_temp" ]; then
+	# A governor only writes a duty when its level changes, and switching the
+	# channel to automatic does not re-apply the current level. A duty left over
+	# from the failsafe write therefore survives the switch: measured 2026-11-26,
+	# the fan kept running at 93/255 in automatic mode at 39 °C. Stopping the
+	# fan in manual mode first makes the hand-back real; when the board is hot
+	# the governor's own level is non-zero, so its next change takes over.
+	if is_uint "$temperature" && is_uint "$cold_temp" && [ "$temperature" -lt "$cold_temp" ]; then
+		pwm_write_manual "$pwm_path" 0 || exit 1
 		for cdev in "$thermal_dir"/cooling_device*; do
 			[ "$(cat "$cdev/type" 2>/dev/null)" = "pwm-fan" ] || continue
 			printf '0\n' >"$cdev/cur_state" 2>/dev/null || true
 		done
 	fi
+	printf '2\n' >"$mode" || exit 1
 	printf 'kernel\n'
 	exit 0
 )

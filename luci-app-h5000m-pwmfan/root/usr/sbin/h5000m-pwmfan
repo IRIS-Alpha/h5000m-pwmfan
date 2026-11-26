@@ -541,6 +541,14 @@ apply_cycle() {
 		was_owner=$ACTIVE_OWNER
 		release_fan
 		[ "$was_owner" = 1 ] && return
+		# release_fan only acts while this process still owns the channel. After
+		# a crash, a service stop or a reflash the flag is already off, and the
+		# channel can be left in manual mode at the failsafe duty — the governor
+		# would then never be able to change it. Hand it back on every disabled
+		# cycle; the helper is idempotent and cheap.
+		if [ -n "$PWM_FILE" ] || PWM_FILE=$(find_fan); then
+			thermal_hand_back "${THERMAL_DIR:-/sys/class/thermal}" "$PWM_FILE" >/dev/null || true
+		fi
 		effective=$(read_effective_pwm)
 		if [ "$ENABLED" = 1 ] && [ "$MODE" != kernel ]; then
 			write_status disabled takeover_pending -- "$effective"
