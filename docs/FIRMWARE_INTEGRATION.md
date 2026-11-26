@@ -1,8 +1,34 @@
 # 把风扇插件接进自定义固件的编译链
 
 目标仓库：`E:\WorkSpace\A20_Project\H5000M-CI-Qmodem-OP-git`（`imm-qmodenext` 分支）。
-补丁：`docs/patches/0001-fan-plugin-from-a-feed.patch`（7 个文件，`git apply --check` 与 `git apply -R --check` 都已验证）。
-状态：2026-11-24 已应用到目标仓库，提交 `218e31e3f`（**尚未推送**）。
+
+> **真相源是固件仓库，不是这个补丁。**
+> 改动已经在固件仓库里提交（`218e31e3f` 摘掉旧插件、`3e4941f00` 声明两条 feed 不设），
+> 那边是唯一需要维护的地方。本仓库的 `docs/patches/0001-fan-plugin-from-a-feed.patch`
+> 只是“从零复刻一次”的清单：固件仓库一旦又改了相关文件（比如重写 README、调整工作流），
+> 补丁就会落后，**不要拿它去覆盖固件仓库**，需要时按下面的方法重新生成。
+
+## 补丁与固件仓库的从属关系
+
+```
+固件仓库（真相源）  ──git diff 固定基线..HEAD──▶  插件仓库的 patch（一次性复刻件）
+        ▲                                                │
+        └──────── 只在重建整棵固件仓库时才使用 ◀──────────┘
+```
+
+重新生成（在固件仓库里跑，`c3ab8a2f6` 是接入本插件之前的最后一个提交）：
+
+```sh
+git diff c3ab8a2f6 HEAD -- \
+  Scripts/Packages.sh Scripts/check_defconfig.py \
+  Config/H5000M-qmodem.txt Config/H5000M-qmodem-next.txt Config/H5000M-modem-pro.txt \
+  .github/workflows/WRT-CORE.yml \
+  > /path/to/h5000m-pwmfan/docs/patches/0001-fan-plugin-from-a-feed.patch
+```
+
+不要用 `git diff c3ab8a2f6 HEAD` 的全量输出：固件仓库自己的 `README.md`、`index.html`、
+`Scripts/customize_luci_labels.py` 也在变，把它们塞进补丁只会在别处重建时覆盖掉别人的改版。
+现在是 **7 个路径、8,065 字节**；正向 `git apply --check` 与反向 `git apply -R --check` 都已验证。
 
 ## 为什么要改
 
@@ -76,6 +102,9 @@
 
 ## 怎么应用
 
+固件仓库里已经有 `218e31e3f` 与 `3e4941f00` 时，这一节可以整段跳过。
+只有从 `c3ab8a2f6` 之前的旧树重建、或补丁被确认落后时，才按下面的步骤走。
+
 ```sh
 cd /path/to/H5000M-CI-Qmodem-OP-git
 git apply --check docs/patches/0001-fan-plugin-from-a-feed.patch   # 先干跑
@@ -89,7 +118,8 @@ git apply -R     docs/patches/0001-fan-plugin-from-a-feed.patch    # 撤回
 
 - 构建日志出现 `h5000m: 已注册为 src-git feed 并安装到 package/feeds/h5000m/`；
 - `wrt/package/feeds/h5000m/luci-app-h5000m-pwmfan` 是符号链接（指向 `feeds/h5000m/…`）；
-- `bin/targets/*/*.manifest` 里有 `luci-app-h5000m-pwmfan - 5.0.0-r1`，且**没有** `luci-app-h5000m-fancontrol`；
+- `bin/targets/*/*.manifest` 里有 `luci-app-h5000m-pwmfan - <版本>`（跟着 feed 上的 tag 走，当前是 5.0.4-r1），
+  且**没有** `luci-app-h5000m-fancontrol`；
 - 刷机后 LuCI 出现「风扇」菜单，`/etc/config/h5000m_pwmfan` 带着默认值。
 
 ## 出了问题时
