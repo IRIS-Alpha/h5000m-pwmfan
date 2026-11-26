@@ -606,3 +606,9 @@ feed succeeded (translation package, no `--allow-untrusted`). Firmware-side inte
 - 11-24 构建的 `0.1.0-r2` 镜像里，视图含 `readonly=!verified`：全新刷机 `takeover_verified=0`，开关直接渲染成只读（`Temp/rootfs/.../h5000m-pwmfan-advanced.js` 可复现）。5.0.5 删掉该门禁，改由守护进程探测并补标记。
 - 5.0.5 镜像里开关可点，但拨动只产生 `uci set` 暂存；页面的“保存并应用”是下拉，提示又只数服务端已暂存改动，刷新后就回到关闭。5.0.6 改为拨动即保存并应用。
 - 5.0.7 把“拨动即应用”扩到所有开关行（`early_reboot` 同理），并在 `decorateFlags` 里清掉任何 `disabled` 属性；真机以 `enabled=0/kernel_takeover=0/takeover_verified=0` 复现首次开机状态，点一次轨道即 `Running · Plugin control`，刷新后仍为开。
+
+### 2026-11-26 — 出厂默认改为接管
+
+- 用户要求“开机默认接管”：`root/etc/config/h5000m_pwmfan` 的 `enabled`、`kernel_takeover` 由 `0` 改为 `1`，`takeover_verified` 仍留 0，由守护进程开机探测后置 1。
+- 语义边界：`/etc/config/*` 是 conffile，升级只旁置 `.apk-new`，所以老设备保持原设置；只有全新刷机（或不保留配置的 sysupgrade）才拿到新默认。
+- 安全边界：硬件写不了 PWM 时退化为 `takeover_pending`，风扇仍归内核；关闭开关仍走交还路径。

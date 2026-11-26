@@ -68,7 +68,7 @@ apk add luci-app-h5000m-pwmfan luci-i18n-h5000m-pwmfan-zh-cn
 仓库用项目密钥签名（`packaging/h5000m-apk.pem`，
 sha256 `d8827e250d7bbbb62acfc018e3e8fd5f29136dcd2b44c2ea569e44f2e1418aa0`），把公钥放进
 `/etc/apk/keys/` 之后就不需要 `--allow-untrusted`。安装后控制器处于**关闭**状态：风扇
-仍由内核管理，直到你在高级设置里打开「接管风扇控制」。
+默认由插件接管（出厂 `enabled=1`）；在高级设置里关掉「接管风扇控制」才会把风扇交还内核，关掉后风扇按内核的 40 / 85 / 115 °C 触点运行。
 
 ### 编入固件
 
@@ -152,7 +152,7 @@ packaging/                   APK 信任锚（只放公钥）
 
 | 键 | 含义 | 默认值 |
 | --- | --- | --- |
-| `enabled`、`kernel_takeover` | 接管开关（一起写入） | `0` / `0` |
+| `enabled`、`kernel_takeover` | 接管开关（一起写入） | `1` / `1` |
 | `mode`、`curve_mode` | 当前模式与曲线预设 | `balanced` |
 | `fixed_duty` | 固定请求，百分比 | `50` |
 | `min_pwm`、`max_pwm` | 非零请求下限 / 曲线输出上限（0–255） | `51` / `255` |

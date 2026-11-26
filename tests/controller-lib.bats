@@ -847,3 +847,13 @@ EOF_OFF
 	[ "$status" -eq 1 ]
 	chmod 644 "$pwm"
 }
+
+@test "the shipped defaults take the fan over" {
+	CFG="$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/etc/config/h5000m_pwmfan"
+
+	grep -Eq "^[[:space:]]*option enabled '1'$" "$CFG" || return 1
+	grep -Eq "^[[:space:]]*option kernel_takeover '1'$" "$CFG" || return 1
+
+	# Left at 0 on purpose: the daemon proves the channel and sets it on the first cycle.
+	grep -Eq "^[[:space:]]*option takeover_verified '0'$" "$CFG" || return 1
+}

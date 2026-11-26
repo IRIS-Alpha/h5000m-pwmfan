@@ -74,7 +74,7 @@ apk add luci-app-h5000m-pwmfan luci-i18n-h5000m-pwmfan-zh-cn
 The feed is signed with the project key (`packaging/h5000m-apk.pem`,
 sha256 `d8827e250d7bbbb62acfc018e3e8fd5f29136dcd2b44c2ea569e44f2e1418aa0`), so no
 `--allow-untrusted` is needed once the key is in `/etc/apk/keys/`. Installation leaves the
-controller **off**: the fan stays with the kernel until you turn on “Take over fan control”
+The plugin takes over by default (`enabled=1` out of the box); turning the switch off hands the fan back to the kernel, which then uses its 40 / 85 / 115 °C trip points.
 in the advanced settings.
 
 ### Baked into the firmware
@@ -159,7 +159,7 @@ form validates ranges on both sides.
 
 | Key | Meaning | Default |
 | --- | --- | --- |
-| `enabled`, `kernel_takeover` | takeover switch (written together) | `0` / `0` |
+| `enabled`, `kernel_takeover` | takeover switch (written together) | `1` / `1` |
 | `mode`, `curve_mode` | active mode and curve preset | `balanced` |
 | `fixed_duty` | fixed request, percent | `50` |
 | `min_pwm`, `max_pwm` | non-zero request floor / curve output ceiling (0–255) | `51` / `255` |
