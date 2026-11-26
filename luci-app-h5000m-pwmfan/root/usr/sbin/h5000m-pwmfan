@@ -394,8 +394,6 @@ load_settings() {
 	[ "$HISTORY_RANGE" -ge 5 ] || HISTORY_RANGE=5
 	[ "$HISTORY_RANGE" -le 360 ] || HISTORY_RANGE=360
 	HISTORY_KEEP=$(temperature_history_keep "$HISTORY_RANGE")
-	config_get DRIVE "$SECTION" drive curve
-	case "$DRIVE" in curve | duty) ;; *) return 1 ;; esac
 	config_get raw "$SECTION" protection_temp 90
 	SAFETY_TEMP=$(cfg_number "$raw" 80 100) || return 1
 	config_get raw "$SECTION" protection_radius 15
@@ -421,25 +419,16 @@ load_settings() {
 		case "$MODE" in
 		quiet)
 			preset='35:51,45:64,55:96,65:160,75:224,85:255'
-			duty=30
 			;;
 		balanced)
 			preset='30:64,42:96,54:144,66:200,76:240,84:255'
-			duty=50
 			;;
 		performance)
 			preset='25:128,34:160,43:192,52:224,61:240,70:255'
-			duty=80
 			;;
 		esac
-		if [ "$DRIVE" = duty ]; then
-			config_get raw "$SECTION" "duty_$MODE" "$duty"
-			DUTY=$(cfg_number "$raw" 0 100) || return 1
-			[ "$((DUTY % 10))" -eq 0 ] || return 1
-		else
-			config_get CURVE "$SECTION" "curve_$MODE" "$preset"
-			curve_validate "$CURVE" || return 1
-		fi
+		config_get CURVE "$SECTION" "curve_$MODE" "$preset"
+		curve_validate "$CURVE" || return 1
 		;;
 	manual | custom)
 		config_get CURVE "$SECTION" "curve_$MODE" '30:51,40:64,50:96,60:144,70:208,80:255'
@@ -453,11 +442,9 @@ load_settings() {
 # Prints "<applied> <raw>": the second field is what the mode asked for before
 # the floor and ceiling were applied, so the caller can report a floored request.
 requested_pwm() {
-	case "$MODE:$DRIVE" in
-	# Fixed mode has no curve, so it always uses the fixed duty even when a
-	# stale drive=curve was left in the config by hand.
-	fixed:*) value=$(((FIXED_DUTY * 255 + 50) / 100)) ;;
-	quiet:duty | balanced:duty | performance:duty) value=$(((DUTY * 255 + 50) / 100)) ;;
+	case "$MODE" in
+	# Fixed mode has no curve, so it always uses the fixed duty.
+	fixed) value=$(((FIXED_DUTY * 255 + 50) / 100)) ;;
 	*) value=$(curve_value "$CURVE" "$CONTROL_TEMP_C") || return 1 ;;
 	esac
 	if [ "$value" -eq 0 ]; then applied=0; else applied=$(clamp_pwm "$value" "$MIN_PWM" "$MAX_PWM") || return 1; fi
@@ -517,10 +504,7 @@ kernel_takeover_ready() {
 # A duty the user sets applies at once; only temperature-driven requests are
 # damped, so a curve cannot oscillate on sensor noise.
 hold_down_allowed() {
-	case "$MODE" in
-	target | custom) return 0 ;;
-	esac
-	[ "$DRIVE" = curve ]
+	[ "$MODE" != fixed ]
 }
 
 apply_cycle() {
@@ -620,7 +604,7 @@ apply_cycle() {
 	LAST_MODE=$MODE
 	# A changed policy is the user asking for a different output right now; the
 	# temperature-driven holds below must not keep the previous level alive.
-	policy="$MODE|$DRIVE|${CURVE:-}|${FIXED_DUTY:-}|${TARGET_TEMP:-}|${TARGET_IDLE:-}|$MIN_PWM|$MAX_PWM"
+	policy="$MODE|${CURVE:-}|${FIXED_DUTY:-}|${TARGET_TEMP:-}|${TARGET_IDLE:-}|$MIN_PWM|$MAX_PWM"
 	if [ "$policy" != "$LAST_POLICY" ]; then POLICY_FRESH=1; else POLICY_FRESH=0; fi
 	LAST_POLICY=$policy
 	if ! calculate_request; then

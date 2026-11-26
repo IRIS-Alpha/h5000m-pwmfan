@@ -327,10 +327,10 @@ return view.extend({
 			button.setAttribute('aria-pressed', String(button.dataset.mode === curveMode && !fixed));
 		});
 		var fixedTitle = this.methodTitle(_('Fixed request'), 'fixed', fixed, function() {
-			if (!fixed) self.scheduleCommit({ mode: 'fixed', drive: 'duty', enabled: '1' }, 'fixed');
+			if (!fixed) self.scheduleCommit({ mode: 'fixed', enabled: '1' }, 'fixed');
 		});
 		var curveTitle = this.methodTitle(_('Curve preset'), 'curve', !fixed, function() {
-			if (fixed) self.scheduleCommit({ mode: curveMode, curve_mode: curveMode, drive: 'curve', enabled: '1' }, 'curve');
+			if (fixed) self.scheduleCommit({ mode: curveMode, curve_mode: curveMode, enabled: '1' }, 'curve');
 		});
 		this.methodButtons = [ fixedTitle, curveTitle ];
 		// Selecting a curve mode should reveal its parameters: a collapsed panel hides the
@@ -457,7 +457,7 @@ return view.extend({
 			liveTimer = setTimeout(function() { track.classList.remove('is-live'); }, 700);
 		};
 		var apply = function() {
-			self.scheduleCommit({ mode: 'fixed', drive: 'duty', fixed_duty: Number(slider.value), enabled: '1' }, 'fixed');
+			self.scheduleCommit({ mode: 'fixed', fixed_duty: Number(slider.value), enabled: '1' }, 'fixed');
 		};
 		var step = function(delta) {
 			slider.value = clamp(Number(slider.value) + delta, 0, 100);
@@ -591,10 +591,6 @@ return view.extend({
 			var idle = Number(setting('target_idle_pwm', 0));
 			return [ { t: Math.max(0, start - blend), pwm: limit(idle) }, { t: start, pwm: limit(Math.max(low, idle)) },
 				{ t: target, pwm: max } ].filter(function(point, index, points) { return index === points.length - 1 || point.t !== points[index + 1].t; });
-		}
-		if (mode !== 'manual' && setting('drive', 'curve') === 'duty') {
-			var duty = Number(setting('duty_' + mode, { quiet: 30, balanced: 50, performance: 80 }[mode]));
-			return [ { t: 0, pwm: limit(Math.round(duty * 255 / 100)) }, { t: 100, pwm: limit(Math.round(duty * 255 / 100)) } ];
 		}
 		if (mode === 'manual' && this.pendingCurve) return this.pendingCurve;
 		var points = parseCurve(setting('curve_' + mode, CURVES[mode]));
@@ -1060,7 +1056,7 @@ return view.extend({
 		this.badge = E('span', { 'class': 'pf-live', role: 'status', 'data-state': 'idle' }, [ E('i', { 'aria-hidden': 'true' }), this.badgeText ]);
 		var modeButton = function(mode) {
 			return E('button', { type: 'button', 'class': 'btn pf-mode', 'data-mode': mode,
-				click: function() { self.scheduleCommit({ mode: mode, curve_mode: mode, drive: 'curve', enabled: '1' }, 'curve'); } }, MODES[mode]);
+				click: function() { self.scheduleCommit({ mode: mode, curve_mode: mode, enabled: '1' }, 'curve'); } }, MODES[mode]);
 		};
 		this.presetButtons = [ 'quiet', 'balanced', 'performance' ].map(modeButton);
 		this.driveButtons = [ 'target', 'manual' ].map(modeButton);

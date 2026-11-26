@@ -432,7 +432,6 @@ config_get() {
 	case "$3" in
 	enabled | kernel_takeover) setting=1 ;;
 	mode) setting=$TEST_MODE ;;
-	drive) setting=${TEST_DRIVE:-duty} ;;
 	fixed_duty) setting=$TEST_DUTY ;;
 	min_pwm) setting=${TEST_MIN_PWM:-51} ;;
 	poll_interval) setting=${TEST_POLL:-2} ;;
@@ -441,7 +440,6 @@ config_get() {
 	kick_ms) setting=0 ;;
 	hysteresis) setting=${TEST_HYST:-0} ;;
 	down_delay) setting=${TEST_DOWN_DELAY:-0} ;;
-	duty_quiet | duty_balanced | duty_performance) setting=${TEST_DUTY:-70} ;;
 	*) setting=$4 ;;
 	esac
 	eval "$1=\$setting"
@@ -547,37 +545,37 @@ TEST_DUTY=40 TEST_RANGE=abc load_settings || exit 1
 [ "$HISTORY_KEEP" = 600 ] || exit 1
 [ "$(temperature_history_keep 5)" = 600 ] || exit 1
 [ "$(temperature_history_keep 400)" = 43200 ] || exit 1
-# A stale drive left in the config must not send fixed mode down the curve path.
-MODE=fixed DRIVE=curve FIXED_DUTY=50 MIN_PWM=51 MAX_PWM=255
+# The mode alone decides where the request comes from.
+MODE=fixed FIXED_DUTY=50 MIN_PWM=51 MAX_PWM=255
 [ "$(requested_pwm)" = '128 128' ] || exit 1
-# A duty the user sets applies at once; temperature-driven requests keep the guards.
-MODE=fixed DRIVE=duty
+# A fixed request is a duty the user set, so it applies at once; every other
+# mode is curve-driven and keeps the downshift guards.
+MODE=fixed
 if hold_down_allowed; then exit 1; fi
-MODE=quiet DRIVE=duty
-if hold_down_allowed; then exit 1; fi
-MODE=quiet DRIVE=curve
-hold_down_allowed || exit 1
-MODE=target DRIVE=duty
-hold_down_allowed || exit 1
-MODE=custom DRIVE=duty
-hold_down_allowed || exit 1
-TEST_MODE=quiet TEST_DRIVE=duty TEST_DUTY=70 TEST_TEMP=61000 TEST_HYST=3 TEST_DOWN_DELAY=60
+for guarded in quiet balanced performance target custom manual; do
+	MODE=$guarded
+	hold_down_allowed || exit 1
+done
+# Switching presets means switching curves: 61 C is 240/255 on the performance
+# curve and 134/255 on the quiet one. A preset change is a deliberate request,
+# so the lower curve lands at once even while the downshift delay is long.
+TEST_MODE=performance TEST_TEMP=61000 TEST_HYST=3 TEST_DOWN_DELAY=600
 apply_cycle
-[ "$(cat "$fixture/pwm")" = 179 ]
-TEST_DUTY=40
-apply_cycle
-[ "$(cat "$fixture/pwm")" = 102 ]
-grep -Fxq 'requested_pwm=102' "$STATUS_FILE"
-# A preset change is a deliberate request: the old, higher output must not be held.
-TEST_MODE=performance TEST_DRIVE=curve TEST_TEMP=61000 TEST_HYST=3 TEST_DOWN_DELAY=600
-apply_cycle
-slow=$(cat "$fixture/pwm")
-[ "$slow" -gt 102 ]
+[ "$(cat "$fixture/pwm")" = 240 ]
 TEST_MODE=quiet
 apply_cycle
-fast=$(cat "$fixture/pwm")
-[ "$fast" -lt "$slow" ]
+[ "$(cat "$fixture/pwm")" = 134 ]
 grep -Fxq 'reason=mode' "$STATUS_FILE"
+# Inside one policy the same kind of drop is held: the temperature fell well
+# past the hysteresis band but the downshift delay has not run out yet.
+TEST_TEMP=52000
+apply_cycle
+[ "$(cat "$fixture/pwm")" = 134 ]
+grep -Fxq 'reason=down_delay_hold' "$STATUS_FILE"
+TEST_TEMP=48000
+TEST_DOWN_DELAY=0
+apply_cycle
+[ "$(cat "$fixture/pwm")" = 73 ]
 EOF_CYCLE
 	run sh "$fixture/check-cycle" "$fixture"
 	[ "$status" -eq 0 ]

@@ -24,6 +24,11 @@ setup() {
 	printf '#!/bin/sh\necho rebooted >"%s"\n' "$ROOT/rebooted" >"$WD_REBOOT_CMD"
 	chmod +x "$WD_LOGGER" "$WD_REBOOT_CMD"
 	: >"$ROOT/pwm1"
+	# The runner used by CI boots seconds before the suite runs, so a status
+	# file "60 seconds stale" would look older than the boot itself and skip
+	# the rescue. Pin a long, fake monotonic clock; tests that need another
+	# value export WD_UPTIME themselves.
+	export WD_UPTIME=1000000
 }
 
 status_file() {

@@ -47,7 +47,7 @@
 ## 升级与配置
 
 - `/etc/config/h5000m_pwmfan` 是 conffile：升级保留用户配置，新键由代码默认值兜底（不会静默改写文件）。
-- 随包发布的默认配置只列仍在使用的键。`manual_pwm`、`safety_temp` 已无任何引用；`duty_quiet`/`duty_balanced`/`duty_performance` 只服务代码里 `drive=duty` 的旧分支，而界面只会写 `drive=curve`/`duty`（固定请求），其 fallback 30/50/80 与原值相同，所以这三行也从默认文件移除，行为不变。
+- 随包发布的默认配置只列仍在使用的键。`manual_pwm`、`safety_temp` 已无任何引用；`duty_quiet`/`duty_balanced`/`duty_performance` 曾服务 `drive=duty` 的旧分支；该分支与 `drive` 键本身已于 2026-11-26 一并从代码里删除——模式已经决定请求来源：`fixed` 用 `fixed_duty`，其他模式一律走曲线，没有两套输出可切换。
 - 包依赖 `libc` 与 `kmod-hwmon-pwmfan`；不含内核模块本体。
 - 面板上“接管风扇控制”开关同时写 `enabled` 与 `kernel_takeover` 两个键，读取时取两者的与。
 
