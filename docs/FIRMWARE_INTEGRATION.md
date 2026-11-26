@@ -27,13 +27,31 @@
 | 文件 | 改动 |
 |---|---|
 | `Scripts/Packages.sh` | ① 删掉 FAN789 那行 `UPDATE_PACKAGE`；② 新增 `REGISTER_H5000M_FEED()`：往 `../feeds.conf`（不存在则 `feeds.conf.default`）追加 `src-git h5000m https://github.com/IRIS-Alpha/h5000m-pwmfan.git`，再 `scripts/feeds update/install -a -p h5000m`；在 QModem 分支之后按 `case "${WRT_CONFIG}" in *H5000M*)` 调用 |
-| `Config/H5000M-qmodem-next.txt`<br>`Config/H5000M-qmodem.txt`<br>`Config/H5000M-modem-pro.txt` | `luci-app-h5000m-fancontrol=n`（保留，防它从别处再进来），`luci-app-h5000m-pwmfan=y` + `luci-i18n-h5000m-pwmfan-zh-cn=y` |
+| `Config/H5000M-qmodem-next.txt`<br>`Config/H5000M-qmodem.txt`<br>`Config/H5000M-modem-pro.txt` | `luci-app-h5000m-fancontrol=n`（保留，防它从别处再进来），`luci-app-h5000m-pwmfan=y` + `luci-i18n-h5000m-pwmfan-zh-cn=y`；另加两行 `# CONFIG_FEED_h5000m is not set` / `# CONFIG_FEED_qmodem is not set`（见下一节） |
 | `Scripts/check_defconfig.py` | H5000M 的必备符号从旧的 `luci-app-h5000m-fancontrol` 换成 `luci-app-h5000m-pwmfan`，并加一条 `kmod-hwmon-pwmfan`（`pwm1` 所在的 `pwm_fan` 模块） |
 | `.github/workflows/WRT-CORE.yml` | 在 **Package Firmware** 步骤、删 manifest 之前加守卫：H5000M 的 manifest 必须含 `luci-app-h5000m-pwmfan`，否则 `::error::` 并退出 |
-| `README.md` | 功能点里的旧包名换成 `luci-app-h5000m-pwmfan` 与实际能力描述 |
+| `README.md` | 功能点里的旧包名换成 `luci-app-h5000m-pwmfan` 与实际能力描述（固件仓库后来整体重写 README，所以补丁不再包含这个文件，避免覆盖它自己的改版） |
 
 三个变体都是 H5000M 硬件，所以都换了；AP3000M / X86 配置不匹配 `*H5000M*`，既不会克隆仓库也不会打开符号，
 它们自己的 `luci-app-airpi-fancontrol` 逻辑一行没动。
+
+## 两条 `# CONFIG_FEED_… is not set` 是干什么的
+
+`include/feeds.mk` 为每个“已安装、且 `CONFIG_FEED_<name>` 为真”的 feed 往镜像里的
+`/etc/apk/repositories.d/distfeeds.list` 写一行 `%U/packages/%A/<feed>/packages.adb`
+（`%U` = `downloads.immortalwrt.org/snapshots`，`%A` = `aarch64_cortex-a53`），而 `scripts/feeds`
+给每个 feed 生成的 `config FEED_<name>` 默认是 `y`。官方五个 feed 在下载站有二进制仓库；
+我们这两个是源码 feed（`src-git` / `src-link`），下载站从来没有对应目录，于是设备上多出两条 404：
+
+| 命令 | 带这两行 | 不带 |
+|---|---|---|
+| `apk update` | 返回 **2**（`2 unavailable, 0 stale`） | 返回 0 |
+| `apk upgrade` | **拒绝执行**，rc=99，要求 `--force-missing-repositories` | 正常执行 |
+| `apk add <包名>` | 正常 | 正常 |
+
+构建期完全不访问这些 URL——两个 feed 的包是从源码 `feeds install` 进 `package/feeds/` 再编的——所以影响只在设备运行时。
+它不是“多一行警告”，而是把系统级 `apk upgrade` 整个挡住。三条 H5000M 配置各加两行声明为未设置；
+写 `FEED_<name>=m` 会让那两行变成注释，效果相同并保留可读性，两种写法任选。
 
 ## 为什么是 src-git，而不是 UPDATE_PACKAGE 或 src-link
 

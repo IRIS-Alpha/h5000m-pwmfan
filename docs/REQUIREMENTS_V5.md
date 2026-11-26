@@ -153,7 +153,7 @@ V1（`docs/archive/REQUIREMENTS_v1.md`）、V3 早期条目与 V4 续接包（`d
 本功能暂名为“温度保护”。检查了固件中的旧 `luci-app-h5000m-fancontrol` 控制器，以及本包 `h5000m-pwmfan` 控制器；两者的自动/曲线调速均没有“温度异常时在曲线请求上加 20 个百分点”的实现。
 
 - 旧 `h5000m-fancontrol`：自动模式先由选定温度源计算曲线 PWM，再将 CPU thermal cooling map 得出的 cooling floor、5G modem throttle floor 与曲线请求取较高值。若无法取得有效控制温度或曲线无效，使用故障全速输出。CPU trip/map 优先从设备树读取；旧固件回退阈值为 38°C、83°C、113°C，对应 cooling state，再映射到 PWM cooling level。进入 `kernel` 模式会释放用户态热控并由内核路径负责。
-- 新 `h5000m-pwmfan`：收集可用温度源，最高有效温度用于独立的高温判断；默认 `safety_temp=85°C`，达到阈值即直接请求 PWM 255（100%），否则按模式曲线计算。5G modem thermal throttle 可设置请求下限。没有有效温度、配置/曲线无效或 PWM 写入失败时走全速故障策略；`kernel` 模式释放插件控制权。
+- 新 `h5000m-pwmfan`：收集可用温度源，最高有效温度用于独立的高温判断；保护锚点默认 90 °C（`protection_temp`），越过锚点即直接请求 PWM 255（100%），否则按模式曲线计算。5G modem thermal throttle 可设置请求下限。没有有效温度、配置/曲线无效或 PWM 写入失败时走全速故障策略；`kernel` 模式释放插件控制权。
 - 温度宽限：单次读数无效不等于传感器故障。控制器沿用上一有效读数最多两个控制周期（`STALE_LIMIT = poll_interval * 2`），状态写 `stale_temperature=1`，仪表盘显示蓝色「温度过期」芯片，风扇按上一读数继续；超过宽限仍无有效读数才进入 `failsafe no_valid_temperature` 全速。理由是热电偶偶发一次读空时不应把风扇顶到 100%，也不应在没有读数时继续按旧值无限期运行。
 - 这两类逻辑需区分：高温阈值触发属于有效读数下的温度保护；传感器缺失/故障、配置异常、写入失败属于故障全速；CPU thermal cooling floor 和 modem throttle floor 则是其他控制来源提出的输出下限。它们都不是曲线输出 +20 个百分点。
 - `kernel`/未接管是控制权归属，不等于插件温度保护正在运行。内核自主时插件不应再叠加自己的 PWM 增量；如果以后支持保护增强，须先明确 ownership、内核 cooling map 和插件写入之间的仲裁。

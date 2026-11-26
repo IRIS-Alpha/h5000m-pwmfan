@@ -1,8 +1,16 @@
 diff --git a/.github/workflows/WRT-CORE.yml b/.github/workflows/WRT-CORE.yml
-index e2402139c..6c151e0e5 100644
+index e2402139c..9f4339dfc 100644
 --- a/.github/workflows/WRT-CORE.yml
 +++ b/.github/workflows/WRT-CORE.yml
-@@ -853,6 +853,16 @@ jobs:
+@@ -485,6 +485,7 @@ jobs:
+           cd ./wrt/package/
+ 
+           $GITHUB_WORKSPACE/Scripts/Packages.sh
++          python3 "$GITHUB_WORKSPACE/Scripts/customize_luci_labels.py" "$PWD" "$WRT_VARIANT"
+           $GITHUB_WORKSPACE/Scripts/Handles.sh
+ 
+       - name: Custom Settings
+@@ -853,6 +854,16 @@ jobs:
            if [[ $WRT_TEST != 'true' ]]; then
              echo "WRT_KVER=$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^kernel - \K[\d\.]+' {} \;)" >> $GITHUB_ENV
              echo "WRT_LIST=$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^luci-(app|theme)[^ ]*' {} \; | tr '\n' ' ')" >> $GITHUB_ENV
@@ -20,10 +28,10 @@ index e2402139c..6c151e0e5 100644
              find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
  
 diff --git a/Config/H5000M-modem-pro.txt b/Config/H5000M-modem-pro.txt
-index de6def4da..9cf1bdfeb 100644
+index de6def4da..99d1cb7e3 100644
 --- a/Config/H5000M-modem-pro.txt
 +++ b/Config/H5000M-modem-pro.txt
-@@ -16,4 +16,7 @@ CONFIG_PACKAGE_nand-utils=y
+@@ -16,4 +16,13 @@ CONFIG_PACKAGE_nand-utils=y
  CONFIG_PACKAGE_cpufreq=y
  
  # H5000M 风扇控制
@@ -32,11 +40,17 @@ index de6def4da..9cf1bdfeb 100644
 +# 插件改由 h5000m-pwmfan feed 提供；旧 fancontrol 与它抢同一路 pwm1，必须二选一
 +CONFIG_PACKAGE_luci-app-h5000m-pwmfan=y
 +CONFIG_PACKAGE_luci-i18n-h5000m-pwmfan-zh-cn=y
++
++# 软件源：自定义 feed 只在构建机有源码，下载站没有对应的二进制仓库。
++# 不声明为未设置时，镜像的 distfeeds.list 会带上 h5000m 与 qmodem 两行，
++# 设备上 apk update 返回 2、apk upgrade 直接拒绝执行（rc=99）。
++# CONFIG_FEED_h5000m is not set
++# CONFIG_FEED_qmodem is not set
 diff --git a/Config/H5000M-qmodem-next.txt b/Config/H5000M-qmodem-next.txt
-index a6ce92b3f..197261ab0 100644
+index a6ce92b3f..619d8d0cb 100644
 --- a/Config/H5000M-qmodem-next.txt
 +++ b/Config/H5000M-qmodem-next.txt
-@@ -18,4 +18,7 @@ CONFIG_PACKAGE_nand-utils=y
+@@ -18,4 +18,13 @@ CONFIG_PACKAGE_nand-utils=y
  CONFIG_PACKAGE_cpufreq=y
  
  # H5000M 风扇控制
@@ -45,11 +59,17 @@ index a6ce92b3f..197261ab0 100644
 +# 插件改由 h5000m-pwmfan feed 提供；旧 fancontrol 与它抢同一路 pwm1，必须二选一
 +CONFIG_PACKAGE_luci-app-h5000m-pwmfan=y
 +CONFIG_PACKAGE_luci-i18n-h5000m-pwmfan-zh-cn=y
++
++# 软件源：自定义 feed 只在构建机有源码，下载站没有对应的二进制仓库。
++# 不声明为未设置时，镜像的 distfeeds.list 会带上 h5000m 与 qmodem 两行，
++# 设备上 apk update 返回 2、apk upgrade 直接拒绝执行（rc=99）。
++# CONFIG_FEED_h5000m is not set
++# CONFIG_FEED_qmodem is not set
 diff --git a/Config/H5000M-qmodem.txt b/Config/H5000M-qmodem.txt
-index a6ce92b3f..197261ab0 100644
+index a6ce92b3f..619d8d0cb 100644
 --- a/Config/H5000M-qmodem.txt
 +++ b/Config/H5000M-qmodem.txt
-@@ -18,4 +18,7 @@ CONFIG_PACKAGE_nand-utils=y
+@@ -18,4 +18,13 @@ CONFIG_PACKAGE_nand-utils=y
  CONFIG_PACKAGE_cpufreq=y
  
  # H5000M 风扇控制
@@ -58,19 +78,12 @@ index a6ce92b3f..197261ab0 100644
 +# 插件改由 h5000m-pwmfan feed 提供；旧 fancontrol 与它抢同一路 pwm1，必须二选一
 +CONFIG_PACKAGE_luci-app-h5000m-pwmfan=y
 +CONFIG_PACKAGE_luci-i18n-h5000m-pwmfan-zh-cn=y
-diff --git a/README.md b/README.md
-index 3a6b3bade..59dbb5be1 100644
---- a/README.md
-+++ b/README.md
-@@ -225,7 +225,7 @@ Rust 后端用**官方 Rust SDK**（rustup stable + `aarch64-unknown-linux-musl`
- 
- 
- ### 2. 硬件风扇温控与多网切换
--- **双温区联动风扇控制 (`luci-app-h5000m-fancontrol`)**：定时轮询 CPU 与模组硬件传感器，通过阶梯 PWM 曲线实现静音与强效散热平衡；
-+- **双温区联动风扇控制 (`luci-app-h5000m-pwmfan`)**：以传感器为输入的自动曲线、目标温度驱动与固定占空比三种模式，接管期间仍保留内核热区保护；
- - **多网络智能切换 (`luci-app-h5000m-netmode`)**：支持“纯 5G”、“纯 WAN 有线”及“主备热备 / 负载均衡”三档模式，配合 `mwan3` 探针实现毫秒级容灾切流；
- - **AP3000M EEPROM 自动化射频恢复**：开机自启服务 `99-ap3000m-eeprom` 自动提取物理 MAC 并写入 factory 分区，激活 Wi-Fi 6 射频。
- 
++
++# 软件源：自定义 feed 只在构建机有源码，下载站没有对应的二进制仓库。
++# 不声明为未设置时，镜像的 distfeeds.list 会带上 h5000m 与 qmodem 两行，
++# 设备上 apk update 返回 2、apk upgrade 直接拒绝执行（rc=99）。
++# CONFIG_FEED_h5000m is not set
++# CONFIG_FEED_qmodem is not set
 diff --git a/Scripts/Packages.sh b/Scripts/Packages.sh
 index b5c42b5e0..358466ad8 100644
 --- a/Scripts/Packages.sh
