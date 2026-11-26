@@ -592,3 +592,5 @@ feed succeeded (translation package, no `--allow-untrusted`). Firmware-side inte
   `yaml.safe_load` 解析通过。`docs/FIRMWARE_INTEGRATION.md` 按实际改动重写（旧插件来源、三道守卫、恢复旧插件的做法）。
 - 2026-11-24：高级设置按确认结构重排为九张卡片（内核保护接管 → 温度保护 → 风扇输出设置 → 降速迟滞 → 启动助推 → 风扇曲线设置 → 温度监控设置 → 故障响应 → 进程守护）。`protection_temp` 更名“保护锚点”，`min_pwm`/`max_pwm` 拆到“风扇输出设置”，`early_reboot`/`early_reboot_temp` 上移到“内核保护接管”，曲线/监控两组删除副标题，监控两个字段改名“监控有效窗口”“监控刷新间隔”，故障响应与进程守护移到末尾；重启温度随开关显示（自绑 checkbox，LuCI `depends()` 看不到移进开关的 input）。`tests/preview.mjs` 增卡片顺序与“重启温度随开关”两条断言。51 bats + 129 条翻译 + 预览检查全部通过。
 - 2026-11-24：高级设置的单位字号由 12px 调到 13px，与输入框、下拉框、标签同字号；单位仍是控件右侧 30px 的透明列、muted 色，数值右对齐。预览 390/1200 实测 `font-size` 全部 13px、单位与控件垂直中线偏差 0、页面与行内溢出 0；51 bats + 129 条翻译 + 预览检查通过。
+
+- 2026-11-26：重刷后接管不可用，定位到三处并修复。(1) `takeover_verified` 刷机归零、界面无重新核验路径 → 新增「核验接管条件」按钮与 `h5000m-pwmfan-takeover-check`（写一个测试占空比、读回、还原，通过后自己写标记），ACL 增加 `read.file` exec；(2) 释放语义从“写 255 后不管”改为交还内核（`pwm1_enable=2` + 温度低于最冷触点时 `cur_state=0`），只有交还失败才写 255；(3) 心跳年龄改用 `uptime=` 单调时钟，墙钟跳变与“早于本次开机的时间戳”不再触发假救援（实测假救援 158741 s）。新增 4 项 lib 测试与 3 项看门狗测试，58/58 通过。

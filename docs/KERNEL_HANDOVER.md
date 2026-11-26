@@ -50,7 +50,16 @@ Option B, phrased as a **global fan takeover** (`docs/REQUIREMENTS_V5.md` §17):
 
 - While enabled, the plugin drives the fan at every temperature. The claim that the kernel thermal zone keeps the fan above 100 °C is dropped; CPU throttling and the 125 °C critical shutdown stay with the kernel.
 - Takeover now requires evidence: `kernel_takeover=1` **and** `takeover_verified=1`, a writable PWM channel, and a cooling device whose `type` is `pwm-fan`. Until then the daemon keeps reporting `state=disabled reason=takeover_pending` and leaves the fan released.
-- `takeover_verified` is set by hand only after the bounded live test below, and defaults to `0` in `root/etc/config/h5000m_pwmfan`.
+- `takeover_verified` is granted only after a bounded live test, and defaults to `0` in `root/etc/config/h5000m_pwmfan`.
+
+## After a reflash
+
+The flag lives in `/etc/config/h5000m_pwmfan`, so a reflash brings it back as `0`: the switch reads "not verified yet"
+and stays locked. That is the gate, not a fault. Open the advanced page and press **核验接管条件 / Run the check** in the
+kernel group. The helper (`root/usr/sbin/h5000m-pwmfan-takeover-check`) writes one test duty, reads it back, restores
+the channel and its mode, and only then writes the flag; the switch unlocks on the reload. If the button reports a
+failure, use the manual procedure below — the verdict names what is missing (`no-pwm`, `not-ready`, `write-failed`,
+`read-mismatch`, `commit-failed`).
 
 ## Options
 

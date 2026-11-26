@@ -64,6 +64,19 @@ status_field() (
 	printf '%s' "$value"
 )
 
+# Seconds since boot. Heartbeat age is measured on this clock: the board RTC
+# still holds the last shutdown until NTP steps the system clock, and a step
+# would otherwise turn a fresh status into an ancient one (measured 2026-11-26).
+uptime_now() {
+	up=0
+	if [ -n "${WD_UPTIME:-}" ]; then
+		printf '%s\n' "$WD_UPTIME"
+		return 0
+	fi
+	{ read -r up _ </proc/uptime; } 2>/dev/null || up=0
+	printf '%s\n' "${up%%.*}"
+}
+
 find_pwm() (
 	for candidate in /sys/class/hwmon/hwmon*/pwm1; do
 		[ -w "$candidate" ] || continue
@@ -168,8 +181,26 @@ rescue() {
 # Returns non-zero when it acted, so the caller can back off.
 check_once() {
 	stamp=$(status_field updated_at)
-	case "$stamp" in '' | *[!0-9]*) return 0 ;; esac
-	age=$(($1 - stamp))
+	uptime_stamp=$(status_field uptime)
+	uptime_now_s=$(uptime_now)
+	age=
+	# Prefer the monotonic heartbeat. The wall clock can jump by days when the
+	# RTC is corrected at boot, which used to look like a controller that had
+	# been silent for over a day (measured 2026-11-26).
+	case "$uptime_stamp" in '' | *[!0-9]*) uptime_stamp= ;; esac
+	case "$uptime_now_s" in '' | *[!0-9]*) uptime_now_s= ;; esac
+	if [ -n "$uptime_stamp" ] && [ -n "$uptime_now_s" ] && [ "$uptime_stamp" -le "$uptime_now_s" ]; then
+		age=$((uptime_now_s - uptime_stamp))
+	fi
+	if [ -z "$age" ]; then
+		case "$stamp" in '' | *[!0-9]*) return 0 ;; esac
+		age=$(($1 - stamp))
+		# A stamp from before this boot says nothing about a live controller.
+		[ "$age" -ge 0 ] || return 0
+		if [ -n "$uptime_now_s" ] && [ "$age" -gt "$uptime_now_s" ]; then
+			return 0
+		fi
+	fi
 	if [ "$age" -gt "$grace" ]; then
 		rescue
 		reboot_watch "$1"

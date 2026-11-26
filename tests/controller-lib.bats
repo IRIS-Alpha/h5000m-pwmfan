@@ -723,3 +723,61 @@ EOF_CYCLE
 	[ "$status" -ne 0 ]
 	[ -z "$output" ]
 }
+
+@test "publishes a manual duty through the channel mode file" {
+	channel="$BATS_TEST_TMPDIR/hwmon0"
+	mkdir -p "$channel"
+	printf '0\n' >"$channel/pwm1"
+	printf '2\n' >"$channel/pwm1_enable"
+	run pwm_write_manual "$channel/pwm1" 51
+	[ "$status" -eq 0 ]
+	[ "$(cat "$channel/pwm1")" = 51 ]
+	[ "$(cat "$channel/pwm1_enable")" = 1 ]
+}
+
+@test "refuses a channel whose mode cannot be switched" {
+	channel="$BATS_TEST_TMPDIR/plain"
+	mkdir -p "$channel"
+	printf '0\n' >"$channel/pwm1"
+	run pwm_write_manual "$channel/pwm1" 51
+	[ "$status" -ne 0 ]
+	[ "$(cat "$channel/pwm1")" = 0 ]
+}
+
+@test "hands a released channel back to the kernel" {
+	thermal="$BATS_TEST_TMPDIR/thermal"
+	channel="$BATS_TEST_TMPDIR/fan"
+	mkdir -p "$thermal/thermal_zone0" "$thermal/cooling_device0" "$channel"
+	printf '33000\n' >"$thermal/thermal_zone0/temp"
+	ln -s ../cooling_device0 "$thermal/thermal_zone0/cdev0"
+	printf 'pwm-fan\n' >"$thermal/cooling_device0/type"
+	printf '3\n' >"$thermal/cooling_device0/cur_state"
+	printf '3\n' >"$thermal/thermal_zone0/cdev0_trip_point"
+	printf '40000\n' >"$thermal/thermal_zone0/trip_point_3_temp"
+	printf '255\n' >"$channel/pwm1"
+	printf '1\n' >"$channel/pwm1_enable"
+	run thermal_hand_back "$thermal" "$channel/pwm1"
+	[ "$status" -eq 0 ]
+	[ "$output" = kernel ]
+	[ "$(cat "$channel/pwm1_enable")" = 2 ]
+	# The temperature sits below the coldest fan trip, so the stale level drops.
+	[ "$(cat "$thermal/cooling_device0/cur_state")" = 0 ]
+}
+
+@test "leaves the cooling level alone while the fan is still needed" {
+	thermal="$BATS_TEST_TMPDIR/hot"
+	channel="$BATS_TEST_TMPDIR/hotfan"
+	mkdir -p "$thermal/thermal_zone0" "$thermal/cooling_device0" "$channel"
+	printf '90000\n' >"$thermal/thermal_zone0/temp"
+	ln -s ../cooling_device0 "$thermal/thermal_zone0/cdev0"
+	printf 'pwm-fan\n' >"$thermal/cooling_device0/type"
+	printf '3\n' >"$thermal/cooling_device0/cur_state"
+	printf '0\n' >"$thermal/thermal_zone0/cdev0_trip_point"
+	printf '40000\n' >"$thermal/thermal_zone0/trip_point_0_temp"
+	printf '255\n' >"$channel/pwm1"
+	printf '1\n' >"$channel/pwm1_enable"
+	run thermal_hand_back "$thermal" "$channel/pwm1"
+	[ "$status" -eq 0 ]
+	[ "$(cat "$channel/pwm1_enable")" = 2 ]
+	[ "$(cat "$thermal/cooling_device0/cur_state")" = 3 ]
+}

@@ -157,3 +157,35 @@ status_file() {
 	[ "$status" -eq 0 ]
 	[ -e "$ROOT/rebooted" ]
 }
+
+@test "a clock step after boot does not look like a hang" {
+	now=$(date +%s)
+	# The status was written 44 hours ago on the wall clock, but only 2 seconds
+	# after the controller started: the RTC was still on the last shutdown.
+	status_file $((now - 158741)) "uptime=100"
+	export WD_UPTIME=102
+	run sh "$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan-watchdog"
+	[ "$status" -eq 0 ]
+	[ ! -s "$ROOT/pwm1" ]
+	[ ! -e "$ROOT/log" ]
+}
+
+@test "a silent controller is caught on the monotonic clock" {
+	now=$(date +%s)
+	status_file "$now" "uptime=100"
+	export WD_UPTIME=200
+	printf 'v1 5 40000 4 85000\n' >"$WD_TAKEOVER"
+	run sh "$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan-watchdog"
+	[ "$status" -eq 0 ]
+	grep -q "controller silent" "$ROOT/log"
+}
+
+@test "a stamp from before this boot is not a hang" {
+	now=$(date +%s)
+	status_file $((now - 100000))
+	export WD_UPTIME=200
+	run sh "$BATS_TEST_DIRNAME/../luci-app-h5000m-pwmfan/root/usr/sbin/h5000m-pwmfan-watchdog"
+	[ "$status" -eq 0 ]
+	[ ! -s "$ROOT/pwm1" ]
+	[ ! -e "$ROOT/log" ]
+}

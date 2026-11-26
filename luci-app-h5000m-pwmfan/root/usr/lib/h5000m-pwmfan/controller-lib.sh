@@ -722,3 +722,74 @@ temperature_history_read() {
 			last = $1 + 0
 		}' "$1"
 }
+
+# Print the mode file that sits next to a pwm channel when the driver exposes
+# one. Args: pwm path.
+pwm_mode_file() (
+	case "$1" in
+	*/*) ;;
+	*) exit 1 ;;
+	esac
+	mode="${1%/*}/pwm1_enable"
+	[ -e "$mode" ] || exit 1
+	printf '%s\n' "$mode"
+	exit 0
+)
+
+# Publish one manual duty. A channel left in automatic mode ignores the write,
+# so the mode is switched first. Args: pwm path, duty.
+pwm_write_manual() {
+	pwm_mode=$(pwm_mode_file "$1") || return 1
+	printf '1\n' >"$pwm_mode" 2>/dev/null || return 1
+	printf '%s\n' "$2" >"$1"
+}
+
+# Print the writable pwm channel of the pwm-fan hwmon device. Args: hwmon dir
+# (default /sys/class/hwmon).
+pwm_channel() {
+	directory=${1:-/sys/class/hwmon}
+	for hwmon in "$directory"/hwmon*; do
+		[ -r "$hwmon/name" ] || continue
+		device=
+		{ read -r device <"$hwmon/name"; } 2>/dev/null || true
+		[ "$device" = pwmfan ] || continue
+		[ -w "$hwmon/pwm1" ] || continue
+		printf '%s\n' "$hwmon/pwm1"
+		return 0
+	done
+	return 1
+}
+
+# Give the fan back to the kernel governor. The governor keeps whatever level it
+# held while the trips were pinned, so a restored zone can stay at full duty
+# while the temperature sits far below every fan trip; the level is nudged back
+# only when the temperature proves it belongs at zero. Args: thermal dir, pwm
+# path. Print "kernel" when the handover happened.
+thermal_hand_back() (
+	thermal_dir=$1 pwm_path=$2
+	[ -n "$pwm_path" ] || exit 1
+	mode=$(pwm_mode_file "$pwm_path") || exit 1
+	zone=$(thermal_fan_zone "$thermal_dir") || exit 1
+	printf '2\n' >"$mode" || exit 1
+	read -r temperature <"$zone/temp" || exit 1
+	cold=$(thermal_fan_trips "$zone" | sed -n 1p) || cold=
+	cold_temp=${cold% *}
+	case "$temperature" in '' | *[!0-9]*)
+		printf 'kernel\n'
+		exit 0
+		;;
+	esac
+	case "$cold_temp" in '' | *[!0-9]*)
+		printf 'kernel\n'
+		exit 0
+		;;
+	esac
+	if [ "$temperature" -lt "$cold_temp" ]; then
+		for cdev in "$thermal_dir"/cooling_device*; do
+			[ "$(cat "$cdev/type" 2>/dev/null)" = "pwm-fan" ] || continue
+			printf '0\n' >"$cdev/cur_state" 2>/dev/null || true
+		done
+	fi
+	printf 'kernel\n'
+	exit 0
+)

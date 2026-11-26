@@ -72,6 +72,15 @@ epoch_now() {
 	date +%s
 }
 
+# Seconds since boot. Heartbeat age is measured on this clock: the board RTC
+# still holds the last shutdown until NTP steps the system clock, and a step
+# would otherwise turn a fresh status into an ancient one (measured 2026-11-26).
+uptime_now() {
+	up=0
+	{ read -r up _ </proc/uptime; } 2>/dev/null || up=0
+	printf '%s\n' "${up%%.*}"
+}
+
 cfg_number() {
 	value=$1
 	minimum=$2
@@ -221,6 +230,7 @@ write_status() {
 		printf 'stale_temperature=%s\n' "${STALE_TEMPERATURE:-0}"
 		printf 'writes_total=%s\n' "$PWM_WRITES"
 		printf 'sensors=%s\n' "$SENSOR_STATUS"
+		printf 'uptime=%s\n' "$(uptime_now)"
 		printf 'updated_at=%s\n' "$stamp"
 	} >"$tmp" && mv "$tmp" "$STATUS_FILE"
 }
@@ -276,14 +286,22 @@ failsafe() {
 release_fan() {
 	[ "$ACTIVE_OWNER" = 1 ] || return 0
 	OWNER=none
+	ACTIVE_OWNER=0
+	# Hand the channel back to the kernel instead of leaving full duty behind.
+	# The restored trips do not reset a governor that was held at its old level,
+	# so the plain failsafe write used to pin the fan at 100 % until something
+	# else acted (measured 2026-11-26).
+	if thermal_hand_back "${THERMAL_DIR:-/sys/class/thermal}" "$PWM_FILE" >/dev/null; then
+		effective=$(read_effective_pwm)
+		write_status disabled released -- "$effective"
+		return 0
+	fi
 	if set_pwm "$FAILSAFE_PWM"; then
-		OWNER=none
 		write_status disabled released "$FAILSAFE_PWM" "$effective"
 	else
-		OWNER=none
 		write_status fault release_write_failed "$FAILSAFE_PWM" "--"
 	fi
-	ACTIVE_OWNER=0
+	return 0
 }
 
 read_effective_pwm() {
@@ -549,6 +567,10 @@ apply_cycle() {
 		esac
 		if thermal_takeover_apply "$pin_dir" "$TAKEOVER_STATE"; then
 			logger -t h5000m-pwmfan "pinned the low pwm-fan trips for the takeover"
+			# The governor only yields the channel in manual mode.
+			if mode_file=$(pwm_mode_file "$PWM_FILE"); then
+				printf '1\n' >"$mode_file" 2>/dev/null || logger -t h5000m-pwmfan "could not switch the pwm channel to manual mode"
+			fi
 		else
 			logger -t h5000m-pwmfan "could not pin the low pwm-fan trips"
 		fi

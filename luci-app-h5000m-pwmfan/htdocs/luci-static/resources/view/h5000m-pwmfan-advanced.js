@@ -180,6 +180,8 @@ return view.extend({
 			   zooming); the unit has to follow, otherwise it sits a size and a baseline
 			   below the number. The preview page is not inside .vt-main, so pin the
 			   fields here as well and the two stay in step wherever the page runs. */
+			'.pwmfan-advanced .pf-takeover-check-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px}'
+				+ '.pwmfan-advanced .pf-check-note{font-size:12px;color:var(--pf-muted)}',
 			'@media (pointer: coarse),(max-width: 720px){'
 				+ '.pwmfan-advanced .cbi-value-field input.cbi-input-text,'
 				+ '.pwmfan-advanced .cbi-value-field select,'
@@ -460,6 +462,48 @@ return view.extend({
 		}, this)).catch(function() { /* The hint is cosmetic. */ });
 	},
 
+
+	// The takeover gate needs evidence that this board can be driven at all.
+	// Asking for an SSH session after every reflash was not a reasonable price,
+	// so one bounded self-test behind a button produces the same evidence.
+	bindTakeoverCheck: function(formNode) {
+		if (uci.get(CONFIG, SECTION, 'takeover_verified') === '1') return;
+		var row = formNode.querySelector('.cbi-value[data-name="enabled"]');
+		var holder = row ? row.querySelector('.cbi-value-description') : null;
+		if (!holder || holder.querySelector('.pf-takeover-check')) return;
+		var verdicts = {
+			'no-pwm': _('No writable PWM channel was found.'),
+			'not-ready': _('The pwm-fan cooling device is missing.'),
+			'write-failed': _('The test duty could not be written.'),
+			'read-mismatch': _('The written duty did not read back.'),
+			'commit-failed': _('The result could not be saved.')
+		};
+		var note = E('span', { 'class': 'pf-check-note', 'role': 'status', 'aria-live': 'polite' });
+		var button = E('button', {
+			'type': 'button',
+			'class': 'cbi-button cbi-button-action pf-takeover-check'
+		}, _('Run the check'));
+		button.addEventListener('click', function(event) {
+			event.preventDefault();
+			button.disabled = true;
+			note.textContent = '';
+			fs.exec('/usr/sbin/h5000m-pwmfan-takeover-check').then(function(result) {
+				var verdict = String(result.stdout || '').trim();
+				if (result.code === 0 && verdict === 'ok') {
+					window.location.reload();
+					return;
+				}
+				button.disabled = false;
+				note.textContent = verdicts[verdict] ||
+					_('The check failed (%s).').format(verdict || result.code);
+			}).catch(function(error) {
+				button.disabled = false;
+				note.textContent = _('The check failed (%s).').format(error.message || error);
+			});
+		});
+		holder.appendChild(E('div', { 'class': 'pf-takeover-check-row' }, [ button, note ]));
+	},
+
 	/* LuCI re-renders the form after a save/apply; redecorate the fresh nodes. */
 	watchForm: function(formNode) {
 		if (typeof MutationObserver !== 'function') return;
@@ -472,6 +516,7 @@ return view.extend({
 				self.decorateFlags(formNode);
 				self.decorateNotes(formNode);
 				self.decorateUnits(formNode);
+				self.bindTakeoverCheck(formNode);
 				self.markActions();
 			}, 30);
 		});
@@ -527,6 +572,7 @@ return view.extend({
 				event.returnValue = '';
 			}.bind(this));
 			this.bindEarlyHint(formNode);
+			this.bindTakeoverCheck(formNode);
 			this.watchForm(formNode);
 			shared.applyTheme(shared.themeMode());
 			this._sensorTimer = window.setInterval(L.bind(this.refreshSensorOptions, this), 5000);

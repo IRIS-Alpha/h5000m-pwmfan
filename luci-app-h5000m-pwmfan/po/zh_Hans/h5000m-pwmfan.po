@@ -414,3 +414,31 @@ msgstr "进程守护"
 #: view
 msgid "An independent process, started by procd, watches the controller heartbeat. If the controller stays silent for three control cycles, it drives the fan to full duty, restores the kernel trip points and restarts the controller; the fan stays at full duty until the controller writes it again."
 msgstr "独立守护进程由 procd 拉起。控制器连续三个控制周期没有心跳时，它把风扇推到全速、恢复内核触点并重启控制器；此后风扇保持全速，直到控制器重新写入。"
+
+#: view
+msgid "Run the check"
+msgstr "核验接管条件"
+
+#: view
+msgid "No writable PWM channel was found."
+msgstr "找不到可写的 PWM 通道。"
+
+#: view
+msgid "The pwm-fan cooling device is missing."
+msgstr "缺少 pwm-fan 冷却设备。"
+
+#: view
+msgid "The test duty could not be written."
+msgstr "测试占空比写入失败。"
+
+#: view
+msgid "The written duty did not read back."
+msgstr "写回的值与请求不一致。"
+
+#: view
+msgid "The result could not be saved."
+msgstr "核验结果无法保存。"
+
+#: view
+msgid "The check failed (%s)."
+msgstr "核验失败（%s）。"

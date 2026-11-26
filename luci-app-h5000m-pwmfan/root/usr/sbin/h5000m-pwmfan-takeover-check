@@ -1,0 +1,74 @@
+#!/bin/sh
+# Bounded self-test behind the "run the check" button on the advanced page.
+#
+# Taking over needs proof that this board can be driven at all: a writable pwm
+# channel, a pwm-fan cooling device, and a duty that reads back as written. The
+# check writes one duty for a second, puts the channel and its mode back, and
+# only then records takeover_verified=1 so the switch unlocks.
+#
+# Prints one verdict line: ok, no-pwm, not-ready, write-failed, read-mismatch or
+# commit-failed. Only "ok" changes anything.
+
+. /usr/lib/h5000m-pwmfan/controller-lib.sh
+
+CONFIG=h5000m_pwmfan
+SECTION=main
+THERMAL=${THERMAL_DIR:-/sys/class/thermal}
+HWMON=${HWMON_DIR:-/sys/class/hwmon}
+
+pwm=
+mode_file=
+saved_pwm=
+saved_mode=
+
+restore() {
+	if [ -n "$pwm" ] && [ -n "$saved_pwm" ]; then
+		printf '%s\n' "$saved_pwm" >"$pwm" 2>/dev/null || true
+	fi
+	if [ -n "$mode_file" ] && [ -n "$saved_mode" ]; then
+		printf '%s\n' "$saved_mode" >"$mode_file" 2>/dev/null || true
+	fi
+}
+
+verify() {
+	pwm=$(pwm_channel "$HWMON") || pwm=
+	if [ -z "$pwm" ] || [ ! -w "$pwm" ]; then
+		echo no-pwm
+		return 0
+	fi
+	if ! kernel_takeover_ready_dir "$THERMAL" "$pwm" 1 1; then
+		echo not-ready
+		return 0
+	fi
+	mode_file=$(pwm_mode_file "$pwm") || mode_file=
+	{ read -r saved_pwm <"$pwm"; } 2>/dev/null || saved_pwm=
+	if [ -n "$mode_file" ]; then
+		{ read -r saved_mode <"$mode_file"; } 2>/dev/null || saved_mode=
+	fi
+	probe=51
+	case "$saved_pwm" in
+	'' | *[!0-9]*) ;;
+	*) [ "$saved_pwm" -eq 0 ] || probe=0 ;;
+	esac
+	if ! pwm_write_manual "$pwm" "$probe"; then
+		restore
+		echo write-failed
+		return 0
+	fi
+	sleep 1
+	back=
+	{ read -r back <"$pwm"; } 2>/dev/null || back=
+	restore
+	if [ "$back" != "$probe" ]; then
+		echo read-mismatch
+		return 0
+	fi
+	if ! uci -q set "$CONFIG.$SECTION.takeover_verified=1" || ! uci -q commit "$CONFIG"; then
+		echo commit-failed
+		return 0
+	fi
+	echo ok
+	return 0
+}
+
+verify

@@ -8,6 +8,9 @@
 				],
 				"/usr/sbin/h5000m-pwmfan-history": [
 					"exec"
+				],
+				"/usr/sbin/h5000m-pwmfan-takeover-check": [
+					"exec"
 				]
 			},
 			"uci": [
