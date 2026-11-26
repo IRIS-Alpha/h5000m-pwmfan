@@ -746,6 +746,36 @@ pwm_write_manual() {
 
 # Print the writable pwm channel of the pwm-fan hwmon device. Args: hwmon dir
 # (default /sys/class/hwmon).
+# Prove the channel can be driven: write one duty, read it back, put both the
+# duty and the mode back. Arg: pwm path. Returns 0 only when the read matches.
+takeover_probe() (
+	probe_pwm=$1
+	[ -n "$probe_pwm" ] && [ -w "$probe_pwm" ] || exit 1
+	probe_mode=$(pwm_mode_file "$probe_pwm") || probe_mode=
+	{ read -r probe_saved <"$probe_pwm"; } 2>/dev/null || probe_saved=
+	probe_saved_mode=
+	if [ -n "$probe_mode" ]; then
+		{ read -r probe_saved_mode <"$probe_mode"; } 2>/dev/null || probe_saved_mode=
+	fi
+	probe=51
+	case "$probe_saved" in
+	'' | *[!0-9]*) ;;
+	*) [ "$probe_saved" -eq 0 ] || probe=0 ;;
+	esac
+	if ! pwm_write_manual "$probe_pwm" "$probe"; then
+		[ -z "$probe_saved" ] || printf '%s\n' "$probe_saved" >"$probe_pwm" 2>/dev/null
+		exit 1
+	fi
+	sleep 1
+	probe_back=
+	{ read -r probe_back <"$probe_pwm"; } 2>/dev/null || probe_back=
+	[ -z "$probe_saved" ] || printf '%s\n' "$probe_saved" >"$probe_pwm" 2>/dev/null
+	if [ -n "$probe_mode" ] && [ -n "$probe_saved_mode" ]; then
+		printf '%s\n' "$probe_saved_mode" >"$probe_mode" 2>/dev/null
+	fi
+	[ "$probe_back" = "$probe" ]
+)
+
 pwm_channel() {
 	directory=${1:-/sys/class/hwmon}
 	for hwmon in "$directory"/hwmon*; do

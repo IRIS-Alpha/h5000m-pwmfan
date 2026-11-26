@@ -25,6 +25,8 @@ run_shellcheck() {
 		"$PKG"/root/usr/lib/h5000m-pwmfan/controller-lib.sh \
 		"$PKG"/root/usr/sbin/h5000m-pwmfan-status \
 		"$PKG"/root/usr/sbin/h5000m-pwmfan-language \
+		"$PKG"/root/usr/sbin/h5000m-pwmfan-history \
+		"$PKG"/root/usr/sbin/h5000m-pwmfan-takeover-check \
 		"$PKG"/root/usr/sbin/h5000m-pwmfan-watchdog \
 		tests/controller-lib.bats \
 		tests/watchdog.bats \
@@ -44,6 +46,8 @@ run_shfmt() {
 		"$PKG"/root/usr/lib/h5000m-pwmfan/controller-lib.sh \
 		"$PKG"/root/usr/sbin/h5000m-pwmfan-status \
 		"$PKG"/root/usr/sbin/h5000m-pwmfan-language \
+		"$PKG"/root/usr/sbin/h5000m-pwmfan-history \
+		"$PKG"/root/usr/sbin/h5000m-pwmfan-takeover-check \
 		"$PKG"/root/usr/sbin/h5000m-pwmfan-watchdog \
 		tests/controller-lib.bats \
 		tests/watchdog.bats \
@@ -62,7 +66,19 @@ require_tool bats
 require_tool node
 require_tool msgfmt
 
+# rpcd runs these helpers on the page's behalf and the payload keeps the source
+# mode, so a 0644 script is a page button that silently fails.
+check_modes() {
+	for script in "$PKG"/root/usr/sbin/* "$PKG"/root/etc/init.d/*; do
+		if [ ! -x "$script" ]; then
+			printf 'not executable: %s\n' "$script" >&2
+			return 1
+		fi
+	done
+}
+
 sh tools/version.sh check
+check_modes
 if command -v shellcheck >/dev/null 2>&1; then run_shellcheck; fi
 if command -v shfmt >/dev/null 2>&1; then run_shfmt; fi
 if command -v bats >/dev/null 2>&1 && [ -d tests ]; then bats tests; fi

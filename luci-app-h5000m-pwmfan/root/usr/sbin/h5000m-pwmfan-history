@@ -10,7 +10,7 @@ file=$runtime_dir/temperature-history
 
 range=$(uci -q get h5000m_pwmfan.main.history_range 2>/dev/null)
 case "$range" in
-	'' | *[!0-9]*) range=5 ;;
+'' | *[!0-9]*) range=5 ;;
 esac
 [ "$range" -lt 5 ] && range=5
 [ "$range" -gt 360 ] && range=360

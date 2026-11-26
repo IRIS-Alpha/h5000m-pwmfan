@@ -208,11 +208,10 @@ return view.extend({
 		var verified = uci.get(CONFIG, SECTION, 'takeover_verified') === '1';
 		takeover.description = verified
 			? _('Drives the fan from the plugin; the kernel keeps throttling and the critical shutdown.')
-			: _('Drives the fan from the plugin; not verified yet, so it stays off.');
+			: _('Drives the fan from the plugin. Turning it on first proves the PWM channel with a one-second test, then hands the fan over.');
 		takeover.cfgvalue = function(sectionId) {
 			return (uci.get(CONFIG, sectionId, 'enabled') === '1' && uci.get(CONFIG, sectionId, 'kernel_takeover') === '1') ? '1' : null;
 		};
-		takeover.readonly = !verified;
 		// The daemon needs `enabled` and `kernel_takeover` to agree, so one switch
 		// writes both keys; reading them back off the DOM broke after a re-render.
 		takeover.write = function(sectionId, value) {

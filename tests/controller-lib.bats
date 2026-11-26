@@ -827,3 +827,23 @@ EOF_OFF
 	run sh "$fixture/check-off" "$fixture"
 	[ "$status" -eq 0 ]
 }
+
+@test "the takeover probe writes a duty, reads it back and restores the channel" {
+	mkdir -p "$BATS_TEST_TMPDIR/probe"
+	pwm="$BATS_TEST_TMPDIR/probe/pwm1"
+	printf '0\n' >"$pwm"
+	printf '2\n' >"$BATS_TEST_TMPDIR/probe/pwm1_enable"
+	takeover_probe "$pwm"
+	[ "$(cat "$pwm")" = 0 ]
+	[ "$(cat "$BATS_TEST_TMPDIR/probe/pwm1_enable")" = 2 ]
+}
+
+@test "the takeover probe refuses a channel it cannot write" {
+	mkdir -p "$BATS_TEST_TMPDIR/readonly"
+	pwm="$BATS_TEST_TMPDIR/readonly/pwm1"
+	printf '0\n' >"$pwm"
+	chmod 444 "$pwm"
+	run takeover_probe "$pwm"
+	[ "$status" -eq 1 ]
+	chmod 644 "$pwm"
+}

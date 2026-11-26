@@ -6,6 +6,7 @@
 
 - 安装后默认 `enabled=0`、`kernel_takeover=0`：插件只读，不写 `pwm1`，不碰热区触点。状态文件会写 `state=disabled` 与具体原因（`not_enabled` / `takeover_pending` / `released`）。
 - 只有同时满足 `enabled=1`、`kernel_takeover=1`、`takeover_verified=1`、找到可写 `pwm1`、且该 hwmon 带 `pwm-fan` 冷却设备时，才认为接管成立（`kernel_takeover_ready_dir()`）。任何一条不满足都不写 PWM。
+- `takeover_verified` 由同一段有界探测置 1（`takeover_probe()`：写一个占空比、读回、把占空比与模式都还原）。两个入口：页面上的「核验接管条件」按钮，以及守护进程自己——`enabled=1` 而标记仍为 0 时，它在下一轮就地探测一次，通过就写标记，于是刷机后打开开关即可接管，不必先用 SSH 改 uci。
 
 ## 找设备
 

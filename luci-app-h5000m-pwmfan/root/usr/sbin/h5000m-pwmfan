@@ -327,6 +327,17 @@ load_settings() {
 	[ "$TAKEOVER" = 0 ] || [ "$TAKEOVER" = 1 ] || return 1
 	config_get TAKEOVER_VERIFIED "$SECTION" takeover_verified 0
 	[ "$TAKEOVER_VERIFIED" = 0 ] || [ "$TAKEOVER_VERIFIED" = 1 ] || return 1
+	# A reflash drops the verified flag. Prove the channel here instead of
+	# leaving the switch dead: same bounded probe the page button runs.
+	if [ "$TAKEOVER" = 1 ] && [ "$TAKEOVER_VERIFIED" != 1 ]; then
+		self_pwm=$(find_fan) || self_pwm=
+		if [ -n "$self_pwm" ] && takeover_probe "$self_pwm"; then
+			if uci -q set "$CONFIG.$SECTION.takeover_verified=1" && uci -q commit "$CONFIG"; then
+				TAKEOVER_VERIFIED=1
+				logger -t h5000m-pwmfan "proved the pwm channel; takeover may run"
+			fi
+		fi
+	fi
 	config_get MODE "$SECTION" mode balanced
 	case "$MODE" in quiet | balanced | performance | custom | manual | kernel | target | fixed) ;; *) return 1 ;; esac
 	config_get SENSOR_SELECTION "$SECTION" sensor_sources auto

@@ -208,8 +208,8 @@ msgstr "等待温度读数"
 msgid "Live temperature readings"
 msgstr "温度读数中"
 
-msgid "Drives the fan from the plugin; not verified yet, so it stays off."
-msgstr "由插件驱动风扇；尚未核验，暂不可启用。"
+msgid "Drives the fan from the plugin. Turning it on first proves the PWM channel with a one-second test, then hands the fan over."
+msgstr "由插件驱动风扇。打开时先用一秒的测试确认 PWM 通道可写，然后把风扇交过来。"
 
 msgid "Drives the fan from the plugin; the kernel keeps throttling and the critical shutdown."
 msgstr "由插件驱动风扇；内核仍负责降频与临界关机。"
